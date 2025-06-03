@@ -9,6 +9,9 @@ struct CameraPreviewView: UIViewRepresentable {
     /// - AVCaptureSession 인스턴스를 통해 카메라 출력을 받아옴
     let session: AVCaptureSession
     
+    /// 디바이스 방향 매니저
+    @StateObject private var orientationManager = DeviceOrientationManager()
+    
     /// AVCaptureVideoPreviewLayer를 사용하는 커스텀 UIView
     /// - 카메라 프리뷰를 표시하기 위한 UIView 서브클래스
     class PreviewView: UIView {
@@ -43,11 +46,6 @@ struct CameraPreviewView: UIViewRepresentable {
         previewLayer.session = session
         previewLayer.videoGravity = .resizeAspect
         
-        // 가로 방향으로 고정
-        if let connection = previewLayer.connection, connection.isVideoOrientationSupported {
-            connection.videoOrientation = .landscapeRight
-        }
-        
         return view
     }
     
@@ -56,9 +54,10 @@ struct CameraPreviewView: UIViewRepresentable {
     /// - 가로 방향 유지를 위해 프리뷰 레이어 방향 재설정
     func updateUIView(_ uiView: PreviewView, context: Context) {
         let previewLayer = uiView.videoPreviewLayer
-        // 가로 방향 유지
+        
+        // 디바이스 방향에 따라 비디오 방향 설정
         if let connection = previewLayer.connection, connection.isVideoOrientationSupported {
-            connection.videoOrientation = .landscapeRight
+            connection.videoOrientation = orientationManager.videoOrientation
         }
     }
 } 
