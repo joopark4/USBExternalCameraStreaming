@@ -3,10 +3,10 @@ import SwiftUI
 /// 권한 설정 화면
 struct PermissionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel: PermissionViewModel
+    @ObservedObject var viewModel: PermissionViewModel
     
-    init(viewModel: PermissionViewModel? = nil) {
-        _viewModel = StateObject(wrappedValue: viewModel ?? PermissionViewModel(permissionManager: PermissionManager()))
+    init(viewModel: PermissionViewModel) {
+        self.viewModel = viewModel
     }
     
     var body: some View {
@@ -91,5 +91,5 @@ struct PermissionRow: View {
 }
 
 #Preview {
-    PermissionSettingsView()
+    PermissionSettingsView(viewModel: PermissionViewModel(permissionManager: PermissionManager()))
 } 
