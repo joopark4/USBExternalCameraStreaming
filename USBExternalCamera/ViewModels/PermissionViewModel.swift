@@ -44,13 +44,13 @@ final class PermissionViewModel: ObservableObject {
     func permissionStatusText(_ status: PermissionStatus) -> String {
         switch status {
         case .notDetermined:
-            return "확인 안됨"
+            return NSLocalizedString("permission_status_not_determined", comment: "")
         case .restricted:
-            return "제한됨"
+            return NSLocalizedString("permission_status_restricted", comment: "")
         case .denied:
-            return "거부됨"
+            return NSLocalizedString("permission_status_denied", comment: "")
         case .authorized:
-            return "허용됨"
+            return NSLocalizedString("permission_status_authorized", comment: "")
         }
     }
     
@@ -64,18 +64,18 @@ final class PermissionViewModel: ObservableObject {
     /// 권한이 거부된 항목 목록
     var deniedPermissions: [String] {
         var denied: [String] = []
-        if cameraStatus == .denied { denied.append("카메라") }
-        if microphoneStatus == .denied { denied.append("마이크") }
-        if photoLibraryStatus == .denied { denied.append("사진첩") }
+        if cameraStatus == .denied { denied.append(NSLocalizedString("permission_camera", comment: "")) }
+        if microphoneStatus == .denied { denied.append(NSLocalizedString("permission_microphone", comment: "")) }
+        if photoLibraryStatus == .denied { denied.append(NSLocalizedString("permission_photo_library", comment: "")) }
         return denied
     }
     
     /// 권한 설정 가이드 메시지
     var permissionGuideMessage: String {
         if deniedPermissions.isEmpty {
-            return "모든 권한이 허용되었습니다."
+            return NSLocalizedString("all_permissions_granted", comment: "")
         } else {
-            return "다음 권한이 거부되었습니다:\n" + deniedPermissions.joined(separator: ", ") + "\n\n설정 앱에서 권한을 허용해주세요."
+            return String(format: NSLocalizedString("permissions_denied_message", comment: ""), deniedPermissions.joined(separator: ", "))
         }
     }
 } 

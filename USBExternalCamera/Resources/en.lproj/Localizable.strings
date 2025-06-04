@@ -1,0 +1,111 @@
+/* 
+  Localizable.strings
+  USBExternalCamera (English)
+*/
+
+// MARK: - Common
+"close" = "Close";
+"cancel" = "Cancel";
+"save" = "Save";
+"done" = "Done";
+"ok" = "OK";
+"settings" = "Settings";
+"menu" = "Menu";
+
+// MARK: - Camera
+"camera" = "Camera";
+"camera_section" = "Camera";
+"select_camera" = "Please select a camera";
+"no_external_camera" = "No external camera connected";
+
+// MARK: - Permissions
+"permissions_title" = "Permission Settings";
+"permissions_request" = "Request Permissions";
+"permission_camera" = "Camera";
+"permission_microphone" = "Microphone";
+"permission_photo_library" = "Photo Library";
+"permission_settings_needed" = "Permission settings required";
+"go_to_permission_settings" = "Go to Permission Settings";
+"permission_status_not_determined" = "Not Determined";
+"permission_status_restricted" = "Restricted";
+"permission_status_denied" = "Denied";
+"permission_status_authorized" = "Authorized";
+"all_permissions_granted" = "All permissions have been granted.";
+"permissions_denied_message" = "The following permissions have been denied:\n%@\n\nPlease allow permissions in the Settings app.";
+
+// MARK: - Live Streaming
+"live_streaming" = "Live Streaming";
+"live_streaming_section" = "Streaming";
+"live_streaming_settings" = "Live Streaming Settings";
+"live_settings" = "Live Settings";
+"youtube_live_streaming" = "YouTube Live Streaming";
+
+// Basic Settings
+"basic_settings" = "Basic Settings";
+"stream_title" = "Stream Title";
+"stream_title_placeholder" = "Live Stream Title";
+"stream_key" = "Stream Key";
+"stream_key_placeholder" = "YouTube Stream Key";
+"stream_key_invalid" = "Invalid stream key format";
+"rtmp_server_url" = "RTMP Server URL";
+"rtmp_url_placeholder" = "RTMP URL";
+"rtmp_url_invalid" = "Invalid RTMP URL format";
+
+// Video Settings
+"video_settings" = "Video Settings";
+"resolution" = "Resolution";
+"video_bitrate" = "Video Bitrate: %d kbps";
+"frame_rate" = "Frame Rate: %d fps";
+"frame_rate_picker" = "Frame Rate";
+"fps_24" = "24 fps";
+"fps_30" = "30 fps";
+"fps_60" = "60 fps";
+
+// Audio Settings
+"audio_settings" = "Audio Settings";
+"audio_bitrate" = "Audio Bitrate: %d kbps";
+"audio_bitrate_picker" = "Audio Bitrate";
+"kbps_64" = "64 kbps";
+"kbps_128" = "128 kbps";
+"kbps_192" = "192 kbps";
+"kbps_256" = "256 kbps";
+
+// Advanced Settings
+"advanced_settings" = "Advanced Settings";
+"auto_reconnect" = "Auto Reconnect";
+"streaming_enabled" = "Streaming Enabled";
+
+// Settings Management
+"settings_management" = "Settings Management";
+"reset_settings" = "Reset Settings";
+
+// Streaming Status
+"streaming_statistics" = "Streaming Statistics";
+"streaming_error" = "Streaming Error";
+
+// Status Messages
+"already_streaming" = "Streaming is already in progress.";
+"connecting_to_server" = "Connecting to server...";
+"connected_to_server" = "Connected to server.";
+"stream_key_rtmp_required" = "Stream key or RTMP URL is required.";
+"disconnecting" = "Disconnecting...";
+"streaming_stopped" = "Streaming has been stopped.";
+"streaming_live" = "Live streaming...";
+
+// Error Messages
+"stream_setup_failed" = "Failed to set up stream.";
+"server_connection_failed" = "Server connection failed.";
+"invalid_streaming_settings" = "Invalid streaming settings.";
+"camera_unavailable" = "Camera is unavailable.";
+
+// Instructions
+"youtube_step1" = "Copy the stream key from YouTube Studio";
+"youtube_step2" = "Enter the stream key and RTMP URL in settings";
+"youtube_step3" = "Select a camera and start streaming";
+
+// Work in Progress
+"haishinkit_integration_message" = "HaishinKit 2.0.8 integration is in progress.\nCurrently, only basic camera preview is supported.";
+"haishinkit_settings_message" = "Live streaming settings will be available\nafter HaishinKit 2.0.8 integration is complete.";
+
+// App Error
+"swiftdata_init_failed" = "SwiftData ModelContainer initialization failed: %@"; 

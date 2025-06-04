@@ -28,6 +28,7 @@ class DeviceOrientationManager: ObservableObject {
     }
     
     /// 디바이스 방향에 따른 비디오 방향 반환
+    @available(iOS, deprecated: 17.0, message: "Use videoRotationAngle instead")
     var videoOrientation: AVCaptureVideoOrientation {
         switch orientation {
         case .portrait:
@@ -40,6 +41,23 @@ class DeviceOrientationManager: ObservableObject {
             return .landscapeLeft
         default:
             return .portrait
+        }
+    }
+    
+    /// iOS 17+ 호환 비디오 회전 각도
+    @available(iOS 17.0, *)
+    var videoRotationAngle: CGFloat {
+        switch orientation {
+        case .portrait:
+            return 0
+        case .portraitUpsideDown:
+            return 180
+        case .landscapeLeft:
+            return 90
+        case .landscapeRight:
+            return 270
+        default:
+            return 0
         }
     }
 } 

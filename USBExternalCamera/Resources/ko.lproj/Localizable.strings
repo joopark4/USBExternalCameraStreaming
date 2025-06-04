@@ -1,0 +1,111 @@
+/* 
+  Localizable.strings
+  USBExternalCamera (Korean)
+*/
+
+// MARK: - Common
+"close" = "닫기";
+"cancel" = "취소";
+"save" = "저장";
+"done" = "완료";
+"ok" = "확인";
+"settings" = "설정";
+"menu" = "메뉴";
+
+// MARK: - Camera
+"camera" = "카메라";
+"camera_section" = "카메라";
+"select_camera" = "카메라를 선택해주세요";
+"no_external_camera" = "연결된 외장 카메라가 없습니다";
+
+// MARK: - Permissions
+"permissions_title" = "권한 설정";
+"permissions_request" = "권한 요청";
+"permission_camera" = "카메라";
+"permission_microphone" = "마이크";
+"permission_photo_library" = "사진첩";
+"permission_settings_needed" = "권한 설정이 필요합니다";
+"go_to_permission_settings" = "권한 설정하기";
+"permission_status_not_determined" = "확인 안됨";
+"permission_status_restricted" = "제한됨";
+"permission_status_denied" = "거부됨";
+"permission_status_authorized" = "허용됨";
+"all_permissions_granted" = "모든 권한이 허용되었습니다.";
+"permissions_denied_message" = "다음 권한이 거부되었습니다:\n%@\n\n설정 앱에서 권한을 허용해주세요.";
+
+// MARK: - Live Streaming
+"live_streaming" = "라이브 스트리밍";
+"live_streaming_section" = "스트리밍";
+"live_streaming_settings" = "라이브 스트리밍 설정";
+"live_settings" = "라이브 설정";
+"youtube_live_streaming" = "유튜브 라이브 스트리밍";
+
+// Basic Settings
+"basic_settings" = "기본 설정";
+"stream_title" = "스트림 제목";
+"stream_title_placeholder" = "라이브 스트림 제목";
+"stream_key" = "스트림 키";
+"stream_key_placeholder" = "유튜브 스트림 키";
+"stream_key_invalid" = "올바르지 않은 스트림 키 형식입니다";
+"rtmp_server_url" = "RTMP 서버 URL";
+"rtmp_url_placeholder" = "RTMP URL";
+"rtmp_url_invalid" = "올바르지 않은 RTMP URL 형식입니다";
+
+// Video Settings
+"video_settings" = "비디오 설정";
+"resolution" = "해상도";
+"video_bitrate" = "비디오 비트레이트: %d kbps";
+"frame_rate" = "프레임률: %d fps";
+"frame_rate_picker" = "프레임률";
+"fps_24" = "24 fps";
+"fps_30" = "30 fps";
+"fps_60" = "60 fps";
+
+// Audio Settings
+"audio_settings" = "오디오 설정";
+"audio_bitrate" = "오디오 비트레이트: %d kbps";
+"audio_bitrate_picker" = "오디오 비트레이트";
+"kbps_64" = "64 kbps";
+"kbps_128" = "128 kbps";
+"kbps_192" = "192 kbps";
+"kbps_256" = "256 kbps";
+
+// Advanced Settings
+"advanced_settings" = "고급 설정";
+"auto_reconnect" = "자동 재연결";
+"streaming_enabled" = "스트리밍 활성화";
+
+// Settings Management
+"settings_management" = "설정 관리";
+"reset_settings" = "설정 초기화";
+
+// Streaming Status
+"streaming_statistics" = "스트리밍 통계";
+"streaming_error" = "스트리밍 오류";
+
+// Status Messages
+"already_streaming" = "이미 스트리밍이 진행 중입니다.";
+"connecting_to_server" = "서버에 연결 중...";
+"connected_to_server" = "서버에 연결되었습니다.";
+"stream_key_rtmp_required" = "스트림 키 또는 RTMP URL이 필요합니다.";
+"disconnecting" = "연결을 해제하는 중...";
+"streaming_stopped" = "스트리밍이 중지되었습니다.";
+"streaming_live" = "라이브 스트리밍 중...";
+
+// Error Messages
+"stream_setup_failed" = "스트림 설정에 실패했습니다.";
+"server_connection_failed" = "서버 연결에 실패했습니다.";
+"invalid_streaming_settings" = "잘못된 스트리밍 설정입니다.";
+"camera_unavailable" = "카메라를 사용할 수 없습니다.";
+
+// Instructions
+"youtube_step1" = "유튜브 스튜디오에서 스트림 키를 복사하세요";
+"youtube_step2" = "설정에서 스트림 키와 RTMP URL을 입력하세요";
+"youtube_step3" = "카메라를 선택하고 스트리밍을 시작하세요";
+
+// Work in Progress
+"haishinkit_integration_message" = "HaishinKit 2.0.8 통합 작업 중입니다.\n현재는 기본 카메라 미리보기만 지원됩니다.";
+"haishinkit_settings_message" = "HaishinKit 2.0.8 통합 작업이 완료되면\n라이브 스트리밍 설정 기능이 제공됩니다.";
+
+// App Error
+"swiftdata_init_failed" = "SwiftData ModelContainer 초기화 실패: %@"; 
