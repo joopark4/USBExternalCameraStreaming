@@ -60,3 +60,30 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode Build Files
+build/
+DerivedData/
+
+# IDE Files
+buildServer.json
+.vscode/
+.idea/
+*.mdc
+
+# Temporary Files
+*.tmp
+*.temp
+*~
+
+# Log Files
+*.log
+
+# Backup Files
+*.bak
+*.backup

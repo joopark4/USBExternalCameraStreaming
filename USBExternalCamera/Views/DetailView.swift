@@ -1,0 +1,156 @@
+//
+//  DetailView.swift
+//  USBExternalCamera
+//
+//  Created by BYEONG JOO KIM on 5/25/25.
+//
+
+import SwiftUI
+
+// MARK: - Detail View Components
+
+/// 상세 화면 View 컴포넌트
+/// 선택된 사이드바 항목에 따라 적절한 콘텐츠를 표시하는 컴포넌트입니다.
+struct DetailView: View {
+    @ObservedObject var viewModel: MainViewModel
+    
+    var body: some View {
+        switch viewModel.selectedSidebarItem {
+        case .cameras:
+            // 카메라 상세 화면
+            CameraDetailContentView(viewModel: viewModel)
+        case .liveStream:
+            // 라이브 스트리밍 상세 화면
+            LiveStreamDetailView(viewModel: viewModel)
+        }
+    }
+}
+
+/// 카메라 상세 콘텐츠 View 컴포넌트
+/// 현재 UI 상태에 따라 적절한 카메라 관련 화면을 표시합니다.
+struct CameraDetailContentView: View {
+    @ObservedObject var viewModel: MainViewModel
+    
+    var body: some View {
+        switch viewModel.currentUIState {
+        case .loading:
+            // 로딩 상태
+            LoadingView()
+        case .permissionRequired:
+            // 권한 필요 상태
+            PermissionRequiredView(viewModel: viewModel)
+        case .cameraNotSelected:
+            // 카메라 미선택 상태
+            CameraPlaceholderView()
+        case .cameraActive:
+            // 카메라 활성화 상태
+            CameraPreviewContainerView(viewModel: viewModel)
+        }
+    }
+}
+
+/// 카메라 프리뷰 컨테이너 View 컴포넌트
+/// 실제 카메라 화면을 표시하는 컴포넌트입니다.
+struct CameraPreviewContainerView: View {
+    @ObservedObject var viewModel: MainViewModel
+    
+    var body: some View {
+        CameraPreviewView(
+            session: viewModel.cameraViewModel.captureSession,
+            streamViewModel: viewModel.liveStreamViewModel
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(30)
+        .background(Color.black)
+    }
+}
+
+/// 카메라 플레이스홀더 View 컴포넌트
+/// 카메라가 선택되지 않았을 때 표시되는 안내 화면입니다.
+struct CameraPlaceholderView: View {
+    var body: some View {
+        Color.black
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
+                VStack {
+                    Image(systemName: "camera")
+                        .font(.system(size: 50))
+                        .foregroundColor(.gray)
+                    Text(NSLocalizedString("select_camera", comment: "카메라 선택"))
+                        .font(.title2)
+                        .foregroundColor(.gray)
+                }
+            }
+    }
+}
+
+/// 권한 필요 안내 View 컴포넌트
+/// 카메라/마이크 권한이 필요할 때 표시되는 안내 화면입니다.
+struct PermissionRequiredView: View {
+    @ObservedObject var viewModel: MainViewModel
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // 경고 아이콘
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            
+            // 제목
+            Text(NSLocalizedString("permission_settings_needed", comment: "권한 설정 필요"))
+                .font(.title2)
+                .bold()
+            
+            // 안내 메시지
+            Text(viewModel.permissionViewModel.permissionGuideMessage)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
+            
+            // 권한 설정 버튼
+            Button(NSLocalizedString("go_to_permission_settings", comment: "권한 설정으로 이동")) {
+                viewModel.showPermissionSettings()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+}
+
+/// 로딩 View 컴포넌트
+/// 초기 로딩 상태를 표시하는 컴포넌트입니다.
+struct LoadingView: View {
+    var body: some View {
+        VStack {
+            ProgressView()
+                .scaleEffect(1.5)
+            Text(NSLocalizedString("loading", comment: "로딩 중"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// 라이브 스트리밍 상세 화면 View 컴포넌트
+/// 라이브 스트리밍 컨트롤과 상태를 표시하는 컴포넌트입니다.
+struct LiveStreamDetailView: View {
+    @ObservedObject var viewModel: MainViewModel
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // 라이브 스트리밍 컨트롤 - 새로운 고급 컨트롤 사용
+            LiveStreamControlView(
+                viewModel: viewModel.liveStreamViewModel,
+                captureSession: viewModel.cameraViewModel.captureSession
+            )
+            
+            Spacer()
+        }
+        .padding()
+        .navigationTitle(NSLocalizedString("live_streaming_nav", comment: "라이브 스트리밍"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+} 

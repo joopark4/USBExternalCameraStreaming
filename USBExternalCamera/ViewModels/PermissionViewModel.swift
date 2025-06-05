@@ -11,7 +11,7 @@ final class PermissionViewModel: ObservableObject {
     // MARK: - Dependencies
     
     /// 권한 매니저 - 실제 권한 관련 비즈니스 로직을 담당
-    private let permissionManager: PermissionManager
+    let permissionManager: PermissionManager
     
     // MARK: - Published Properties (UI State)
     

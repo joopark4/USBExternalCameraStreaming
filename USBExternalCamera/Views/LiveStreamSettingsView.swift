@@ -6,146 +6,51 @@
 //
 
 import SwiftUI
+import SwiftData
 import AVFoundation
+import UIKit
+import Combine
 
 /// 라이브 스트리밍 설정 뷰
-/// 유튜브 RTMP 스트리밍을 위한 설정을 관리합니다.
+/// 유튜브 RTMP 스트리밍을 위한 완전한 설정 관리 팝업
 struct LiveStreamSettingsView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showResetAlert = false
+    @State private var showTestConnectionAlert = false
+    @State private var showHelpSheet = false
+    @State private var selectedHelpTopic: String = "rtmpURL"
     
     var body: some View {
         NavigationView {
-            Form {
-                // 기본 설정 섹션
-                Section(NSLocalizedString("basic_settings", comment: "")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("stream_title", comment: ""))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField(NSLocalizedString("stream_title_placeholder", comment: ""), text: $viewModel.settings.streamTitle)
-                            .textFieldStyle(.roundedBorder)
-                    }
+            ScrollView {
+                VStack(spacing: 20) {
+                    // 상태 표시
+                    StatusSectionView(viewModel: viewModel)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("stream_key", comment: ""))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        SecureField(NSLocalizedString("stream_key_placeholder", comment: ""), text: $viewModel.settings.streamKey)
-                            .textFieldStyle(.roundedBorder)
-                        
-                        if !viewModel.settings.streamKey.isEmpty && !viewModel.validateStreamKey(viewModel.settings.streamKey) {
-                            Text(NSLocalizedString("stream_key_invalid", comment: ""))
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                    }
+                    // 기본 설정
+                    BasicSettingsSectionView(viewModel: viewModel)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("rtmp_server_url", comment: ""))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField(NSLocalizedString("rtmp_url_placeholder", comment: ""), text: $viewModel.settings.rtmpURL)
-                            .textFieldStyle(.roundedBorder)
-                            .autocapitalization(.none)
-                            .keyboardType(.URL)
-                        
-                        if !viewModel.validateRTMPURL(viewModel.settings.rtmpURL) {
-                            Text(NSLocalizedString("rtmp_url_invalid", comment: ""))
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                    }
-                }
-                
-                // 비디오 설정 섹션
-                Section(NSLocalizedString("video_settings", comment: "")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("resolution", comment: ""))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Picker(NSLocalizedString("resolution", comment: ""), selection: Binding(
-                            get: {
-                                VideoResolution.allCases.first { resolution in
-                                    resolution.width == viewModel.settings.videoWidth &&
-                                    resolution.height == viewModel.settings.videoHeight
-                                } ?? .fullHD
-                            },
-                            set: { resolution in
-                                viewModel.settings.videoWidth = resolution.width
-                                viewModel.settings.videoHeight = resolution.height
-                            }
-                        )) {
-                            ForEach(VideoResolution.allCases, id: \.self) { resolution in
-                                Text(resolution.displayName).tag(resolution)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
+                    // 비디오 설정
+                    VideoSettingsSectionView(viewModel: viewModel)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(String(format: NSLocalizedString("video_bitrate", comment: ""), viewModel.settings.videoBitrate))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Slider(
-                            value: Binding(
-                                get: { Double(viewModel.settings.videoBitrate) },
-                                set: { viewModel.settings.videoBitrate = Int($0) }
-                            ),
-                            in: 500...10000,
-                            step: 100
-                        )
-                    }
+                    // 오디오 설정
+                    AudioSettingsSectionView(viewModel: viewModel)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(String(format: NSLocalizedString("frame_rate", comment: ""), viewModel.settings.frameRate))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Picker(NSLocalizedString("frame_rate_picker", comment: ""), selection: $viewModel.settings.frameRate) {
-                            Text(NSLocalizedString("fps_24", comment: "")).tag(24)
-                            Text(NSLocalizedString("fps_30", comment: "")).tag(30)
-                            Text(NSLocalizedString("fps_60", comment: "")).tag(60)
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                }
-                
-                // 오디오 설정 섹션
-                Section(NSLocalizedString("audio_settings", comment: "")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(String(format: NSLocalizedString("audio_bitrate", comment: ""), viewModel.settings.audioBitrate))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Picker(NSLocalizedString("audio_bitrate_picker", comment: ""), selection: $viewModel.settings.audioBitrate) {
-                            Text(NSLocalizedString("kbps_64", comment: "")).tag(64)
-                            Text(NSLocalizedString("kbps_128", comment: "")).tag(128)
-                            Text(NSLocalizedString("kbps_192", comment: "")).tag(192)
-                            Text(NSLocalizedString("kbps_256", comment: "")).tag(256)
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                }
-                
-                // 고급 설정 섹션
-                Section(NSLocalizedString("advanced_settings", comment: "")) {
-                    Toggle(NSLocalizedString("auto_reconnect", comment: ""), isOn: $viewModel.settings.autoReconnect)
-                        .toggleStyle(SwitchToggleStyle())
+                    // 고급 설정
+                    AdvancedSettingsSectionView(viewModel: viewModel)
                     
-                    Toggle(NSLocalizedString("streaming_enabled", comment: ""), isOn: $viewModel.settings.isEnabled)
-                        .toggleStyle(SwitchToggleStyle())
+                    // 프리셋
+                    PresetSectionView(viewModel: viewModel)
+                    
+                    // 액션 버튼들
+                    ActionButtonsView(
+                        viewModel: viewModel,
+                        showTestConnectionAlert: $showTestConnectionAlert,
+                        showResetAlert: $showResetAlert
+                    )
                 }
-                
-                // 설정 관리 섹션
-                Section(NSLocalizedString("settings_management", comment: "")) {
-                    Button(NSLocalizedString("reset_settings", comment: "")) {
-                        viewModel.resetSettings()
-                    }
-                    .foregroundColor(.red)
-                }
+                .padding()
             }
             .navigationTitle(NSLocalizedString("live_streaming_settings", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
@@ -161,151 +66,716 @@ struct LiveStreamSettingsView: View {
                         viewModel.saveSettings()
                         dismiss()
                     }
-                    .bold()
+                    .disabled(!isValidConfiguration)
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .alert(NSLocalizedString("reset_settings_confirmation", comment: ""), isPresented: $showResetAlert) {
+            Button(NSLocalizedString("cancel", comment: ""), role: .cancel) { }
+            Button(NSLocalizedString("reset", comment: ""), role: .destructive) {
+                viewModel.resetToDefaults()
+            }
+        } message: {
+            Text(NSLocalizedString("reset_settings_message", comment: ""))
+        }
+        .alert(NSLocalizedString("connection_test", comment: ""), isPresented: $showTestConnectionAlert) {
+            Button(NSLocalizedString("ok", comment: "")) { }
+        } message: {
+            Text(viewModel.connectionTestResult)
+        }
+        .sheet(isPresented: $showHelpSheet) {
+            HelpDetailView(topic: selectedHelpTopic, viewModel: viewModel)
+        }
+    }
+    
+    // MARK: - Header Section
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Circle()
+                    .fill(isValidConfiguration ? Color.green : Color.red)
+                    .frame(width: 12, height: 12)
+                
+                Text(isValidConfiguration ? NSLocalizedString("configuration_complete", comment: "") : NSLocalizedString("configuration_required", comment: ""))
+                    .font(.subheadline)
+                    .foregroundColor(isValidConfiguration ? .green : .red)
+                
+                Spacer()
+                
+                if !isValidConfiguration {
+                    Button(NSLocalizedString("help", comment: "")) {
+                        showHelpSheet = true
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(4)
+                }
+            }
+            
+            if viewModel.status != .idle {
+                // 스트리밍 중일 때는 제한된 설정만 변경 가능
+                Text("스트리밍 중에는 일부 설정을 변경할 수 없습니다")
+                    .foregroundColor(.orange)
+                    .font(.caption)
+                    .padding(.bottom)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    // MARK: - Connection Settings Section
+    private var connectionSettingsSection: some View {
+        SettingsSectionView(title: NSLocalizedString("connection_settings", comment: ""), icon: "link") {
+            VStack(spacing: 16) {
+                // 스트림 제목
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("stream_title", comment: ""))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text(NSLocalizedString("optional", comment: ""))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    TextField(NSLocalizedString("stream_title_placeholder", comment: ""), text: $viewModel.settings.streamTitle)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+                
+                // RTMP 서버 URL
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("rtmp_server_url", comment: ""))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        Button(action: {
+                            selectedHelpTopic = "rtmpURL"
+                            showHelpSheet = true
+                        }) {
+                            Image(systemName: "questionmark.circle")
+                                .foregroundColor(.blue)
+                                .font(.caption)
+                        }
+                        
+                        Spacer()
+                        if viewModel.validateRTMPURL(viewModel.settings.rtmpURL) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                        } else {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                        }
+                    }
+                    
+                    TextField("rtmp://a.rtmp.youtube.com/live2/", text: $viewModel.settings.rtmpURL)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .keyboardType(.URL)
+                        .font(.system(.body, design: .monospaced))
+                    
+                    if !viewModel.validateRTMPURL(viewModel.settings.rtmpURL) {
+                        Text(NSLocalizedString("rtmp_url_invalid", comment: ""))
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+                
+                // 스트림 키
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("stream_key", comment: ""))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        Button(action: {
+                            selectedHelpTopic = "streamKey"
+                            showHelpSheet = true
+                        }) {
+                            Image(systemName: "questionmark.circle")
+                                .foregroundColor(.blue)
+                                .font(.caption)
+                        }
+                        
+                        Spacer()
+                        if !viewModel.settings.streamKey.isEmpty && viewModel.validateStreamKey(viewModel.settings.streamKey) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                        } else if !viewModel.settings.streamKey.isEmpty {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                        }
+                    }
+                    
+                    SecureField(NSLocalizedString("stream_key_placeholder", comment: ""), text: $viewModel.settings.streamKey)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .font(.system(.body, design: .monospaced))
+                    
+                    if !viewModel.settings.streamKey.isEmpty && !viewModel.validateStreamKey(viewModel.settings.streamKey) {
+                        Text(NSLocalizedString("stream_key_invalid", comment: ""))
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
             }
         }
     }
-}
-
-/// 라이브 스트리밍 컨트롤 뷰
-/// 스트리밍 시작/중지 및 상태 표시를 담당합니다.
-struct LiveStreamControlView: View {
-    @ObservedObject var viewModel: LiveStreamViewModel
-    let captureSession: AVCaptureSession?
     
-    var body: some View {
-        VStack(spacing: 16) {
-            // 스트리밍 상태 표시
-            HStack {
-                Image(systemName: viewModel.streamingStatus.iconName)
-                    .foregroundColor(statusColor)
-                    .font(.title2)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(viewModel.streamingStatus.description)
-                        .font(.headline)
-                        .foregroundColor(statusColor)
+    // MARK: - Video Settings Section
+    private var videoSettingsSection: some View {
+        SettingsSectionView(title: NSLocalizedString("video_settings", comment: ""), icon: "video") {
+            VStack(spacing: 16) {
+                // 해상도 설정
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("resolution", comment: ""))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                     
-                    if !viewModel.statusMessage.isEmpty {
-                        Text(viewModel.statusMessage)
+                    Picker(NSLocalizedString("resolution", comment: ""), selection: Binding(
+                        get: {
+                            ResolutionPreset.allCases.first { resolution in
+                                let (width, height) = getResolutionDimensions(resolution)
+                                return width == viewModel.settings.videoWidth &&
+                                       height == viewModel.settings.videoHeight
+                            } ?? .fhd1080p
+                        },
+                        set: { resolution in
+                            let (width, height) = getResolutionDimensions(resolution)
+                            viewModel.settings.videoWidth = width
+                            viewModel.settings.videoHeight = height
+                        }
+                    )) {
+                        ForEach(ResolutionPreset.allCases, id: \.self) { resolution in
+                            VStack {
+                                Text(resolution.displayName)
+                                let (width, height) = getResolutionDimensions(resolution)
+                                Text("\(width)×\(height)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .tag(resolution)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
+                // 비디오 비트레이트
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("video_bitrate", comment: ""))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        Spacer()
+                        Text("\(viewModel.settings.videoBitrate) kbps")
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Slider(
+                        value: Binding(
+                            get: { Double(viewModel.settings.videoBitrate) },
+                            set: { viewModel.settings.videoBitrate = Int($0) }
+                        ),
+                        in: 500...10000,
+                        step: 100
+                    )
+                    
+                    HStack {
+                        Text("500 kbps")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("10,000 kbps")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
                 
-                Spacer()
-            }
-            .padding()
-            .background(Color.secondary.opacity(0.1))
-            .cornerRadius(12)
-            
-            // 스트리밍 통계 (스트리밍 중일 때만 표시)
-            if viewModel.streamingStatus == .streaming {
+                // 프레임레이트
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(NSLocalizedString("streaming_statistics", comment: ""))
-                        .font(.headline)
+                    Text(NSLocalizedString("frame_rate", comment: ""))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                     
-                    Text(viewModel.formatStreamStats())
+                    Picker(NSLocalizedString("frame_rate", comment: ""), selection: $viewModel.settings.frameRate) {
+                        Text(NSLocalizedString("fps_24_movie", comment: "")).tag(24)
+                        Text(NSLocalizedString("fps_30_standard", comment: "")).tag(30)
+                        Text(NSLocalizedString("fps_60_high", comment: "")).tag(60)
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Audio Settings Section
+    private var audioSettingsSection: some View {
+        SettingsSectionView(title: NSLocalizedString("audio_settings", comment: ""), icon: "speaker.wave.2") {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("audio_bitrate_picker", comment: ""))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text("\(viewModel.settings.audioBitrate) kbps")
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Picker(NSLocalizedString("audio_bitrate_picker", comment: ""), selection: $viewModel.settings.audioBitrate) {
+                        Text(NSLocalizedString("kbps_64_low", comment: "")).tag(64)
+                        Text(NSLocalizedString("kbps_128_standard", comment: "")).tag(128)
+                        Text(NSLocalizedString("kbps_192_high", comment: "")).tag(192)
+                        Text(NSLocalizedString("kbps_256_highest", comment: "")).tag(256)
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Advanced Settings Section
+    private var advancedSettingsSection: some View {
+        SettingsSectionView(title: NSLocalizedString("advanced_settings", comment: ""), icon: "gear") {
+            VStack(spacing: 16) {
+                // 자동 재연결
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(NSLocalizedString("auto_reconnect", comment: ""))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text(NSLocalizedString("auto_reconnect_description", comment: ""))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $viewModel.settings.autoReconnect)
+                }
+                
+                // 스트리밍 활성화
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(NSLocalizedString("streaming_enabled", comment: ""))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text(NSLocalizedString("streaming_enabled_description", comment: ""))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $viewModel.settings.isEnabled)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Bottom Buttons Section
+    private var bottomButtonsSection: some View {
+        VStack(spacing: 12) {
+            if isValidConfiguration {
+                Button(NSLocalizedString("save", comment: "")) {
+                    viewModel.saveSettings()
+                    dismiss()
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .frame(maxWidth: .infinity)
+            } else {
+                VStack(spacing: 8) {
+                    Text(NSLocalizedString("required_items_message", comment: ""))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    ForEach(missingRequirements, id: \.self) { requirement in
+                        HStack {
+                            Image(systemName: "exclamationmark.circle")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                            Text(requirement)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                            Spacer()
+                        }
+                    }
                 }
                 .padding()
-                .background(Color.secondary.opacity(0.05))
+                .background(Color.red.opacity(0.1))
                 .cornerRadius(8)
             }
             
-            // 컨트롤 버튼
-            HStack(spacing: 16) {
-                Button(action: {
-                    if let session = captureSession {
-                        viewModel.toggleStreaming(with: session)
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: streamButtonIcon)
-                        Text(viewModel.streamControlButtonText)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(viewModel.streamControlButtonColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                }
-                .disabled(!viewModel.isStreamControlButtonEnabled || captureSession == nil)
-                
-                Button(NSLocalizedString("settings", comment: "")) {
-                    viewModel.showingSettings = true
-                }
-                .frame(width: 80)
-                .padding()
-                .background(Color.secondary.opacity(0.2))
-                .foregroundColor(.primary)
-                .cornerRadius(8)
+            Button(NSLocalizedString("reset_settings", comment: "")) {
+                showResetAlert = true
             }
-        }
-        .padding()
-        .sheet(isPresented: $viewModel.showingSettings) {
-            LiveStreamSettingsView(viewModel: viewModel)
-        }
-        .alert(NSLocalizedString("streaming_error", comment: ""), isPresented: $viewModel.showingErrorAlert) {
-            Button(NSLocalizedString("ok", comment: "")) { }
-        } message: {
-            Text(viewModel.currentErrorMessage)
+            .buttonStyle(DestructiveButtonStyle())
         }
     }
     
     // MARK: - Computed Properties
+    private var isValidConfiguration: Bool {
+        !viewModel.settings.streamKey.isEmpty &&
+        viewModel.validateStreamKey(viewModel.settings.streamKey) &&
+        viewModel.validateRTMPURL(viewModel.settings.rtmpURL)
+    }
+    
+    private var missingRequirements: [String] {
+        var requirements: [String] = []
+        
+        if viewModel.settings.streamKey.isEmpty {
+            requirements.append(NSLocalizedString("stream_key", comment: ""))
+        } else if !viewModel.validateStreamKey(viewModel.settings.streamKey) {
+            requirements.append(NSLocalizedString("stream_key_invalid", comment: ""))
+        }
+        
+        if !viewModel.validateRTMPURL(viewModel.settings.rtmpURL) {
+            requirements.append(NSLocalizedString("rtmp_url_invalid", comment: ""))
+        }
+        
+        return requirements
+    }
     
     private var statusColor: Color {
-        switch viewModel.streamingStatus {
-        case .idle:
-            return .gray
-        case .connecting:
-            return .orange
-        case .connected:
-            return .green
-        case .streaming:
-            return .blue
-        case .disconnecting:
-            return .orange
-        case .error:
-            return .red
+        switch viewModel.status {
+        case .idle: return .gray
+        case .connecting: return .orange
+        case .connected: return .green
+        case .streaming: return .blue
+        case .disconnecting: return .orange
+        case .error: return .red
         }
     }
     
-    private var streamButtonIcon: String {
-        switch viewModel.streamingStatus {
-        case .idle, .error:
-            return "play.circle.fill"
-        case .streaming, .connected, .connecting:
-            return "stop.circle.fill"
-        case .disconnecting:
-            return "stop.circle"
+    // MARK: - Helper Methods
+    private func getResolutionDimensions(_ resolution: ResolutionPreset) -> (Int, Int) {
+        switch resolution {
+        case .sd480p: return (854, 480)
+        case .hd720p: return (1280, 720)
+        case .fhd1080p: return (1920, 1080)
+        case .uhd4k: return (3840, 2160)
         }
     }
 }
 
-#Preview {
-    // Preview를 위한 더미 뷰모델
-    struct PreviewWrapper: View {
-        @State private var dummyViewModel: LiveStreamViewModel?
-        
-        var body: some View {
-            Group {
-                if let viewModel = dummyViewModel {
-                    LiveStreamSettingsView(viewModel: viewModel)
-                } else {
-                    ProgressView()
-                        .onAppear {
-                            // Preview용 더미 ModelContext 생성 (실제 앱에서는 사용하지 않음)
-                            // dummyViewModel = LiveStreamViewModel(modelContext: dummyContext)
+// MARK: - Supporting Views
+
+/// 상태 표시 섹션
+struct StatusSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: NSLocalizedString("status", comment: ""), icon: "antenna.radiowaves.left.and.right") {
+            HStack {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 12, height: 12)
+                Text(viewModel.statusMessage)
+                    .font(.body)
+                Spacer()
+            }
+        }
+    }
+    
+    private var statusColor: Color {
+        switch viewModel.status {
+        case .idle: return .gray
+        case .connecting: return .orange
+        case .connected: return .green
+        case .streaming: return .blue
+        case .disconnecting: return .orange
+        case .error: return .red
+        }
+    }
+}
+
+/// 기본 설정 섹션
+struct BasicSettingsSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: NSLocalizedString("basic_settings", comment: ""), icon: "gear") {
+            VStack(spacing: 16) {
+                // RTMP URL
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("rtmp_url", comment: ""))
+                        .font(.headline)
+                    TextField(NSLocalizedString("rtmp_url_placeholder", comment: ""), text: $viewModel.settings.rtmpURL)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+                
+                // Stream Key
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("stream_key", comment: ""))
+                        .font(.headline)
+                    SecureField(NSLocalizedString("stream_key_placeholder", comment: ""), text: $viewModel.settings.streamKey)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+            }
+        }
+    }
+}
+
+/// 비디오 설정 섹션
+struct VideoSettingsSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: NSLocalizedString("video_settings", comment: ""), icon: "video") {
+            VStack(spacing: 16) {
+                HStack {
+                    Text(NSLocalizedString("video_bitrate", comment: ""))
+                    Spacer()
+                    Text("\(viewModel.settings.videoBitrate) kbps")
+                        .foregroundColor(.secondary)
+                }
+                
+                Slider(value: Binding(
+                    get: { Double(viewModel.settings.videoBitrate) },
+                    set: { viewModel.settings.videoBitrate = Int($0) }
+                ), in: 500...10000, step: 100)
+            }
+        }
+    }
+}
+
+/// 오디오 설정 섹션
+struct AudioSettingsSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: NSLocalizedString("audio_settings", comment: ""), icon: "speaker.wave.2") {
+            VStack(spacing: 16) {
+                HStack {
+                    Text(NSLocalizedString("audio_bitrate", comment: ""))
+                    Spacer()
+                    Text("\(viewModel.settings.audioBitrate) kbps")
+                        .foregroundColor(.secondary)
+                }
+                
+                Slider(value: Binding(
+                    get: { Double(viewModel.settings.audioBitrate) },
+                    set: { viewModel.settings.audioBitrate = Int($0) }
+                ), in: 64...320, step: 32)
+            }
+        }
+    }
+}
+
+/// 고급 설정 섹션
+struct AdvancedSettingsSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: NSLocalizedString("advanced_settings", comment: ""), icon: "gearshape.2") {
+            VStack(spacing: 16) {
+                HStack {
+                    Text(NSLocalizedString("frame_rate", comment: ""))
+                    Spacer()
+                    Text("\(viewModel.settings.frameRate) fps")
+                        .foregroundColor(.secondary)
+                }
+                
+                Picker(NSLocalizedString("frame_rate", comment: ""), selection: $viewModel.settings.frameRate) {
+                    Text("24 fps").tag(24)
+                    Text("30 fps").tag(30)
+                    Text("60 fps").tag(60)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+            }
+        }
+    }
+}
+
+/// 프리셋 섹션
+struct PresetSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: NSLocalizedString("presets", comment: ""), icon: "slider.horizontal.3") {
+            Text(NSLocalizedString("preset_description", comment: ""))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+/// 액션 버튼 섹션
+struct ActionButtonsView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    @Binding var showTestConnectionAlert: Bool
+    @Binding var showResetAlert: Bool
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Button(NSLocalizedString("test_connection", comment: "")) {
+                Task {
+                    await viewModel.testConnection()
+                    showTestConnectionAlert = true
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            
+            Button(NSLocalizedString("reset_settings", comment: "")) {
+                showResetAlert = true
+            }
+            .buttonStyle(DestructiveButtonStyle())
+        }
+    }
+}
+
+/// 설정 섹션 래퍼 뷰
+struct SettingsSectionView<Content: View>: View {
+    let title: String
+    let icon: String
+    let content: Content
+    
+    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(.blue)
+                    .frame(width: 20)
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            
+            content
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+// MARK: - Button Styles
+
+struct PrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .foregroundColor(.white)
+            .padding()
+            .background(Color.blue)
+            .cornerRadius(8)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+    }
+}
+
+struct DestructiveButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline)
+            .foregroundColor(.red)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .background(Color.red.opacity(0.1))
+            .cornerRadius(6)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+    }
+}
+
+// MARK: - Help Detail View
+
+struct HelpDetailView: View {
+    let topic: String
+    let viewModel: LiveStreamViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    let helpContent = getHelpContentFor(topic)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(helpContent.title)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text(helpContent.description)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if !helpContent.recommendedValues.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(NSLocalizedString("recommended_settings_help", comment: "권장 설정"))
+                                .font(.headline)
+                                .foregroundColor(.green)
+                            
+                            ForEach(helpContent.recommendedValues, id: \.self) { value in
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                    Text(value)
+                                        .font(.body)
+                                }
+                            }
                         }
+                        .padding()
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    
+                    Spacer(minLength: 50)
+                }
+                .padding()
+            }
+            .navigationTitle(NSLocalizedString("help", comment: ""))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(NSLocalizedString("done", comment: "")) {
+                        dismiss()
+                    }
                 }
             }
         }
     }
     
-    return PreviewWrapper()
+    private func getHelpContentFor(_ topic: String) -> (title: String, description: String, recommendedValues: [String]) {
+        switch topic {
+        case "rtmpURL":
+            return (
+                title: "RTMP 서버 URL",
+                description: "RTMP 스트리밍을 위한 서버 URL입니다. 유튜브 스트리밍을 위해서는 이 URL을 사용해야 합니다.",
+                recommendedValues: [
+                    "rtmp://a.rtmp.youtube.com/live2/"
+                ]
+            )
+        case "streamKey":
+            return (
+                title: "스트림 키",
+                description: "스트림을 식별하는 고유한 키입니다. 유튜브 스트리밍을 위해서는 이 키를 사용해야 합니다.",
+                recommendedValues: []
+            )
+        default:
+            return (
+                title: "설정 도움말",
+                description: "이 설정에 대한 자세한 정보가 필요합니다.",
+                recommendedValues: []
+            )
+        }
+    }
 } 

@@ -41,18 +41,41 @@ final class CameraViewModel: NSObject, ObservableObject {
         self.sessionManager = CameraSessionManager()
         super.init()
         
-        // 비동기 초기화를 위해 Task 사용
+        logInfo("CameraViewModel initializing...", category: .camera)
+        
+        // 카메라 초기화 - 단순화된 접근법
         Task {
+            logDebug("Starting camera initialization task...", category: .camera)
+            
+            // 전체 카메라 목록 검색
             await discoverCameras()
             
-            // 첫 번째 카메라 자동 선택
-            if let firstCamera = builtInCameras.first ?? externalCameras.first {
-                switchToCamera(firstCamera)
+            // 첫 번째 사용 가능한 카메라 선택
+            await MainActor.run {
+                let allCameras = self.builtInCameras + self.externalCameras
+                logInfo("Total cameras found: \(allCameras.count)", category: .camera)
+                
+                if let firstCamera = allCameras.first {
+                    logInfo("Selecting first available camera: \(firstCamera.name)", category: .camera)
+                    self.switchToCamera(firstCamera)
+                } else {
+                    logWarning("No cameras found!", category: .camera)
+                }
             }
         }
         
         // 외장 카메라 연결 상태 모니터링
         setupDeviceNotifications()
+        logInfo("CameraViewModel initialization completed", category: .camera)
+    }
+
+    /// 기본 카메라를 빠르게 가져오기 (성능 최적화)
+    private func getDefaultCamera() async -> CameraDevice? {
+        // 가장 일반적인 내장 카메라를 먼저 확인하여 빠른 초기화
+        if let defaultDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
+            return CameraDevice(device: defaultDevice)
+        }
+        return nil
     }
 
     /// 외장 카메라 연결 상태 모니터링 설정
@@ -103,6 +126,8 @@ final class CameraViewModel: NSObject, ObservableObject {
     /// - AVCaptureDevice.DiscoverySession을 사용하여 외장 및 내장 카메라 검색
     /// - 검색된 카메라를 CameraDevice 모델로 변환하여 저장
     private func discoverCameras() async {
+        logInfo("Starting camera discovery...", category: .camera)
+        
         // 내장 카메라 검색
         let builtInDiscoverySession = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInWideAngleCamera, .builtInUltraWideCamera, .builtInTelephotoCamera],
@@ -117,19 +142,108 @@ final class CameraViewModel: NSObject, ObservableObject {
             position: .unspecified
         )
 
+        let discoveredBuiltInDevices = builtInDiscoverySession.devices
+        let discoveredExternalDevices = externalDiscoverySession.devices
+        
+        logInfo("Found \(discoveredBuiltInDevices.count) built-in cameras", category: .camera)
+        logInfo("Found \(discoveredExternalDevices.count) external cameras", category: .camera)
+        
+        // 발견된 카메라들 로깅
+        for (index, device) in discoveredBuiltInDevices.enumerated() {
+            logInfo("Built-in camera \(index): \(device.localizedName) (ID: \(device.uniqueID))", category: .camera)
+        }
+        
+        for (index, device) in discoveredExternalDevices.enumerated() {
+            logInfo("External camera \(index): \(device.localizedName) (ID: \(device.uniqueID))", category: .camera)
+        }
+
         // 메인 스레드에서 UI 업데이트
         await MainActor.run {
-            builtInCameras = builtInDiscoverySession.devices.map { CameraDevice(device: $0) }
-            externalCameras = externalDiscoverySession.devices.map { CameraDevice(device: $0) }
+            let newBuiltInCameras = discoveredBuiltInDevices.map { CameraDevice(device: $0) }
+            let newExternalCameras = discoveredExternalDevices.map { CameraDevice(device: $0) }
+            
+            logInfo("Updating camera lists...", category: .camera)
+            logInfo("Previous built-in count: \(self.builtInCameras.count)", category: .camera)
+            logInfo("Previous external count: \(self.externalCameras.count)", category: .camera)
+            
+            self.builtInCameras = newBuiltInCameras
+            self.externalCameras = newExternalCameras
+            
+            logInfo("New built-in count: \(self.builtInCameras.count)", category: .camera)
+            logInfo("New external count: \(self.externalCameras.count)", category: .camera)
+            logInfo("Camera discovery completed", category: .camera)
         }
     }
 
     /// 선택된 카메라로 전환
     /// - sessionManager를 통해 카메라 전환 처리
     /// - 선택된 카메라 상태 업데이트
-    func switchToCamera(_ camera: CameraDevice) {
-        sessionManager.switchToCamera(camera)
+    /// - Parameter camera: 전환할 카메라 디바이스
+    /// - Parameter skipSessionUpdate: 세션 업데이트를 건너뛸지 여부 (새로고침 시 사용)
+    func switchToCamera(_ camera: CameraDevice, skipSessionUpdate: Bool = false) {
+        logInfo("Switching to camera \(camera.name) (ID: \(camera.id))", category: .camera)
+        print("📹 CameraViewModel: Previous selected camera: \(selectedCamera?.name ?? "None") (ID: \(selectedCamera?.id ?? "None"))")
+        logInfo("Skip session update: \(skipSessionUpdate)", category: .camera)
+        
+        // 이미 선택된 카메라인지 확인 - ID와 객체 모두 비교
+        if let currentSelected = selectedCamera {
+            if currentSelected.id == camera.id {
+                logInfo("Camera \(camera.name) is already selected (same ID)", category: .camera)
+                return
+            }
+            
+            // 추가 안전 검사: 같은 디바이스인지 확인
+            if currentSelected.device.uniqueID == camera.device.uniqueID {
+                logInfo("Camera \(camera.name) is already selected (same device)", category: .camera)
+                return
+            }
+        }
+        
+        logInfo("Proceeding with camera switch...", category: .camera)
+        logInfo("- Target camera: \(camera.name)", category: .camera)
+        logInfo("- Target ID: \(camera.id)", category: .camera)
+        logInfo("- Target device type: \(camera.deviceType)", category: .camera)
+        logInfo("- Target position: \(camera.position)", category: .camera)
+        
+        // 이전 선택 해제 로깅
+        if let previousCamera = selectedCamera {
+            logInfo("Deselecting previous camera: \(previousCamera.name) (ID: \(previousCamera.id))", category: .camera)
+        }
+        
+        // @Published 속성 직접 업데이트 - SwiftUI가 자동으로 UI 업데이트
         selectedCamera = camera
+        
+        print("📹 CameraViewModel: Selected camera updated to: \(selectedCamera?.name ?? "None")")
+        print("📹 CameraViewModel: Selected camera ID: \(selectedCamera?.id ?? "None")")
+        
+        // 세션 업데이트를 건너뛰지 않는 경우에만 세션 매니저를 통해 실제 카메라 전환 처리
+        if !skipSessionUpdate {
+            sessionManager.switchToCamera(camera)
+            logInfo("Session manager updated for \(camera.name)", category: .camera)
+        } else {
+            logInfo("Skipped session update for \(camera.name) (maintaining current session)", category: .camera)
+        }
+        
+        logInfo("Camera switch completed for \(camera.name)", category: .camera)
+        
+        // UI 업데이트 강제 트리거 (즉시 + 지연)
+        objectWillChange.send()
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.objectWillChange.send()
+        }
+        
+        // 선택 상태 검증
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let currentSelected = self.selectedCamera {
+                logInfo("[Verification] Currently selected: \(currentSelected.name) (ID: \(currentSelected.id))", category: .camera)
+                logInfo("[Verification] Selection match: \(currentSelected.id == camera.id)", category: .camera)
+            } else {
+                logInfo("[Verification] No camera selected!", category: .camera)
+            }
+        }
     }
 
     /// 카메라 세션 중지
@@ -141,35 +255,90 @@ final class CameraViewModel: NSObject, ObservableObject {
     }
     
     /// 카메라 리스트 새로고침
+    /// 현재 선택된 카메라를 유지하면서 카메라 목록만 갱신합니다.
     func refreshCameraList() async {
-        let currentSelectedId = selectedCamera?.id
+        logInfo("=== REFRESH CAMERA LIST START ===", category: .camera)
         
-        // 현재 카메라 목록 저장
-        let currentBuiltInCameras = builtInCameras
-        let currentExternalCameras = externalCameras
+        // 현재 선택된 카메라 정보 저장 (더 상세한 정보 저장)
+        let currentSelectedCamera = selectedCamera
+        let currentSelectedId = currentSelectedCamera?.id
+        let currentSelectedDeviceId = currentSelectedCamera?.device.uniqueID
+        let currentSelectedName = currentSelectedCamera?.name
+        
+        logInfo("Current selected camera before refresh:", category: .camera)
+        print("📹 CameraViewModel: - Name: \(currentSelectedName ?? "None")")
+        print("📹 CameraViewModel: - ID: \(currentSelectedId ?? "None")")
+        print("📹 CameraViewModel: - Device ID: \(currentSelectedDeviceId ?? "None")")
         
         // 카메라 목록 새로고침
         await discoverCameras()
+        logInfo("Camera discovery completed during refresh", category: .camera)
         
-        // 이전에 선택된 카메라가 있었다면 다시 선택
-        if let selectedId = currentSelectedId {
-            if let camera = builtInCameras.first(where: { $0.id == selectedId }) {
-                selectedCamera = camera
-            } else if let camera = externalCameras.first(where: { $0.id == selectedId }) {
-                selectedCamera = camera
-            } else {
-                // 이전에 선택된 카메라를 찾을 수 없는 경우
-                // 외장 카메라가 연결 해제된 경우 기본 카메라로 전환
-                if currentExternalCameras.contains(where: { $0.id == selectedId }) {
-                    // 이전에 선택된 카메라가 외장 카메라였고, 현재 연결이 끊어진 경우
-                    if let firstBuiltInCamera = builtInCameras.first {
-                        switchToCamera(firstBuiltInCamera)
-                    } else {
-                        selectedCamera = nil
-                    }
-                } else {
-                    selectedCamera = nil
+        // 현재 선택된 카메라를 새로운 목록에서 찾아서 유지
+        if let selectedId = currentSelectedId, let selectedDeviceId = currentSelectedDeviceId {
+            logInfo("Attempting to restore selected camera...", category: .camera)
+            
+            // 1차: ID로 정확히 매칭되는 카메라 찾기
+            var restoredCamera: CameraDevice? = nil
+            
+            // 내장 카메라에서 찾기
+            if let matchedCamera = builtInCameras.first(where: { $0.id == selectedId }) {
+                restoredCamera = matchedCamera
+                logInfo("Found matching built-in camera by ID: \(matchedCamera.name)", category: .camera)
+            }
+            // 외장 카메라에서 찾기
+            else if let matchedCamera = externalCameras.first(where: { $0.id == selectedId }) {
+                restoredCamera = matchedCamera
+                logInfo("Found matching external camera by ID: \(matchedCamera.name)", category: .camera)
+            }
+            // 2차: Device uniqueID로 매칭 (ID 생성 방식이 변경된 경우 대비)
+            else if let matchedCamera = builtInCameras.first(where: { $0.device.uniqueID == selectedDeviceId }) {
+                restoredCamera = matchedCamera
+                logInfo("Found matching built-in camera by device ID: \(matchedCamera.name)", category: .camera)
+            }
+            else if let matchedCamera = externalCameras.first(where: { $0.device.uniqueID == selectedDeviceId }) {
+                restoredCamera = matchedCamera
+                logInfo("Found matching external camera by device ID: \(matchedCamera.name)", category: .camera)
+            }
+            
+            if let camera = restoredCamera {
+                logInfo("Restoring selected camera: \(camera.name) (ID: \(camera.id))", category: .camera)
+                
+                // 세션을 중지하지 않고 선택된 카메라만 업데이트
+                await MainActor.run {
+                    self.selectedCamera = camera
+                    logInfo("Selected camera restored successfully", category: .camera)
+                    
+                    // UI 강제 업데이트
+                    self.objectWillChange.send()
                 }
+            } else {
+                logInfo("Could not find previously selected camera, selecting fallback", category: .camera)
+                await selectFallbackCamera()
+            }
+        } else {
+            logInfo("No previously selected camera, selecting default", category: .camera)
+            await selectFallbackCamera()
+        }
+        
+        logInfo("=== REFRESH CAMERA LIST END ===", category: .camera)
+        print("📹 CameraViewModel: Final selected camera: \(selectedCamera?.name ?? "None") (ID: \(selectedCamera?.id ?? "None"))")
+    }
+    
+    /// 기본 카메라 선택 (이전 선택이 복원되지 않은 경우)
+    private func selectFallbackCamera() async {
+        await MainActor.run {
+            if let firstBuiltInCamera = self.builtInCameras.first {
+                logInfo("Selecting first built-in camera as fallback: \(firstBuiltInCamera.name)", category: .camera)
+                // 새로고침 중에는 세션을 업데이트하지 않음
+                self.switchToCamera(firstBuiltInCamera, skipSessionUpdate: true)
+            } else if let firstExternalCamera = self.externalCameras.first {
+                logInfo("Selecting first external camera as fallback: \(firstExternalCamera.name)", category: .camera)
+                // 새로고침 중에는 세션을 업데이트하지 않음
+                self.switchToCamera(firstExternalCamera, skipSessionUpdate: true)
+            } else {
+                logInfo("No cameras available, clearing selection", category: .camera)
+                self.selectedCamera = nil
             }
         }
     }

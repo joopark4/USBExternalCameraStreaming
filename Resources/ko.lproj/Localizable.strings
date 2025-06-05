@@ -1,0 +1,547 @@
+/* 
+  Localizable.strings
+  USBExternalCamera (Korean)
+*/
+
+// MARK: - Common
+"close" = "닫기";
+"cancel" = "취소";
+"save" = "저장";
+"done" = "완료";
+"ok" = "확인";
+"settings" = "설정";
+"menu" = "메뉴";
+
+// MARK: - Camera
+"camera" = "카메라";
+"camera_section" = "카메라";
+"select_camera" = "카메라를 선택해주세요";
+"no_external_camera" = "연결된 외장 카메라가 없습니다";
+
+// MARK: - Permissions
+"permissions_title" = "권한 설정";
+"permissions_request" = "권한 요청";
+"permission_camera" = "카메라";
+"permission_microphone" = "마이크";
+"permission_photo_library" = "사진첩";
+"permission_settings_needed" = "권한 설정이 필요합니다";
+"go_to_permission_settings" = "권한 설정하기";
+"permission_status_not_determined" = "확인 안됨";
+"permission_status_restricted" = "제한됨";
+"permission_status_denied" = "거부됨";
+"permission_status_authorized" = "허용됨";
+"all_permissions_granted" = "모든 권한이 허용되었습니다.";
+"permissions_denied_message" = "다음 권한이 거부되었습니다:\n%@\n\n설정 앱에서 권한을 허용해주세요.";
+
+// MARK: - Live Streaming
+"live_streaming" = "라이브 스트리밍";
+"live_streaming_section" = "스트리밍";
+"live_streaming_settings" = "라이브 스트리밍 설정";
+"live_settings" = "라이브 설정";
+"youtube_live_streaming" = "유튜브 라이브 스트리밍";
+
+// Basic Settings
+"basic_settings" = "기본 설정";
+"stream_title" = "스트림 제목";
+"stream_title_placeholder" = "라이브 스트림 제목";
+"stream_key" = "스트림 키";
+"stream_key_placeholder" = "유튜브 스트림 키";
+"stream_key_invalid" = "올바르지 않은 스트림 키 형식입니다";
+"rtmp_server_url" = "RTMP 서버 URL";
+"rtmp_url_placeholder" = "RTMP URL";
+"rtmp_url_invalid" = "올바르지 않은 RTMP URL 형식입니다";
+
+// Video Settings
+"video_settings" = "비디오 설정";
+"resolution" = "해상도";
+"video_bitrate" = "비디오 비트레이트: %d kbps";
+"frame_rate" = "프레임률: %d fps";
+"frame_rate_picker" = "프레임률";
+"fps_24" = "24 fps";
+"fps_30" = "30 fps";
+"fps_60" = "60 fps";
+
+// Audio Settings
+"audio_settings" = "오디오 설정";
+"audio_bitrate" = "오디오 비트레이트: %d kbps";
+"audio_bitrate_picker" = "오디오 비트레이트";
+"kbps_64" = "64 kbps";
+"kbps_128" = "128 kbps";
+"kbps_192" = "192 kbps";
+"kbps_256" = "256 kbps";
+
+// Advanced Settings
+"advanced_settings" = "고급 설정";
+"auto_reconnect" = "자동 재연결";
+"streaming_enabled" = "스트리밍 활성화";
+
+// Settings Management
+"settings_management" = "설정 관리";
+"reset_settings" = "설정 초기화";
+
+// Streaming Status
+"streaming_statistics" = "스트리밍 통계";
+"streaming_error" = "스트리밍 오류";
+
+// Status Messages
+"already_streaming" = "이미 스트리밍이 진행 중입니다.";
+"connecting_to_server" = "서버에 연결 중...";
+"connected_to_server" = "서버에 연결되었습니다.";
+"stream_key_rtmp_required" = "스트림 키 또는 RTMP URL이 필요합니다.";
+"disconnecting" = "연결을 해제하는 중...";
+"streaming_stopped" = "스트리밍이 중지되었습니다.";
+"streaming_live" = "라이브 스트리밍 중...";
+
+// Error Messages
+"stream_setup_failed" = "스트림 설정에 실패했습니다.";
+"server_connection_failed" = "서버 연결에 실패했습니다.";
+"invalid_streaming_settings" = "잘못된 스트리밍 설정입니다.";
+"camera_unavailable" = "카메라를 사용할 수 없습니다.";
+
+// Instructions
+"youtube_step1" = "유튜브 스튜디오에서 스트림 키를 복사하세요";
+"youtube_step2" = "설정에서 스트림 키와 RTMP URL을 입력하세요";
+"youtube_step3" = "카메라를 선택하고 스트리밍을 시작하세요";
+
+// Work in Progress
+"haishinkit_integration_message" = "HaishinKit 2.0.8 통합 작업 중입니다.\n현재는 기본 카메라 미리보기만 지원됩니다.";
+"haishinkit_settings_message" = "HaishinKit 2.0.8 통합 작업이 완료되면\n라이브 스트리밍 설정 기능이 제공됩니다.";
+
+// App Error
+"swiftdata_init_failed" = "SwiftData ModelContainer 초기화 실패: %@";
+
+// MARK: - LiveStream Settings UI
+"help" = "도움말";
+"optional" = "선택사항";
+"configuration_complete" = "설정 완료";
+"configuration_required" = "설정 필요";
+"quick_settings" = "빠른 설정";
+"quick_settings_description" = "스트리밍 품질을 빠르게 설정하세요";
+"connection_settings" = "연결 설정";
+"stream_settings" = "스트림 설정";
+"preview_and_test" = "프리뷰 및 테스트";
+"connection_test" = "연결 테스트";
+"export_settings" = "설정 내보내기";
+"estimated_bandwidth" = "예상 대역폭:";
+"required_items_message" = "설정을 완료하려면 다음 항목이 필요합니다:";
+"reset_settings_confirm_title" = "설정 초기화";
+"reset_settings_confirm_message" = "모든 설정이 기본값으로 초기화됩니다. 계속하시겠습니까?";
+"apply_preset_title" = "프리셋 적용";
+"apply_preset_message" = "선택한 프리셋으로 모든 설정이 변경됩니다. 계속하시겠습니까?";
+"apply" = "적용";
+"reset" = "초기화";
+
+// Quality Presets
+"quality_low" = "저화질";
+"quality_standard" = "표준";
+"quality_high" = "고화질";
+"quality_ultra" = "최고화질";
+"quality_low_desc" = "720p • 1.5Mbps";
+"quality_standard_desc" = "1080p • 2.5Mbps";
+"quality_high_desc" = "1080p • 4.5Mbps";
+"quality_ultra_desc" = "4K • 8Mbps";
+
+// Frame Rate Options
+"fps_24_movie" = "24 fps (영화)";
+"fps_30_standard" = "30 fps (표준)";
+"fps_60_high" = "60 fps (고품질)";
+
+// Audio Bitrate Options
+"kbps_64_low" = "64 kbps (낮음)";
+"kbps_128_standard" = "128 kbps (표준)";
+"kbps_192_high" = "192 kbps (높음)";
+"kbps_256_highest" = "256 kbps (최고)";
+
+// Keyframe Interval
+"keyframe_interval" = "키프레임 간격";
+"keyframe_recommended" = "권장: 2초 (YouTube 최적화)";
+
+// Video Encoder
+"video_encoder" = "비디오 인코더";
+"video_encoder_h264_recommended" = "H.264 (권장)";
+"video_encoder_h265" = "H.265 (HEVC)";
+
+// Auto Reconnect
+"auto_reconnect_description" = "연결이 끊어질 때 자동으로 재연결을 시도합니다";
+"streaming_enabled_description" = "스트리밍 기능을 사용할지 설정합니다";
+
+// Stream Key Instructions
+"stream_key_instructions_title" = "스트림 키 찾는 방법:";
+"stream_key_step1" = "1. YouTube Studio 접속";
+"stream_key_step2" = "2. 실시간 스트리밍 → 스트림 키 복사";
+
+// MARK: - Help System
+"help_rtmp_url_title" = "RTMP 서버 URL";
+"help_rtmp_url_desc" = "라이브 스트리밍을 송출할 RTMP 서버의 주소입니다. 스트리밍 플랫폼에서 제공하는 인제스트 서버 URL을 입력해야 합니다.";
+
+"help_stream_key_title" = "스트림 키";
+"help_stream_key_desc" = "각 스트리밍 플랫폼에서 제공하는 고유한 인증 키입니다. 이 키를 통해 어떤 채널로 스트리밍할지 식별됩니다.";
+
+"help_video_bitrate_title" = "비디오 비트레이트";
+"help_video_bitrate_desc" = "초당 전송되는 비디오 데이터의 양을 나타냅니다. 높을수록 화질이 좋아지지만 더 많은 인터넷 대역폭이 필요합니다.";
+
+"help_audio_bitrate_title" = "오디오 비트레이트";
+"help_audio_bitrate_desc" = "초당 전송되는 오디오 데이터의 양입니다. 음질과 파일 크기에 영향을 미칩니다.";
+
+"help_video_resolution_title" = "비디오 해상도";
+"help_video_resolution_desc" = "스트리밍되는 비디오의 가로×세로 픽셀 수입니다. 해상도가 높을수록 더 선명한 화질을 제공하지만 더 많은 대역폭이 필요합니다.";
+
+"help_frame_rate_title" = "프레임 레이트";
+"help_frame_rate_desc" = "초당 표시되는 프레임(화면) 수입니다. 높을수록 더 부드러운 영상을 제공하지만 더 많은 처리 능력과 대역폭이 필요합니다.";
+
+// Help Categories
+"help_recommended_settings" = "권장 설정";
+"help_tips" = "💡 팁";
+"help_warnings" = "⚠️ 주의사항";
+"help_examples" = "📝 예시";
+
+// Common Help Phrases
+"help_see_details" = "설정에 대한 자세한 내용은 도움말을 참조하세요.";
+"help_youtube_720p" = "YouTube: rtmp://a.rtmp.youtube.com/live2/";
+"help_twitch" = "Twitch: rtmp://live.twitch.tv/app/";
+"help_facebook" = "Facebook: rtmp://live-api-s.facebook.com/rtmp/";
+
+// MARK: - Status Messages & Errors
+"service_not_initialized" = "서비스가 아직 초기화되지 않았습니다.";
+"streaming_start_failed" = "스트리밍을 시작할 수 없습니다. 설정을 확인해주세요.";
+"streaming_started" = "스트리밍 시작됨";
+"streaming_start_error" = "스트리밍 시작 실패: %@";
+"streaming_stopped" = "스트리밍 중지됨";
+"settings_saved" = "설정이 저장되었습니다";
+"settings_save_error" = "설정 저장 실패: %@";
+"connection_testing" = "연결 테스트 중...";
+"settings_import_success" = "설정을 성공적으로 가져왔습니다";
+"settings_import_error" = "설정 가져오기 실패: %@";
+"settings_load_error" = "설정 로드 실패: %@";
+
+// Stream Control Buttons
+"start_streaming" = "스트리밍 시작";
+"stop_streaming" = "스트리밍 중지";
+"stopping" = "중지 중";
+"connecting" = "연결 중";
+"ready" = "준비됨";
+"retry" = "다시 시도";
+
+// Streaming Status
+"status_idle" = "대기 중";
+"status_connecting" = "연결 중";
+"status_connected" = "연결됨";
+"status_streaming" = "스트리밍 중";
+"status_disconnecting" = "연결 해제 중";
+"status_error" = "오류 발생";
+
+// Stream Stats Display
+"not_connected" = "연결되지 않음";
+"connecting_status" = "연결 중...";
+"streaming_duration" = "스트리밍 중 (%@)";
+"reconnecting" = "재연결 중...";
+"connection_failed" = "연결 실패";
+
+// Network Quality
+"network_excellent" = "우수";
+"network_good" = "양호";
+"network_fair" = "보통";
+"network_poor" = "불량";
+
+// Network Speed Descriptions
+"slow_connection" = "느린 연결 (< 2Mbps)";
+"fair_connection" = "보통 연결 (2-5Mbps)";
+"fast_connection" = "빠른 연결 (5-10Mbps)";
+"very_fast_connection" = "매우 빠른 연결 (> 10Mbps)";
+
+// Quality Advice Messages
+"network_unstable" = "네트워크 연결이 불안정합니다.";
+"use_low_quality" = "저화질 설정을 사용하세요.";
+"check_wifi" = "Wi-Fi 연결을 확인해보세요.";
+"use_standard_quality" = "표준 화질로 스트리밍하세요.";
+"reduce_network_usage" = "다른 기기의 네트워크 사용을 줄여보세요.";
+"high_quality_available" = "고화질 스트리밍이 가능합니다.";
+"stable_connection" = "안정적인 연결 상태입니다.";
+"ultra_quality_available" = "최고화질 스트리밍이 가능합니다.";
+"optimal_network" = "최적의 네트워크 환경입니다.";
+
+// Fixed UI Text
+"2_seconds" = "2초";
+"streaming_statistics" = "스트리밍 통계";
+"streaming_error_alert" = "스트리밍 오류";
+"confirm_button" = "확인";
+
+// Preview Text
+"live_streaming_preview_title" = "라이브 스트리밍 설정";
+"live_streaming_preview_desc" = "HaishinKit-RTMP 라이브 스트리밍 설정 화면입니다.";
+"test_stream_title" = "테스트 스트림";
+"test_stream_key" = "test-key";
+
+// Loading
+"loading" = "로딩 중";
+
+// Navigation
+"live_streaming_nav" = "라이브 스트리밍";
+
+// Missing Keys
+"recommended_settings_help" = "권장 설정";
+"tips_help" = "💡 팁";
+"warnings_help" = "⚠️ 주의사항";
+"examples_help" = "📝 예시";
+"connection_settings_section" = "연결 설정";
+
+// Validation Messages
+"check_bitrate" = "비트레이트를 확인해보세요";
+"general_audio_streaming" = "일반적인 스트리밍에 적합한 오디오 비트레이트입니다";
+"voice_content_suitable" = "음성 중심 콘텐츠에 적합합니다";
+"music_content_suitable" = "음악 중심 콘텐츠에 적합합니다";
+"audio_bitrate_too_low" = "오디오 비트레이트가 너무 낮아 음질이 저하될 수 있습니다";
+"audio_bitrate_too_high" = "오디오 비트레이트가 과도하게 높습니다";
+"general_content_framerate" = "일반적인 콘텐츠에 적합한 프레임률입니다";
+"gaming_sports_framerate" = "게임이나 스포츠 콘텐츠에 적합한 프레임률입니다";
+"cinematic_framerate" = "영화적인 느낌을 원할 때 적합합니다";
+"framerate_too_high" = "과도하게 높은 프레임률은 대역폭을 많이 사용합니다";
+"framerate_too_low" = "너무 낮은 프레임률은 부자연스러운 영상을 만듭니다";
+"recommended_keyframe" = "대부분의 플랫폼에서 권장하는 키프레임 간격입니다";
+"appropriate_keyframe" = "적절한 키프레임 간격입니다";
+"keyframe_too_short" = "키프레임 간격이 너무 짧아 대역폭을 과도하게 사용합니다";
+"keyframe_too_long" = "키프레임 간격이 너무 길어 화질이 저하될 수 있습니다";
+"check_settings" = "설정을 확인해보세요";
+"720p_suitable_bitrate" = "720p에 적합한 비트레이트입니다";
+"720p_low_bitrate" = "720p 해상도에 비해 비트레이트가 너무 낮습니다";
+"720p_high_bitrate" = "720p 해상도에 비해 비트레이트가 너무 높습니다";
+"1080p_suitable_bitrate" = "1080p에 적합한 비트레이트입니다";
+"1080p_low_bitrate" = "1080p 해상도에 비해 비트레이트가 너무 낮습니다";
+"1080p_high_bitrate" = "1080p 해상도에 비해 비트레이트가 너무 높습니다";
+
+// Help System Titles
+"help_keyframe_interval_title" = "키프레임 간격";
+"help_video_encoder_title" = "비디오 인코더";
+"help_audio_encoder_title" = "오디오 인코더";
+"help_auto_reconnect_title" = "자동 재연결";
+"help_buffer_size_title" = "버퍼 크기";
+"help_connection_timeout_title" = "연결 타임아웃";
+
+// Network Error Messages
+"invalid_rtmp_format" = "잘못된 RTMP URL 또는 스트림 키 형식입니다.";
+"connection_test_success" = "연결 테스트 성공";
+"rtmp_connection_failed" = "RTMP 서버 연결 실패";
+"connection_test_error" = "연결 테스트 중 오류가 발생했습니다.";
+"connection_failed_message" = "서버에 연결할 수 없습니다.";
+"timeout_message" = "연결 시간이 초과되었습니다.";
+"invalid_credentials_message" = "잘못된 인증 정보입니다.";
+"network_unavailable_message" = "네트워크에 연결되어 있지 않습니다.";
+"server_error_message" = "서버 오류가 발생했습니다. (코드: %d)";
+"unknown_error_message" = "알 수 없는 오류가 발생했습니다.";
+"error_occurred" = "오류가 발생했습니다.";
+"wifi_connection" = "WiFi";
+"cellular_data" = "모바일 데이터";
+"ethernet_connection" = "유선 연결";
+"unknown_connection" = "알 수 없음";
+
+// MARK: - Help Content Descriptions
+"help_rtmp_url_desc" = "라이브 스트리밍을 송출할 RTMP 서버의 주소입니다. 스트리밍 플랫폼에서 제공하는 인제스트 서버 URL을 입력해야 합니다.";
+"help_stream_key_desc" = "각 스트리밍 플랫폼에서 제공하는 고유한 인증 키입니다. 이 키를 통해 어떤 채널로 스트리밍할지 식별됩니다.";
+"help_video_bitrate_desc" = "초당 전송되는 비디오 데이터의 양을 나타냅니다. 높을수록 화질이 좋아지지만 더 많은 인터넷 대역폭이 필요합니다.";
+"help_audio_bitrate_desc" = "초당 전송되는 오디오 데이터의 양입니다. 음질과 파일 크기에 영향을 미칩니다.";
+"help_video_resolution_desc" = "스트리밍되는 비디오의 가로×세로 픽셀 수입니다. 해상도가 높을수록 더 선명한 화질을 제공하지만 더 많은 대역폭이 필요합니다.";
+"help_frame_rate_desc" = "초당 표시되는 프레임(화면) 수입니다. 높을수록 더 부드러운 영상을 제공하지만 더 많은 처리 능력과 대역폭이 필요합니다.";
+"help_keyframe_interval_desc" = "완전한 프레임(키프레임) 사이의 간격을 초 단위로 나타냅니다. 작을수록 화질이 좋아지지만 파일 크기가 커집니다.";
+"help_video_encoder_desc" = "비디오를 압축하는 방식입니다. 다양한 인코더는 화질, 압축률, 처리 속도에서 서로 다른 특성을 가집니다.";
+"help_audio_encoder_desc" = "오디오를 압축하는 방식입니다. 음질과 호환성에 영향을 미칩니다.";
+"help_auto_reconnect_desc" = "네트워크 연결이 끊어졌을 때 자동으로 다시 연결을 시도하는 기능입니다.";
+"help_buffer_size_desc" = "네트워크로 전송하기 전에 임시로 저장하는 데이터의 양입니다. 네트워크 안정성과 지연시간에 영향을 미칩니다.";
+"help_connection_timeout_desc" = "서버 연결을 시도할 때 기다리는 최대 시간입니다. 이 시간이 지나면 연결 실패로 처리됩니다.";
+
+// MARK: - Help Details for RTMP
+"help_rtmp_tip_close_server" = "가장 가까운 지역의 서버를 선택하면 지연시간이 줄어듭니다";
+"help_rtmp_tip_protocol_start" = "rtmp:// 프로토콜로 시작해야 합니다";
+"help_rtmp_tip_platform_url" = "플랫폼별로 제공되는 정확한 URL을 사용하세요";
+"help_rtmp_warning_invalid" = "잘못된 URL을 입력하면 연결에 실패합니다";
+"help_rtmp_warning_regional" = "일부 플랫폼은 지역별로 다른 서버를 제공합니다";
+
+// MARK: - Help Details for Stream Key
+"help_stream_key_rec_dashboard" = "플랫폼 대시보드에서 생성된 키 사용";
+"help_stream_key_rec_security" = "보안을 위해 정기적으로 갱신";
+"help_stream_key_tip_never_share" = "스트림 키는 절대 공개하지 마세요";
+"help_stream_key_tip_generate_new" = "플랫폼 대시보드에서 새로운 키를 생성할 수 있습니다";
+"help_stream_key_tip_replace_exposed" = "키가 노출되었다면 즉시 새로운 키로 교체하세요";
+"help_stream_key_warning_exposure" = "스트림 키가 노출되면 다른 사람이 당신의 채널로 스트리밍할 수 있습니다";
+"help_stream_key_warning_auth_fail" = "잘못된 키를 입력하면 인증에 실패합니다";
+
+// MARK: - Help Details for Video Bitrate
+"help_video_bitrate_tip_80_percent" = "인터넷 업로드 속도의 80% 이하로 설정하세요";
+"help_video_bitrate_tip_dynamic_adjust" = "네트워크 상황에 따라 동적으로 조정하세요";
+"help_video_bitrate_tip_find_optimal" = "테스트를 통해 최적값을 찾으세요";
+"help_video_bitrate_warning_buffering" = "너무 높게 설정하면 버퍼링이나 연결 끊김이 발생할 수 있습니다";
+"help_video_bitrate_warning_platform_limit" = "플랫폼별로 최대 비트레이트 제한이 있습니다";
+"help_video_bitrate_example_hd" = "HD 스트리밍: 2500 kbps";
+"help_video_bitrate_example_mobile" = "모바일 최적화: 1000 kbps";
+
+// MARK: - Help Details for Audio Bitrate
+"help_audio_bitrate_rec_voice" = "음성 중심: 64-96 kbps";
+"help_audio_bitrate_rec_general" = "일반 품질: 128 kbps";
+"help_audio_bitrate_rec_high" = "고품질: 192-256 kbps";
+"help_audio_bitrate_rec_music" = "음악 스트리밍: 320 kbps";
+"help_audio_bitrate_tip_128_sufficient" = "대부분의 경우 128 kbps면 충분합니다";
+"help_audio_bitrate_tip_music_192" = "음악이 중요한 콘텐츠라면 192 kbps 이상 사용";
+"help_audio_bitrate_tip_mobile_low" = "모바일 환경에서는 낮은 비트레이트 권장";
+"help_audio_bitrate_warning_too_low" = "너무 낮으면 음질이 크게 저하됩니다";
+"help_audio_bitrate_warning_stereo" = "스테레오는 모노보다 약 2배의 비트레이트가 필요합니다";
+"help_audio_bitrate_example_podcast" = "팟캐스트: 64 kbps";
+"help_audio_bitrate_example_game" = "게임 스트리밍: 128 kbps";
+"help_audio_bitrate_example_music_broadcast" = "음악 방송: 192 kbps";
+
+// MARK: - Help Details for Video Resolution  
+"help_video_resolution_rec_mobile" = "모바일: 854×480 (480p)";
+"help_video_resolution_rec_standard" = "표준: 1280×720 (720p)";
+"help_video_resolution_rec_high" = "고품질: 1920×1080 (1080p)";
+"help_video_resolution_rec_ultra" = "초고품질: 3840×2160 (4K)";
+"help_video_resolution_tip_audience" = "시청자의 인터넷 환경을 고려하세요";
+"help_video_resolution_tip_camera_support" = "카메라가 지원하는 해상도 내에서 선택하세요";
+"help_video_resolution_tip_16_9" = "16:9 비율을 권장합니다";
+"help_video_resolution_warning_cpu_gpu" = "높은 해상도는 CPU/GPU 사용량을 크게 증가시킵니다";
+"help_video_resolution_warning_platform" = "플랫폼별로 지원하는 최대 해상도가 다릅니다";
+"help_video_resolution_example_youtube" = "유튜브 권장: 1920×1080";
+"help_video_resolution_example_twitch" = "트위치 권장: 1280×720";
+
+// MARK: - Help Details for Frame Rate
+"help_frame_rate_rec_movie" = "영화/드라마: 24 fps";
+"help_frame_rate_rec_general" = "일반 방송: 30 fps";
+"help_frame_rate_rec_game" = "게임/스포츠: 60 fps";
+"help_frame_rate_rec_theater" = "극장용: 120 fps";
+"help_frame_rate_tip_content_match" = "콘텐츠 특성에 맞는 프레임률을 선택하세요";
+"help_frame_rate_tip_60fps_game" = "60fps는 게임이나 빠른 움직임에 적합합니다";
+"help_frame_rate_tip_30fps_sufficient" = "30fps는 대부분의 콘텐츠에 충분합니다";
+"help_frame_rate_warning_high_usage" = "높은 프레임률은 비트레이트와 CPU 사용량을 크게 증가시킵니다";
+"help_frame_rate_warning_platform_support" = "일부 플랫폼은 특정 프레임률만 지원합니다";
+"help_frame_rate_example_talk" = "토크쇼: 30 fps";
+"help_frame_rate_example_fps_game" = "FPS 게임: 60 fps";
+
+// MARK: - Help Recommended Values
+"help_rtmp_recommended_youtube" = "YouTube: rtmp://a.rtmp.youtube.com/live2/";
+"help_rtmp_recommended_twitch" = "Twitch: rtmp://live.twitch.tv/app/";
+"help_rtmp_recommended_facebook" = "Facebook: rtmp://live-api-s.facebook.com/rtmp/";
+"help_stream_key_recommended_dashboard" = "플랫폼 대시보드에서 생성된 키 사용";
+"help_stream_key_recommended_security" = "보안을 위해 정기적으로 갱신";
+
+// MARK: - Help Tips
+"help_rtmp_tip_server_location" = "가장 가까운 지역의 서버를 선택하면 지연시간이 줄어듭니다";
+"help_rtmp_tip_protocol" = "rtmp:// 프로토콜로 시작해야 합니다";
+"help_rtmp_tip_correct_url" = "플랫폼별로 제공되는 정확한 URL을 사용하세요";
+"help_stream_key_tip_security" = "스트림 키는 절대 공개하지 마세요";
+"help_stream_key_tip_regenerate" = "플랫폼 대시보드에서 새로운 키를 생성할 수 있습니다";
+"help_stream_key_tip_replace" = "키가 노출되었다면 즉시 새로운 키로 교체하세요";
+
+// MARK: - Help Warnings
+"help_rtmp_warning_invalid_url" = "잘못된 URL을 입력하면 연결에 실패합니다";
+"help_rtmp_warning_regional_servers" = "일부 플랫폼은 지역별로 다른 서버를 제공합니다";
+"help_stream_key_warning_exposure" = "스트림 키가 노출되면 다른 사람이 당신의 채널로 스트리밍할 수 있습니다";
+"help_stream_key_warning_auth_fail" = "잘못된 키를 입력하면 인증에 실패합니다";
+
+// MARK: - Help Examples
+"help_rtmp_example_youtube" = "rtmp://a.rtmp.youtube.com/live2/";
+"help_rtmp_example_twitch" = "rtmp://live-sel.twitch.tv/app/";
+"help_stream_key_example_format1" = "xxxx-xxxx-xxxx-xxxx-xxxx";
+"help_stream_key_example_format2" = "live_123456789_abcdefghijk";
+
+// MARK: - Help Details for Keyframe Interval
+"help_keyframe_rec_general" = "일반적인 권장값: 2초";
+"help_keyframe_rec_high_quality" = "고화질 콘텐츠: 1초";
+"help_keyframe_rec_bandwidth_save" = "대역폭 절약: 4초";
+"help_keyframe_tip_2_seconds" = "대부분의 플랫폼에서 2초를 권장합니다";
+"help_keyframe_tip_fast_scene" = "빠른 장면 변화가 많으면 간격을 줄이세요";
+"help_keyframe_tip_stable_connection" = "안정적인 연결에서는 더 긴 간격 사용 가능";
+"help_keyframe_warning_long_interval" = "너무 긴 간격은 화질 저하를 일으킬 수 있습니다";
+"help_keyframe_warning_short_interval" = "너무 짧은 간격은 대역폭을 과도하게 사용합니다";
+"help_keyframe_example_standard" = "표준 설정: 2초";
+"help_keyframe_example_high_quality" = "고품질: 1초";
+
+// MARK: - Help Details for Video Encoder
+"help_video_encoder_rec_h264" = "H.264 (AVC): 가장 널리 지원";
+"help_video_encoder_rec_h265" = "H.265 (HEVC): 더 나은 압축률";
+"help_video_encoder_rec_vp9" = "VP9: 구글 개발, 무료";
+"help_video_encoder_tip_h264_compatibility" = "H.264는 가장 호환성이 좋습니다";
+"help_video_encoder_tip_hardware_accel" = "하드웨어 가속을 지원하는 인코더를 선택하세요";
+"help_video_encoder_tip_platform_support" = "플랫폼 지원 여부를 확인하세요";
+"help_video_encoder_warning_platform_support" = "일부 인코더는 특정 플랫폼에서 지원되지 않을 수 있습니다";
+"help_video_encoder_warning_software_cpu" = "소프트웨어 인코딩은 CPU를 많이 사용합니다";
+"help_video_encoder_example_universal" = "범용성: H.264";
+"help_video_encoder_example_efficiency" = "고효율: H.265";
+
+// MARK: - Help Details for Audio Encoder
+"help_audio_encoder_rec_aac" = "AAC: 가장 널리 사용";
+"help_audio_encoder_rec_mp3" = "MP3: 레거시 지원";
+"help_audio_encoder_rec_opus" = "Opus: 고품질, 낮은 지연";
+"help_audio_encoder_tip_aac_recommended" = "AAC는 대부분의 플랫폼에서 권장됩니다";
+"help_audio_encoder_tip_music_high_quality" = "음악 콘텐츠에는 고품질 설정을 사용하세요";
+"help_audio_encoder_tip_opus_realtime" = "실시간 통신에는 Opus가 적합합니다";
+"help_audio_encoder_warning_codec_support" = "플랫폼별로 지원하는 오디오 코덱이 다를 수 있습니다";
+"help_audio_encoder_warning_license_cost" = "일부 코덱은 라이센스 비용이 발생할 수 있습니다";
+"help_audio_encoder_example_streaming" = "스트리밍: AAC";
+"help_audio_encoder_example_podcast" = "팟캐스트: MP3";
+
+// MARK: - Help Details for Auto Reconnect
+"help_auto_reconnect_rec_enable" = "일반적으로 활성화 권장";
+"help_auto_reconnect_rec_retry_count" = "재시도 횟수: 3-5회";
+"help_auto_reconnect_rec_retry_interval" = "재시도 간격: 5-10초";
+"help_auto_reconnect_tip_unstable_network" = "불안정한 네트워크 환경에서 유용합니다";
+"help_auto_reconnect_tip_battery_concern" = "무한 재시도는 배터리를 소모할 수 있습니다";
+"help_auto_reconnect_tip_proper_interval" = "재시도 간격을 적절히 설정하세요";
+"help_auto_reconnect_warning_server_problem" = "서버 문제인 경우 재연결이 계속 실패할 수 있습니다";
+"help_auto_reconnect_warning_frequent_retry" = "너무 잦은 재시도는 서버에 부하를 줄 수 있습니다";
+"help_auto_reconnect_example_mobile" = "모바일 환경: 활성화";
+"help_auto_reconnect_example_stable_wifi" = "안정적인 Wi-Fi: 선택적 활성화";
+
+// MARK: - Help Details for Buffer Size
+"help_buffer_size_rec_stable" = "안정적인 네트워크: 작은 버퍼 (1-2MB)";
+"help_buffer_size_rec_unstable" = "불안정한 네트워크: 큰 버퍼 (5-10MB)";
+"help_buffer_size_rec_low_latency" = "초저지연: 최소 버퍼 (0.5MB 이하)";
+"help_buffer_size_tip_adjust_network" = "네트워크 상황에 맞게 조정하세요";
+"help_buffer_size_tip_stability_vs_latency" = "큰 버퍼는 안정성을 높이지만 지연이 증가합니다";
+"help_buffer_size_tip_realtime_interaction" = "실시간 상호작용이 중요하면 작은 버퍼 사용";
+"help_buffer_size_warning_too_small" = "너무 작은 버퍼는 끊김 현상을 일으킬 수 있습니다";
+"help_buffer_size_warning_too_large" = "너무 큰 버퍼는 메모리를 과도하게 사용합니다";
+"help_buffer_size_example_gaming" = "게임 스트리밍: 1MB";
+"help_buffer_size_example_general" = "일반 방송: 3MB";
+
+// MARK: - Help Details for Connection Timeout
+"help_connection_timeout_rec_general" = "일반적인 설정: 10-30초";
+"help_connection_timeout_rec_fast" = "빠른 환경: 5-10초";
+"help_connection_timeout_rec_slow" = "느린 환경: 30-60초";
+"help_connection_timeout_tip_network_match" = "네트워크 환경에 맞게 설정하세요";
+"help_connection_timeout_tip_too_short" = "너무 짧으면 정상적인 연결도 실패할 수 있습니다";
+"help_connection_timeout_tip_too_long" = "너무 길면 사용자 경험이 저하됩니다";
+"help_connection_timeout_warning_no_response" = "서버가 응답하지 않으면 설정된 시간만큼 기다립니다";
+"help_connection_timeout_warning_battery" = "모바일에서는 배터리 소모를 고려해야 합니다";
+"help_connection_timeout_example_wifi" = "Wi-Fi: 15초";
+"help_connection_timeout_example_mobile_data" = "모바일 데이터: 30초";
+
+// MARK: - Streaming Preset Enum
+"streaming_preset_low" = "저화질";
+"streaming_preset_standard" = "표준";
+"streaming_preset_high" = "고화질";
+"streaming_preset_ultra" = "최고화질";
+
+// MARK: - Streaming Platform Enum
+"streaming_platform_custom" = "사용자 정의";
+
+// MARK: - Network Status Enum
+"network_status_poor" = "불량";
+"network_status_fair" = "보통";
+"network_status_good" = "양호";
+"network_status_excellent" = "우수";
+
+// MARK: - Network Status Descriptions
+"network_status_poor_desc" = "느린 연결 (< 2Mbps)";
+"network_status_fair_desc" = "보통 연결 (2-5Mbps)";
+"network_status_good_desc" = "빠른 연결 (5-10Mbps)";
+"network_status_excellent_desc" = "매우 빠른 연결 (> 10Mbps)";
+
+// MARK: - Additional Status Keys
+"status_disconnected" = "연결 해제됨";
+"status_reconnecting" = "재연결 중";
+
+// MARK: - Suggestion Messages
+"high_bandwidth_warning" = "🌐 총 대역폭이 높습니다. 안정적인 인터넷 연결이 필요합니다";
+"high_performance_warning" = "⚡ 고해상도 + 고프레임률 조합은 많은 처리 능력이 필요합니다";
+"settings_optimal" = "✅ 현재 설정이 적절합니다";
+
+// MARK: - Connection and Stats
+"connection_latency" = " (지연: %.0fms)";
+"stream_stats_format" = "비디오: %.1f kbps\n오디오: %.1f kbps\n프레임률: %.1f fps\n드롭 프레임: %d"; 
