@@ -82,11 +82,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging {
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
             
-            // 실행 중인 세션 중지
-            if self.captureSession.isRunning {
-                self.captureSession.stopRunning()
-            }
-            
+            // 개선: 세션 중지 없이 즉시 입력 교체하여 지연 최소화
             self.captureSession.beginConfiguration()
             
             // 기존 입력 제거
@@ -102,12 +98,12 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging {
                     self.videoInput = input
                 }
             } catch {
-                print("카메라 전환 중 오류 발생: \(error.localizedDescription)")
+                logError("Camera switch error: \(error.localizedDescription)", category: .camera)
             }
             
             self.captureSession.commitConfiguration()
             
-            // 세션 재시작
+            // 세션이 중지되어 있는 경우에만 재시작
             if !self.captureSession.isRunning {
                 self.captureSession.startRunning()
             }

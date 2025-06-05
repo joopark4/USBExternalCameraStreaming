@@ -9,202 +9,72 @@ import SwiftUI
 import SwiftData
 import AVFoundation
 
-/// 앱의 메인 뷰
-struct ContentView: View {
-    @StateObject private var cameraViewModel = CameraViewModel()
-    @StateObject private var permissionViewModel: PermissionViewModel
-    @State private var showingPermissionAlert = false
-    @State private var isRefreshing = false
-    
-    init() {
-        let manager = PermissionManager()
-        _permissionViewModel = StateObject(wrappedValue: PermissionViewModel(permissionManager: manager))
-    }
+// MARK: - Main View (MVVM Architecture)
 
+/// 앱의 메인 화면 View
+/// MVVM 패턴에서 View 역할을 담당하며, UI 렌더링과 사용자 상호작용을 처리합니다.
+/// ViewModel을 통해 비즈니스 로직과 분리되어 있어 테스트 가능하고 유지보수가 용이합니다.
+struct ContentView: View {
+    
+    // MARK: - ViewModel Dependencies
+    
+    /// 메인 화면의 상태와 비즈니스 로직을 관리하는 ViewModel
+    /// UI 상태, 사용자 액션, 데이터 바인딩을 담당합니다.
+    @StateObject private var mainViewModel: MainViewModel
+    
+    // MARK: - Initialization
+    
+    /// ContentView 초기화
+    /// 의존성 주입을 통해 필요한 ViewModel들을 생성하고 주입합니다.
+    init() {
+        // SwiftData ModelContainer 접근
+        let container = try! ModelContainer(for: LiveStreamSettings.self)
+        
+        // 의존성 생성 및 주입
+        let cameraViewModel = CameraViewModel()
+        let permissionManager = PermissionManager()
+        let permissionViewModel = PermissionViewModel(permissionManager: permissionManager)
+        let liveStreamViewModel = LiveStreamViewModel(modelContext: container.mainContext)
+        
+        // MainViewModel 초기화 (의존성 주입)
+        _mainViewModel = StateObject(wrappedValue: MainViewModel(
+            cameraViewModel: cameraViewModel,
+            permissionViewModel: permissionViewModel,
+            liveStreamViewModel: liveStreamViewModel
+        ))
+    }
+    
+    // MARK: - Body
+    
     var body: some View {
         NavigationSplitView {
-            // 사이드바 (카메라 목록)
-            CameraListView(
-                builtInCameras: cameraViewModel.builtInCameras,
-                externalCameras: cameraViewModel.externalCameras,
-                selectedCamera: cameraViewModel.selectedCamera,
-                onCameraSelected: { camera in
-                    cameraViewModel.switchToCamera(camera)
-                },
-                onSettingsTapped: {
-                    showingPermissionAlert = true
-                },
-                onRefreshTapped: {
-                    Task {
-                        isRefreshing = true
-                        await cameraViewModel.refreshCameraList()
-                        isRefreshing = false
-                    }
-                },
-                isRefreshing: isRefreshing
-            )
+            // 사이드바 영역: 메뉴 네비게이션 담당
+            SidebarView(viewModel: mainViewModel)
         } detail: {
-            // 메인 영역 (카메라 프리뷰 또는 권한 안내)
-            if permissionViewModel.areAllPermissionsGranted {
-                if let selectedCamera = cameraViewModel.selectedCamera {
-                    CameraPreviewView(session: cameraViewModel.captureSession)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(30)
-                        .background(Color.black)
-                } else {
-                    Color.black
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            } else {
-                VStack(spacing: 20) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 50))
-                        .foregroundColor(.orange)
-                    
-                    Text("권한 설정이 필요합니다")
-                        .font(.title2)
-                        .bold()
-                    
-                    Text(permissionViewModel.permissionGuideMessage)
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                    
-                    Button("권한 설정하기") {
-                        showingPermissionAlert = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding()
-            }
+            // 상세 화면 영역: 선택된 메뉴에 따른 콘텐츠 표시
+            DetailView(viewModel: mainViewModel)
         }
-        .navigationTitle("카메라")
-        .sheet(isPresented: $showingPermissionAlert) {
-            PermissionSettingsView(viewModel: permissionViewModel)
+        // 모달 시트들: 설정 화면들
+        .sheet(isPresented: $mainViewModel.showingPermissionAlert) {
+            PermissionSettingsView(viewModel: mainViewModel.permissionViewModel)
+        }
+        .sheet(isPresented: $mainViewModel.showingLiveStreamSettings) {
+            LiveStreamSettingsView(viewModel: mainViewModel.liveStreamViewModel)
+        }
+        .sheet(isPresented: $mainViewModel.showingLoggingSettings) {
+            LoggingSettingsView()
         }
     }
 }
 
-/// 카메라 목록 뷰
-struct CameraListView: View {
-    let builtInCameras: [CameraDevice]
-    let externalCameras: [CameraDevice]
-    let selectedCamera: CameraDevice?
-    let onCameraSelected: (CameraDevice) -> Void
-    let onSettingsTapped: () -> Void
-    let onRefreshTapped: () -> Void
-    let isRefreshing: Bool
-    
-    var body: some View {
-        List {
-            // 내장 카메라 섹션
-            if !builtInCameras.isEmpty {
-                Section("내장 카메라") {
-                    ForEach(builtInCameras) { camera in
-                        CameraRow(
-                            camera: camera,
-                            isSelected: selectedCamera?.id == camera.id,
-                            onSelect: { onCameraSelected(camera) }
-                        )
-                    }
-                }
-            }
-            
-            // 외장 카메라 섹션 (항상 표시)
-            Section("외장 카메라") {
-                if externalCameras.isEmpty {
-                    Text("연결된 외장 카메라가 없습니다")
-                        .foregroundColor(.secondary)
-                        .italic()
-                } else {
-                    ForEach(externalCameras) { camera in
-                        CameraRow(
-                            camera: camera,
-                            isSelected: selectedCamera?.id == camera.id,
-                            onSelect: { onCameraSelected(camera) }
-                        )
-                    }
-                }
-            }
-        }
-        .navigationTitle("카메라 목록")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack {
-                    Button(action: onRefreshTapped) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(isRefreshing)
-                    
-                    Button(action: onSettingsTapped) {
-                        Image(systemName: "gear")
-                    }
-                }
-            }
-        }
-        .overlay {
-            if isRefreshing {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.opacity(0.2))
-            }
-        }
-    }
-}
+// MARK: - Views Organization
+// Views have been refactored into separate files for better code organization:
+// - Views/SidebarView.swift: Contains SidebarView and LoadingOverlayView
+// - Views/CameraListView.swift: Contains camera-related views (CameraSectionView, CameraListView, CameraRowView, EmptyExternalCameraView)
+// - Views/LiveStreamView.swift: Contains live streaming views (LiveStreamSectionView)
+// - Views/DetailView.swift: Contains detail view components (DetailView, CameraDetailContentView, etc.)
 
-/// 카메라 프리뷰 컨테이너 뷰
-struct CameraPreviewContainerView: View {
-    let cameraStatus: PermissionStatus
-    let selectedCamera: CameraDevice?
-    let captureSession: AVCaptureSession
-    let onPermissionRequest: () -> Void
-    
-    var body: some View {
-        if cameraStatus == .authorized {
-            if let selectedCamera = selectedCamera {
-                CameraPreviewView(session: captureSession)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black)
-            } else {
-                Text("연결된 카메라가 없습니다")
-                    .font(.title)
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        } else {
-            VStack(spacing: 20) {
-                Text("카메라 접근 권한이 필요합니다")
-                    .font(.title2)
-                
-                Button("권한 요청", action: onPermissionRequest)
-                    .buttonStyle(.borderedProminent)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-}
-
-/// 카메라 목록의 각 행을 표시하는 뷰
-struct CameraRow: View {
-    let camera: CameraDevice
-    let isSelected: Bool
-    let onSelect: () -> Void
-    
-    var body: some View {
-        Button(action: onSelect) {
-            HStack {
-                Text(camera.name)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .foregroundColor(.blue)
-                }
-            }
-        }
-    }
-}
+// MARK: - Preview
 
 #Preview {
     ContentView()

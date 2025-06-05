@@ -1,0 +1,547 @@
+/* 
+  Localizable.strings
+  USBExternalCamera (English)
+*/
+
+// MARK: - Common
+"close" = "Close";
+"cancel" = "Cancel";
+"save" = "Save";
+"done" = "Done";
+"ok" = "OK";
+"settings" = "Settings";
+"menu" = "Menu";
+
+// MARK: - Camera
+"camera" = "Camera";
+"camera_section" = "Camera";
+"select_camera" = "Please select a camera";
+"no_external_camera" = "No external camera connected";
+
+// MARK: - Permissions
+"permissions_title" = "Permission Settings";
+"permissions_request" = "Request Permissions";
+"permission_camera" = "Camera";
+"permission_microphone" = "Microphone";
+"permission_photo_library" = "Photo Library";
+"permission_settings_needed" = "Permission settings required";
+"go_to_permission_settings" = "Go to Permission Settings";
+"permission_status_not_determined" = "Not Determined";
+"permission_status_restricted" = "Restricted";
+"permission_status_denied" = "Denied";
+"permission_status_authorized" = "Authorized";
+"all_permissions_granted" = "All permissions have been granted.";
+"permissions_denied_message" = "The following permissions have been denied:\n%@\n\nPlease allow permissions in the Settings app.";
+
+// MARK: - Live Streaming
+"live_streaming" = "Live Streaming";
+"live_streaming_section" = "Streaming";
+"live_streaming_settings" = "Live Streaming Settings";
+"live_settings" = "Live Settings";
+"youtube_live_streaming" = "YouTube Live Streaming";
+
+// Basic Settings
+"basic_settings" = "Basic Settings";
+"stream_title" = "Stream Title";
+"stream_title_placeholder" = "Live Stream Title";
+"stream_key" = "Stream Key";
+"stream_key_placeholder" = "YouTube Stream Key";
+"stream_key_invalid" = "Invalid stream key format";
+"rtmp_server_url" = "RTMP Server URL";
+"rtmp_url_placeholder" = "RTMP URL";
+"rtmp_url_invalid" = "Invalid RTMP URL format";
+
+// Video Settings
+"video_settings" = "Video Settings";
+"resolution" = "Resolution";
+"video_bitrate" = "Video Bitrate: %d kbps";
+"frame_rate" = "Frame Rate: %d fps";
+"frame_rate_picker" = "Frame Rate";
+"fps_24" = "24 fps";
+"fps_30" = "30 fps";
+"fps_60" = "60 fps";
+
+// Audio Settings
+"audio_settings" = "Audio Settings";
+"audio_bitrate" = "Audio Bitrate: %d kbps";
+"audio_bitrate_picker" = "Audio Bitrate";
+"kbps_64" = "64 kbps";
+"kbps_128" = "128 kbps";
+"kbps_192" = "192 kbps";
+"kbps_256" = "256 kbps";
+
+// Advanced Settings
+"advanced_settings" = "Advanced Settings";
+"auto_reconnect" = "Auto Reconnect";
+"streaming_enabled" = "Streaming Enabled";
+
+// Settings Management
+"settings_management" = "Settings Management";
+"reset_settings" = "Reset Settings";
+
+// Streaming Status
+"streaming_statistics" = "Streaming Statistics";
+"streaming_error" = "Streaming Error";
+
+// Status Messages
+"already_streaming" = "Streaming is already in progress.";
+"connecting_to_server" = "Connecting to server...";
+"connected_to_server" = "Connected to server.";
+"stream_key_rtmp_required" = "Stream key or RTMP URL is required.";
+"disconnecting" = "Disconnecting...";
+"streaming_stopped" = "Streaming has been stopped.";
+"streaming_live" = "Live streaming...";
+
+// Error Messages
+"stream_setup_failed" = "Failed to set up stream.";
+"server_connection_failed" = "Server connection failed.";
+"invalid_streaming_settings" = "Invalid streaming settings.";
+"camera_unavailable" = "Camera is unavailable.";
+
+// Instructions
+"youtube_step1" = "Copy the stream key from YouTube Studio";
+"youtube_step2" = "Enter the stream key and RTMP URL in settings";
+"youtube_step3" = "Select a camera and start streaming";
+
+// Work in Progress
+"haishinkit_integration_message" = "HaishinKit 2.0.8 integration is in progress.\nCurrently, only basic camera preview is supported.";
+"haishinkit_settings_message" = "Live streaming settings will be available\nafter HaishinKit 2.0.8 integration is complete.";
+
+// App Error
+"swiftdata_init_failed" = "SwiftData ModelContainer initialization failed: %@";
+
+// MARK: - LiveStream Settings UI
+"help" = "Help";
+"optional" = "Optional";
+"configuration_complete" = "Configuration Complete";
+"configuration_required" = "Configuration Required";
+"quick_settings" = "Quick Settings";
+"quick_settings_description" = "Quickly configure streaming quality";
+"connection_settings" = "Connection Settings";
+"stream_settings" = "Stream Settings";
+"preview_and_test" = "Preview & Test";
+"connection_test" = "Connection Test";
+"export_settings" = "Export Settings";
+"estimated_bandwidth" = "Estimated Bandwidth:";
+"required_items_message" = "The following items are required to complete the configuration:";
+"reset_settings_confirm_title" = "Reset Settings";
+"reset_settings_confirm_message" = "All settings will be reset to default values. Do you want to continue?";
+"apply_preset_title" = "Apply Preset";
+"apply_preset_message" = "All settings will be changed to the selected preset. Do you want to continue?";
+"apply" = "Apply";
+"reset" = "Reset";
+
+// Quality Presets
+"quality_low" = "Low Quality";
+"quality_standard" = "Standard";
+"quality_high" = "High Quality";
+"quality_ultra" = "Ultra Quality";
+"quality_low_desc" = "720p • 1.5Mbps";
+"quality_standard_desc" = "1080p • 2.5Mbps";
+"quality_high_desc" = "1080p • 4.5Mbps";
+"quality_ultra_desc" = "4K • 8Mbps";
+
+// Frame Rate Options
+"fps_24_movie" = "24 fps (Movie)";
+"fps_30_standard" = "30 fps (Standard)";
+"fps_60_high" = "60 fps (High Quality)";
+
+// Audio Bitrate Options
+"kbps_64_low" = "64 kbps (Low)";
+"kbps_128_standard" = "128 kbps (Standard)";
+"kbps_192_high" = "192 kbps (High)";
+"kbps_256_highest" = "256 kbps (Highest)";
+
+// Keyframe Interval
+"keyframe_interval" = "Keyframe Interval";
+"keyframe_recommended" = "Recommended: 2 seconds (YouTube optimized)";
+
+// Video Encoder
+"video_encoder" = "Video Encoder";
+"video_encoder_h264_recommended" = "H.264 (Recommended)";
+"video_encoder_h265" = "H.265 (HEVC)";
+
+// Auto Reconnect
+"auto_reconnect_description" = "Automatically attempts to reconnect when the connection is lost";
+"streaming_enabled_description" = "Enable or disable streaming functionality";
+
+// Stream Key Instructions
+"stream_key_instructions_title" = "How to find Stream Key:";
+"stream_key_step1" = "1. Go to YouTube Studio";
+"stream_key_step2" = "2. Live Streaming → Copy Stream Key";
+
+// MARK: - Help System
+"help_rtmp_url_title" = "RTMP Server URL";
+"help_rtmp_url_desc" = "The address of the RTMP server to send live streaming to. You must enter the ingest server URL provided by the streaming platform.";
+
+"help_stream_key_title" = "Stream Key";
+"help_stream_key_desc" = "A unique authentication key provided by each streaming platform. This key identifies which channel to stream to.";
+
+"help_video_bitrate_title" = "Video Bitrate";
+"help_video_bitrate_desc" = "The amount of video data transmitted per second. Higher values provide better quality but require more internet bandwidth.";
+
+"help_audio_bitrate_title" = "Audio Bitrate";
+"help_audio_bitrate_desc" = "The amount of audio data transmitted per second. It affects audio quality and file size.";
+
+"help_video_resolution_title" = "Video Resolution";
+"help_video_resolution_desc" = "The width×height pixel count of the streamed video. Higher resolutions provide clearer quality but require more bandwidth.";
+
+"help_frame_rate_title" = "Frame Rate";
+"help_frame_rate_desc" = "The number of frames (screens) displayed per second. Higher values provide smoother video but require more processing power and bandwidth.";
+
+// Help Categories
+"help_recommended_settings" = "Recommended Settings";
+"help_tips" = "💡 Tips";
+"help_warnings" = "⚠️ Warnings";
+"help_examples" = "📝 Examples";
+
+// Common Help Phrases
+"help_see_details" = "See help for detailed information about settings.";
+"help_youtube_720p" = "YouTube: rtmp://a.rtmp.youtube.com/live2/";
+"help_twitch" = "Twitch: rtmp://live.twitch.tv/app/";
+"help_facebook" = "Facebook: rtmp://live-api-s.facebook.com/rtmp/";
+
+// MARK: - Status Messages & Errors
+"service_not_initialized" = "Service is not yet initialized.";
+"streaming_start_failed" = "Cannot start streaming. Please check your settings.";
+"streaming_started" = "Streaming started";
+"streaming_start_error" = "Failed to start streaming: %@";
+"streaming_stopped" = "Streaming stopped";
+"settings_saved" = "Settings have been saved";
+"settings_save_error" = "Failed to save settings: %@";
+"connection_testing" = "Testing connection...";
+"settings_import_success" = "Settings imported successfully";
+"settings_import_error" = "Failed to import settings: %@";
+"settings_load_error" = "Failed to load settings: %@";
+
+// Stream Control Buttons
+"start_streaming" = "Start Streaming";
+"connecting" = "Connecting...";
+"ready" = "Ready";
+"stop_streaming" = "Stop Streaming";
+"stopping" = "Stopping...";
+"retry" = "Retry";
+
+// Streaming Status
+"status_idle" = "Idle";
+"status_connecting" = "Connecting";
+"status_connected" = "Connected";
+"status_streaming" = "Streaming";
+"status_disconnecting" = "Disconnecting";
+"status_error" = "Error Occurred";
+
+// Stream Stats Display
+"not_connected" = "Not Connected";
+"connecting_status" = "Connecting...";
+"streaming_duration" = "Streaming (%@)";
+"reconnecting" = "Reconnecting...";
+"connection_failed" = "Connection Failed";
+
+// Network Quality
+"network_excellent" = "Excellent";
+"network_good" = "Good";
+"network_fair" = "Fair";
+"network_poor" = "Poor";
+
+// Network Speed Descriptions
+"slow_connection" = "Slow Connection (< 2Mbps)";
+"fair_connection" = "Fair Connection (2-5Mbps)";
+"fast_connection" = "Fast Connection (5-10Mbps)";
+"very_fast_connection" = "Very Fast Connection (> 10Mbps)";
+
+// Quality Advice Messages
+"network_unstable" = "Network connection is unstable.";
+"use_low_quality" = "Use low quality settings.";
+"check_wifi" = "Please check your Wi-Fi connection.";
+"use_standard_quality" = "Stream in standard quality.";
+"reduce_network_usage" = "Reduce network usage on other devices.";
+"high_quality_available" = "High quality streaming is available.";
+"stable_connection" = "Stable connection status.";
+"ultra_quality_available" = "Ultra quality streaming is available.";
+"optimal_network" = "Optimal network environment.";
+
+// Fixed UI Text
+"2_seconds" = "2 seconds";
+"streaming_statistics" = "Streaming Statistics";
+"streaming_error_alert" = "Streaming Error";
+"confirm_button" = "OK";
+
+// Preview Text
+"live_streaming_preview_title" = "Live Streaming Settings";
+"live_streaming_preview_desc" = "HaishinKit-RTMP live streaming settings screen.";
+"test_stream_title" = "Test Stream";
+"test_stream_key" = "test-key";
+
+// Loading
+"loading" = "Loading";
+
+// Navigation
+"live_streaming_nav" = "Live Streaming";
+
+// Missing Keys
+"recommended_settings_help" = "Recommended Settings";
+"tips_help" = "💡 Tips";
+"warnings_help" = "⚠️ Warnings";
+"examples_help" = "📝 Examples";
+"connection_settings_section" = "Connection Settings";
+
+// Validation Messages
+"check_bitrate" = "Please check the bitrate";
+"general_audio_streaming" = "Suitable audio bitrate for general streaming";
+"voice_content_suitable" = "Suitable for voice-focused content";
+"music_content_suitable" = "Suitable for music-focused content";
+"audio_bitrate_too_low" = "Audio bitrate is too low, audio quality may be degraded";
+"audio_bitrate_too_high" = "Audio bitrate is excessively high";
+"general_content_framerate" = "Suitable frame rate for general content";
+"gaming_sports_framerate" = "Suitable frame rate for gaming or sports content";
+"cinematic_framerate" = "Suitable for cinematic feel";
+"framerate_too_high" = "Excessively high frame rate uses a lot of bandwidth";
+"framerate_too_low" = "Too low frame rate creates unnatural video";
+"recommended_keyframe" = "Keyframe interval recommended by most platforms";
+"appropriate_keyframe" = "Appropriate keyframe interval";
+"keyframe_too_short" = "Keyframe interval is too short, uses excessive bandwidth";
+"keyframe_too_long" = "Keyframe interval is too long, may degrade quality";
+"check_settings" = "Please check the settings";
+"720p_suitable_bitrate" = "Suitable bitrate for 720p";
+"720p_low_bitrate" = "Bitrate is too low for 720p resolution";
+"720p_high_bitrate" = "Bitrate is too high for 720p resolution";
+"1080p_suitable_bitrate" = "Suitable bitrate for 1080p";
+"1080p_low_bitrate" = "Bitrate is too low for 1080p resolution";
+"1080p_high_bitrate" = "Bitrate is too high for 1080p resolution";
+
+// Help System Titles
+"help_keyframe_interval_title" = "Keyframe Interval";
+"help_video_encoder_title" = "Video Encoder";
+"help_audio_encoder_title" = "Audio Encoder";
+"help_auto_reconnect_title" = "Auto Reconnect";
+"help_buffer_size_title" = "Buffer Size";
+"help_connection_timeout_title" = "Connection Timeout";
+
+// Network Error Messages
+"invalid_rtmp_format" = "Invalid RTMP URL or stream key format.";
+"connection_test_success" = "Connection test successful";
+"rtmp_connection_failed" = "RTMP server connection failed";
+"connection_test_error" = "An error occurred during connection test.";
+"connection_failed_message" = "Unable to connect to server.";
+"timeout_message" = "Connection timeout exceeded.";
+"invalid_credentials_message" = "Invalid authentication information.";
+"network_unavailable_message" = "Not connected to network.";
+"server_error_message" = "Server error occurred. (Code: %d)";
+"unknown_error_message" = "An unknown error occurred.";
+"error_occurred" = "An error occurred.";
+"wifi_connection" = "WiFi";
+"cellular_data" = "Cellular Data";
+"ethernet_connection" = "Ethernet";
+"unknown_connection" = "Unknown";
+
+// MARK: - Help Content Descriptions
+"help_rtmp_url_desc" = "The address of the RTMP server to send live streaming to. You must enter the ingest server URL provided by the streaming platform.";
+"help_stream_key_desc" = "A unique authentication key provided by each streaming platform. This key identifies which channel to stream to.";
+"help_video_bitrate_desc" = "The amount of video data transmitted per second. Higher values provide better quality but require more internet bandwidth.";
+"help_audio_bitrate_desc" = "The amount of audio data transmitted per second. It affects audio quality and file size.";
+"help_video_resolution_desc" = "The width×height pixel count of the streamed video. Higher resolutions provide clearer quality but require more bandwidth.";
+"help_frame_rate_desc" = "The number of frames (screens) displayed per second. Higher values provide smoother video but require more processing power and bandwidth.";
+"help_keyframe_interval_desc" = "The interval between complete frames (keyframes) in seconds. Smaller values provide better quality but increase file size.";
+"help_video_encoder_desc" = "The method used to compress video. Different encoders have varying characteristics for quality, compression ratio, and processing speed.";
+"help_audio_encoder_desc" = "The method used to compress audio. It affects audio quality and compatibility.";
+"help_auto_reconnect_desc" = "A feature that automatically attempts to reconnect when the network connection is lost.";
+"help_buffer_size_desc" = "The amount of data temporarily stored before transmitting over the network. It affects network stability and latency.";
+"help_connection_timeout_desc" = "The maximum time to wait when attempting to connect to the server. Connection failure is declared if this time is exceeded.";
+
+// MARK: - Help Details for RTMP
+"help_rtmp_tip_close_server" = "Selecting the nearest regional server reduces latency";
+"help_rtmp_tip_protocol_start" = "Must start with rtmp:// protocol";
+"help_rtmp_tip_platform_url" = "Use the exact URL provided by each platform";
+"help_rtmp_warning_invalid" = "Entering an incorrect URL will cause connection failure";
+"help_rtmp_warning_regional" = "Some platforms provide different servers by region";
+
+// MARK: - Help Details for Stream Key
+"help_stream_key_rec_dashboard" = "Use key generated from platform dashboard";
+"help_stream_key_rec_security" = "Regularly renew for security";
+"help_stream_key_tip_never_share" = "Never share your stream key publicly";
+"help_stream_key_tip_generate_new" = "You can generate a new key from the platform dashboard";
+"help_stream_key_tip_replace_exposed" = "Replace immediately if the key is exposed";
+"help_stream_key_warning_exposure" = "If your stream key is exposed, others can stream to your channel";
+"help_stream_key_warning_auth_fail" = "Entering an incorrect key will cause authentication failure";
+
+// MARK: - Help Details for Video Bitrate
+"help_video_bitrate_tip_80_percent" = "Set to 80% or less of your internet upload speed";
+"help_video_bitrate_tip_dynamic_adjust" = "Adjust dynamically according to network conditions";
+"help_video_bitrate_tip_find_optimal" = "Find the optimal value through testing";
+"help_video_bitrate_warning_buffering" = "Setting too high may cause buffering or disconnections";
+"help_video_bitrate_warning_platform_limit" = "Each platform has maximum bitrate limitations";
+"help_video_bitrate_example_hd" = "HD Streaming: 2500 kbps";
+"help_video_bitrate_example_mobile" = "Mobile Optimized: 1000 kbps";
+
+// MARK: - Help Details for Audio Bitrate
+"help_audio_bitrate_rec_voice" = "Voice-focused: 64-96 kbps";
+"help_audio_bitrate_rec_general" = "General quality: 128 kbps";
+"help_audio_bitrate_rec_high" = "High quality: 192-256 kbps";
+"help_audio_bitrate_rec_music" = "Music streaming: 320 kbps";
+"help_audio_bitrate_tip_128_sufficient" = "128 kbps is sufficient for most cases";
+"help_audio_bitrate_tip_music_192" = "Use 192 kbps or higher for music-focused content";
+"help_audio_bitrate_tip_mobile_low" = "Lower bitrates recommended for mobile environments";
+"help_audio_bitrate_warning_too_low" = "Too low bitrates can significantly degrade audio quality";
+"help_audio_bitrate_warning_stereo" = "Stereo requires approximately twice the bitrate of mono";
+"help_audio_bitrate_example_podcast" = "Podcast: 64 kbps";
+"help_audio_bitrate_example_game" = "Game Streaming: 128 kbps";
+"help_audio_bitrate_example_music_broadcast" = "Music Broadcast: 192 kbps";
+
+// MARK: - Help Details for Video Resolution  
+"help_video_resolution_rec_mobile" = "Mobile: 854×480 (480p)";
+"help_video_resolution_rec_standard" = "Standard: 1280×720 (720p)";
+"help_video_resolution_rec_high" = "High Quality: 1920×1080 (1080p)";
+"help_video_resolution_rec_ultra" = "Ultra High Quality: 3840×2160 (4K)";
+"help_video_resolution_tip_audience" = "Consider your audience's internet environment";
+"help_video_resolution_tip_camera_support" = "Choose within the resolution supported by your camera";
+"help_video_resolution_tip_16_9" = "16:9 aspect ratio is recommended";
+"help_video_resolution_warning_cpu_gpu" = "High resolutions significantly increase CPU/GPU usage";
+"help_video_resolution_warning_platform" = "Different platforms support different maximum resolutions";
+"help_video_resolution_example_youtube" = "YouTube recommended: 1920×1080";
+"help_video_resolution_example_twitch" = "Twitch recommended: 1280×720";
+
+// MARK: - Help Details for Frame Rate
+"help_frame_rate_rec_movie" = "Movies/Drama: 24 fps";
+"help_frame_rate_rec_general" = "General broadcast: 30 fps";
+"help_frame_rate_rec_game" = "Games/Sports: 60 fps";
+"help_frame_rate_rec_theater" = "Theater: 120 fps";
+"help_frame_rate_tip_content_match" = "Choose frame rate that matches your content characteristics";
+"help_frame_rate_tip_60fps_game" = "60fps is suitable for games or fast movements";
+"help_frame_rate_tip_30fps_sufficient" = "30fps is sufficient for most content";
+"help_frame_rate_warning_high_usage" = "High frame rates significantly increase bitrate and CPU usage";
+"help_frame_rate_warning_platform_support" = "Some platforms only support specific frame rates";
+"help_frame_rate_example_talk" = "Talk Show: 30 fps";
+"help_frame_rate_example_fps_game" = "FPS Game: 60 fps";
+
+// MARK: - Help Recommended Values
+"help_rtmp_recommended_youtube" = "YouTube: rtmp://a.rtmp.youtube.com/live2/";
+"help_rtmp_recommended_twitch" = "Twitch: rtmp://live.twitch.tv/app/";
+"help_rtmp_recommended_facebook" = "Facebook: rtmp://live-api-s.facebook.com/rtmp/";
+"help_stream_key_recommended_dashboard" = "Use key generated from platform dashboard";
+"help_stream_key_recommended_security" = "Regularly renew for security";
+
+// MARK: - Help Tips
+"help_rtmp_tip_server_location" = "Selecting the nearest regional server reduces latency";
+"help_rtmp_tip_protocol" = "Must start with rtmp:// protocol";
+"help_rtmp_tip_correct_url" = "Use the exact URL provided by each platform";
+"help_stream_key_tip_security" = "Never share your stream key publicly";
+"help_stream_key_tip_regenerate" = "You can generate a new key from the platform dashboard";
+"help_stream_key_tip_replace" = "Replace immediately if the key is exposed";
+
+// MARK: - Help Warnings
+"help_rtmp_warning_invalid_url" = "Entering an incorrect URL will cause connection failure";
+"help_rtmp_warning_regional_servers" = "Some platforms provide different servers by region";
+"help_stream_key_warning_exposure" = "If your stream key is exposed, others can stream to your channel";
+"help_stream_key_warning_auth_fail" = "Entering an incorrect key will cause authentication failure";
+
+// MARK: - Help Examples
+"help_rtmp_example_youtube" = "rtmp://a.rtmp.youtube.com/live2/";
+"help_rtmp_example_twitch" = "rtmp://live-sel.twitch.tv/app/";
+"help_stream_key_example_format1" = "xxxx-xxxx-xxxx-xxxx-xxxx";
+"help_stream_key_example_format2" = "live_123456789_abcdefghijk";
+
+// MARK: - Help Details for Keyframe Interval
+"help_keyframe_rec_general" = "General recommended value: 2 seconds";
+"help_keyframe_rec_high_quality" = "High quality content: 1 second";
+"help_keyframe_rec_bandwidth_save" = "Bandwidth saving: 4 seconds";
+"help_keyframe_tip_2_seconds" = "Most platforms recommend 2 seconds";
+"help_keyframe_tip_fast_scene" = "Reduce interval if there are many fast scene changes";
+"help_keyframe_tip_stable_connection" = "Longer intervals can be used with stable connections";
+"help_keyframe_warning_long_interval" = "Too long intervals may cause quality degradation";
+"help_keyframe_warning_short_interval" = "Too short intervals use excessive bandwidth";
+"help_keyframe_example_standard" = "Standard setting: 2 seconds";
+"help_keyframe_example_high_quality" = "High quality: 1 second";
+
+// MARK: - Help Details for Video Encoder
+"help_video_encoder_rec_h264" = "H.264 (AVC): Most widely supported";
+"help_video_encoder_rec_h265" = "H.265 (HEVC): Better compression ratio";
+"help_video_encoder_rec_vp9" = "VP9: Google developed, free";
+"help_video_encoder_tip_h264_compatibility" = "H.264 has the best compatibility";
+"help_video_encoder_tip_hardware_accel" = "Choose encoders that support hardware acceleration";
+"help_video_encoder_tip_platform_support" = "Check platform support";
+"help_video_encoder_warning_platform_support" = "Some encoders may not be supported on specific platforms";
+"help_video_encoder_warning_software_cpu" = "Software encoding uses a lot of CPU";
+"help_video_encoder_example_universal" = "Universal: H.264";
+"help_video_encoder_example_efficiency" = "High efficiency: H.265";
+
+// MARK: - Help Details for Audio Encoder
+"help_audio_encoder_rec_aac" = "AAC: Most widely used";
+"help_audio_encoder_rec_mp3" = "MP3: Legacy support";
+"help_audio_encoder_rec_opus" = "Opus: High quality, low latency";
+"help_audio_encoder_tip_aac_recommended" = "AAC is recommended by most platforms";
+"help_audio_encoder_tip_music_high_quality" = "Use high quality settings for music content";
+"help_audio_encoder_tip_opus_realtime" = "Opus is suitable for real-time communication";
+"help_audio_encoder_warning_codec_support" = "Different platforms may support different audio codecs";
+"help_audio_encoder_warning_license_cost" = "Some codecs may incur license costs";
+"help_audio_encoder_example_streaming" = "Streaming: AAC";
+"help_audio_encoder_example_podcast" = "Podcast: MP3";
+
+// MARK: - Help Details for Auto Reconnect
+"help_auto_reconnect_rec_enable" = "Generally recommended to enable";
+"help_auto_reconnect_rec_retry_count" = "Retry count: 3-5 times";
+"help_auto_reconnect_rec_retry_interval" = "Retry interval: 5-10 seconds";
+"help_auto_reconnect_tip_unstable_network" = "Useful in unstable network environments";
+"help_auto_reconnect_tip_battery_concern" = "Infinite retries can drain battery";
+"help_auto_reconnect_tip_proper_interval" = "Set appropriate retry intervals";
+"help_auto_reconnect_warning_server_problem" = "Reconnection may keep failing if there's a server problem";
+"help_auto_reconnect_warning_frequent_retry" = "Too frequent retries can burden the server";
+"help_auto_reconnect_example_mobile" = "Mobile environment: Enable";
+"help_auto_reconnect_example_stable_wifi" = "Stable Wi-Fi: Optionally enable";
+
+// MARK: - Help Details for Buffer Size
+"help_buffer_size_rec_stable" = "Stable network: Small buffer (1-2MB)";
+"help_buffer_size_rec_unstable" = "Unstable network: Large buffer (5-10MB)";
+"help_buffer_size_rec_low_latency" = "Ultra-low latency: Minimum buffer (0.5MB or less)";
+"help_buffer_size_tip_adjust_network" = "Adjust according to network conditions";
+"help_buffer_size_tip_stability_vs_latency" = "Large buffers increase stability but add latency";
+"help_buffer_size_tip_realtime_interaction" = "Use small buffer if real-time interaction is important";
+"help_buffer_size_warning_too_small" = "Too small buffer can cause interruptions";
+"help_buffer_size_warning_too_large" = "Too large buffer uses excessive memory";
+"help_buffer_size_example_gaming" = "Game Streaming: 1MB";
+"help_buffer_size_example_general" = "General broadcast: 3MB";
+
+// MARK: - Help Details for Connection Timeout
+"help_connection_timeout_rec_general" = "General setting: 10-30 seconds";
+"help_connection_timeout_rec_fast" = "Fast environment: 5-10 seconds";
+"help_connection_timeout_rec_slow" = "Slow environment: 30-60 seconds";
+"help_connection_timeout_tip_network_match" = "Set according to your network environment";
+"help_connection_timeout_tip_too_short" = "Too short may cause normal connections to fail";
+"help_connection_timeout_tip_too_long" = "Too long degrades user experience";
+"help_connection_timeout_warning_no_response" = "Will wait for the set time if server doesn't respond";
+"help_connection_timeout_warning_battery" = "Consider battery consumption on mobile devices";
+"help_connection_timeout_example_wifi" = "Wi-Fi: 15 seconds";
+"help_connection_timeout_example_mobile_data" = "Mobile data: 30 seconds";
+
+// MARK: - Streaming Preset Enum
+"streaming_preset_low" = "Low Quality";
+"streaming_preset_standard" = "Standard";
+"streaming_preset_high" = "High Quality";
+"streaming_preset_ultra" = "Ultra Quality";
+
+// MARK: - Streaming Platform Enum
+"streaming_platform_custom" = "Custom";
+
+// MARK: - Network Status Enum
+"network_status_poor" = "Poor";
+"network_status_fair" = "Fair";
+"network_status_good" = "Good";
+"network_status_excellent" = "Excellent";
+
+// MARK: - Network Status Descriptions
+"network_status_poor_desc" = "Slow Connection (< 2Mbps)";
+"network_status_fair_desc" = "Fair Connection (2-5Mbps)";
+"network_status_good_desc" = "Fast Connection (5-10Mbps)";
+"network_status_excellent_desc" = "Very Fast Connection (> 10Mbps)";
+
+// MARK: - Additional Status Keys
+"status_disconnected" = "Disconnected";
+"status_reconnecting" = "Reconnecting";
+
+// MARK: - Suggestion Messages
+"high_bandwidth_warning" = "🌐 High total bandwidth. Stable internet connection required";
+"high_performance_warning" = "⚡ High resolution + high frame rate combination requires significant processing power";
+"settings_optimal" = "✅ Current settings are optimal";
+
+// MARK: - Connection and Stats
+"connection_latency" = " (Latency: %.0fms)";
+"stream_stats_format" = "Video: %.1f kbps\nAudio: %.1f kbps\nFrame Rate: %.1f fps\nDropped Frames: %d"; 

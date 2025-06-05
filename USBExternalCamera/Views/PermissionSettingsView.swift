@@ -3,10 +3,10 @@ import SwiftUI
 /// 권한 설정 화면
 struct PermissionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel: PermissionViewModel
+    @ObservedObject var viewModel: PermissionViewModel
     
-    init(viewModel: PermissionViewModel? = nil) {
-        _viewModel = StateObject(wrappedValue: viewModel ?? PermissionViewModel(permissionManager: PermissionManager()))
+    init(viewModel: PermissionViewModel) {
+        self.viewModel = viewModel
     }
     
     var body: some View {
@@ -15,7 +15,7 @@ struct PermissionSettingsView: View {
                 VStack(spacing: 0) {
                     PermissionRow(
                         icon: "camera",
-                        title: "카메라",
+                        title: NSLocalizedString("permission_camera", comment: ""),
                         status: viewModel.permissionStatusText(viewModel.cameraStatus)
                     ) {
                         Task {
@@ -25,7 +25,7 @@ struct PermissionSettingsView: View {
                     
                     PermissionRow(
                         icon: "mic",
-                        title: "마이크",
+                        title: NSLocalizedString("permission_microphone", comment: ""),
                         status: viewModel.permissionStatusText(viewModel.microphoneStatus)
                     ) {
                         Task {
@@ -35,7 +35,7 @@ struct PermissionSettingsView: View {
                     
                     PermissionRow(
                         icon: "photo.on.rectangle",
-                        title: "사진첩",
+                        title: NSLocalizedString("permission_photo_library", comment: ""),
                         status: viewModel.permissionStatusText(viewModel.photoLibraryStatus)
                     ) {
                         Task {
@@ -46,11 +46,11 @@ struct PermissionSettingsView: View {
                 .padding(.vertical)
             }
             .scrollDisabled(true)
-            .navigationTitle("권한 설정")
+            .navigationTitle(NSLocalizedString("permissions_title", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("닫기") {
+                    Button(NSLocalizedString("close", comment: "")) {
                         dismiss()
                     }
                 }
@@ -79,7 +79,7 @@ struct PermissionRow: View {
             }
             Spacer()
             Button(action: action) {
-                Text("권한 요청")
+                Text(NSLocalizedString("permissions_request", comment: ""))
                     .font(.subheadline)
             }
             .buttonStyle(.bordered)
@@ -91,5 +91,5 @@ struct PermissionRow: View {
 }
 
 #Preview {
-    PermissionSettingsView()
+    PermissionSettingsView(viewModel: PermissionViewModel(permissionManager: PermissionManager()))
 } 
