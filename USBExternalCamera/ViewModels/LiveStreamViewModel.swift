@@ -85,44 +85,7 @@ final class LiveStreamViewModel: ObservableObject {
         return status
     }
     
-    var streamControlButtonText: String {
-        switch status {
-        case .idle:
-            return NSLocalizedString("start_streaming", comment: "스트리밍 시작")
-        case .connecting:
-            return NSLocalizedString("connecting", comment: "연결 중")
-        case .connected:
-            return NSLocalizedString("start_streaming", comment: "스트리밍 시작")
-        case .streaming:
-            return NSLocalizedString("stop_streaming", comment: "스트리밍 중지")
-        case .disconnecting:
-            return NSLocalizedString("stopping", comment: "중지 중")
-        case .error:
-            return NSLocalizedString("start_streaming", comment: "스트리밍 시작")
-        }
-    }
-    
-    var isStreamControlButtonEnabled: Bool {
-        switch status {
-        case .connecting, .disconnecting:
-            return false
-        case .streaming, .connected:
-            return true
-        default:
-            return canStartStreaming
-        }
-    }
-    
-    var streamControlButtonColor: Color {
-        switch status {
-        case .streaming:
-            return .red
-        case .connecting, .disconnecting:
-            return .gray
-        default:
-            return .blue
-        }
-    }
+    // 기존 일반 스트리밍 버튼 관련 속성들 제거 - 화면 캡처 스트리밍만 사용
     
     // MARK: - Dependencies
     
@@ -152,56 +115,9 @@ final class LiveStreamViewModel: ObservableObject {
     
     // MARK: - Public Methods - Streaming Control
     
-    /// 라이브 스트리밍 시작
-    /// - Parameter captureSession: 카메라 캡처 세션
-    func startStreaming(with captureSession: AVCaptureSession) async {
-        logInfo("Starting streaming...", category: .streaming)
-        
-        isLoading = true
-        await updateStatus(.connecting, message: "스트리밍 연결 중...")
-        startDataMonitoring()
-        
-        do {
-            try await performStreamingStart(with: captureSession)
-            await handleStreamingStartSuccess()
-        } catch {
-            await handleStreamingStartFailure(error)
-        }
-        
-        isLoading = false
-    }
+    // 기존 일반 스트리밍 시작/중지 메서드들 제거 - 화면 캡처 스트리밍만 사용
     
-    /// 라이브 스트리밍 중지
-    func stopStreaming() async {
-        logInfo("Stopping streaming...", category: .streaming)
-        
-        isLoading = true
-        await updateStatus(.disconnecting, message: "스트리밍 종료 중...")
-        
-        do {
-            try await performStreamingStop()
-            await handleStreamingStopSuccess()
-        } catch {
-            await handleStreamingStopFailure(error)
-        }
-        
-        isLoading = false
-    }
-    
-    /// 스트리밍 토글 (시작/중지)
-    /// - Parameter captureSession: 카메라 캡처 세션
-    func toggleStreaming(with captureSession: AVCaptureSession) {
-        logDebug("🎮 [TOGGLE] Current status: \(status)", category: .streaming)
-        
-        switch status {
-        case .idle, .error:
-            Task { await startStreaming(with: captureSession) }
-        case .connected, .streaming:
-            Task { await stopStreaming() }
-        case .connecting, .disconnecting:
-            logDebug("🎮 [TOGGLE] Ignoring - already in transition", category: .streaming)
-        }
-    }
+    // 기존 일반 스트리밍 toggleStreaming 메서드 제거 - 화면 캡처 스트리밍만 사용
     
     // MARK: - Screen Capture Streaming Methods
     
@@ -945,11 +861,12 @@ final class LiveStreamViewModel: ObservableObject {
             throw LiveStreamError.networkError("Service not initialized")
         }
         
-        // 카메라 세션과 함께 스트리밍 시작 (프리뷰와 동일한 소스 사용)
+        // 화면 캡처 스트리밍 시작 (카메라 스트리밍은 제거됨)
         if let haishinKitManager = service as? HaishinKitManager {
-            try await haishinKitManager.startStreaming(with: settings, captureSession: captureSession)
+            try await haishinKitManager.startScreenCaptureStreaming(with: settings)
         } else {
-            try await service.startStreaming(with: settings)
+            // 다른 서비스의 경우 화면 캡처 스트리밍을 구현해야 함
+            throw LiveStreamError.streamingFailed("화면 캡처 스트리밍만 지원됩니다")
         }
     }
     

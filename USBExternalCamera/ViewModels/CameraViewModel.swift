@@ -346,14 +346,14 @@ final class CameraViewModel: NSObject, ObservableObject {
         }
     }
     
-    /// 카메라와 스트리밍 연결 설정
+    /// 카메라와 스트리밍 연결 설정 (화면 캡처용)
     /// - Parameters:
     ///   - streamingManager: 스트리밍 매니저 인스턴스
     func connectToStreaming(_ streamingManager: HaishinKitManager) {
         self.streamingManager = streamingManager
         sessionManager.frameDelegate = streamingManager
-        sessionManager.switchDelegate = streamingManager  // 카메라 전환 델리게이트 설정
-        logInfo("🔗 카메라와 스트리밍 매니저가 연결되었습니다 (프레임 + 전환 델리게이트)", category: .camera)
+        // 화면 캡처 모드에서는 카메라 전환 델리게이트가 불필요
+        logInfo("🔗 카메라와 스트리밍 매니저가 연결되었습니다 (프레임 델리게이트만)", category: .camera)
     }
     
     /// 소멸자

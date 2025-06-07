@@ -51,7 +51,7 @@ final class LiveStreamingTests: XCTestCase {
         testSettings.audioBitrate = 128
         
         do {
-            try await haishinKitManager.startStreaming(with: testSettings)
+            try await haishinKitManager.startScreenCaptureStreaming(with: testSettings)
             let status = haishinKitManager.connectionStatus
             XCTAssertEqual(status, .streaming)
             
@@ -107,7 +107,7 @@ final class LiveStreamingTests: XCTestCase {
         testSettings.audioBitrate = 128
         
         do {
-            try await haishinKitManager.startStreaming(with: testSettings)
+            try await haishinKitManager.startScreenCaptureStreaming(with: testSettings)
             
             // 잠시 대기 후 상태 확인
             try await Task.sleep(nanoseconds: 100_000_000) // 0.1초

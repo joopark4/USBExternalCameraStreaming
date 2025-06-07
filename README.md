@@ -8,6 +8,7 @@
 ### 🎯 주요 기능
 - ✅ **HaishinKit 2.0.8** - 실제 RTMP 스트리밍 구현 완료
 - ✅ **USB 외장 카메라 지원** - AVFoundation 기반 카메라 연동
+- ✅ **스크린 캡처 스트리밍** - 카메라 + UI 오버레이를 포함한 전체 화면 스트리밍
 - ✅ **실시간 스트리밍 제어** - 스트리밍 시작/중지, 실시간 모니터링
 - ✅ **YouTube Live 연동** - RTMP URL 및 스트림 키 지원
 - ✅ **고급 설정** - 비디오/오디오 품질, 해상도, 비트레이트 제어
@@ -18,20 +19,23 @@
 ```
 USBExternalCamera/
 ├── Services/
-│   └── LiveStreamService.swift          # HaishinKit 2.0.8 실제 구현
+│   └── LiveStreaming/
+│       ├── LiveStreamService.swift              # 프로토콜 및 인터페이스
+│       └── Managers/
+│           └── HaishinKitManager.swift          # HaishinKit 2.0.8 실제 구현
 ├── ViewModels/
-│   ├── LiveStreamViewModel.swift        # MVVM 스트리밍 뷰모델
-│   ├── CameraViewModel.swift           # 카메라 관리 뷰모델
-│   ├── MainViewModel.swift             # 메인 앱 뷰모델
-│   └── PermissionViewModel.swift       # 권한 관리 뷰모델
+│   ├── LiveStreamViewModel.swift                # MVVM 스트리밍 뷰모델 (스크린 캡처 전용)
+│   ├── CameraViewModel.swift                    # 카메라 관리 뷰모델
+│   ├── MainViewModel.swift                      # 메인 앱 뷰모델
+│   └── PermissionViewModel.swift                # 권한 관리 뷰모델
 ├── Views/
-│   ├── LiveStreamControlView.swift     # 스트리밍 컨트롤 UI
-│   ├── LiveStreamSettingsView.swift    # 스트리밍 설정 UI
-│   ├── CameraPreviewView.swift         # 카메라 미리보기
-│   └── CameraListView.swift            # 카메라 선택 UI
-├── Models/                             # SwiftData 모델
-├── Managers/                           # 추가 매니저 클래스들
-└── Assets.xcassets/                    # 앱 리소스
+│   ├── LiveStreamView.swift                     # 스트리밍 UI (스크린 캡처 전용)
+│   ├── LiveStreamSettingsView.swift             # 스트리밍 설정 UI
+│   ├── CameraPreviewView.swift                  # 카메라 미리보기
+│   └── CameraListView.swift                     # 카메라 선택 UI
+├── Models/                                      # SwiftData 모델
+├── Managers/                                    # 추가 매니저 클래스들
+└── Assets.xcassets/                             # 앱 리소스
 ```
 
 ## 🔧 기술 스택
@@ -39,6 +43,7 @@ USBExternalCamera/
 ### 📱 iOS Framework
 - **SwiftUI** - 모던 UI 프레임워크
 - **AVFoundation** - 카메라 캡처 및 미디어 처리
+- **ScreenCaptureKit** - iOS 화면 캡처 (카메라 + UI 오버레이)
 - **SwiftData** - 설정 데이터 영구 저장
 - **Combine** - 리액티브 프로그래밍
 
@@ -46,6 +51,7 @@ USBExternalCamera/
 - **HaishinKit 2.0.8** - RTMP 실시간 스트리밍
 - **MediaMixer** - 카메라 데이터 처리 및 믹싱
 - **RTMPConnection/RTMPStream** - 실제 RTMP 연결 및 스트림
+- **CVPixelBuffer** - 실시간 비디오 프레임 처리
 
 ### 🎥 지원 해상도 & 품질
 | 프리셋 | 해상도 | 비디오 비트레이트 | 오디오 비트레이트 | 프레임률 |
@@ -54,6 +60,62 @@ USBExternalCamera/
 | 표준 | 1080p | 2.5 Mbps | 128 kbps | 30 fps |
 | 고화질 | 1080p | 4.5 Mbps | 192 kbps | 60 fps |
 | 최고화질 | 4K | 8 Mbps | 256 kbps | 60 fps |
+
+## 🆕 최신 업데이트 (v2.0.0)
+
+### 🎯 스크린 캡처 스트리밍 시스템
+기존의 일반 카메라 스트리밍을 대체하여 **스크린 캡처 기반 스트리밍**으로 전환:
+
+#### ✨ 새로운 기능
+- **📱 전체 화면 캡처**: 카메라 미리보기 + UI 오버레이를 함께 스트리밍
+- **🎤 통합 오디오**: 마이크 오디오를 포함한 실시간 오디오 스트리밍
+- **⚡ 30fps 안정적 출력**: CVPixelBuffer 기반 최적화된 프레임 처리
+- **🔄 실시간 동기화**: 카메라 뷰모델과 스트리밍 매니저 자동 연결
+
+#### 🗑️ 제거된 기능
+- 이전 일반 카메라 스트리밍 버튼 (사이드바)
+- 기존 `startStreaming(with captureSession:)` 메서드
+- 카메라 전환 델리게이트 및 관련 UI
+- 중복된 스트리밍 제어 버튼들
+
+#### 🔧 리팩토링된 구조
+```swift
+// 이전: 일반 카메라 스트리밍 + 스크린 캡처 스트리밍 혼재
+// 현재: 스크린 캡처 스트리밍 전용
+
+// HaishinKitManager - 핵심 변경사항
+class HaishinKitManager {
+    // ✅ 유지: 스크린 캡처 스트리밍
+    func startScreenCaptureStreaming(settings: LiveStreamSettings) async throws
+    func processVideoFrame(_ sampleBuffer: CMSampleBuffer) async
+    
+    // ❌ 제거: 일반 스트리밍 메서드들
+    // func startStreaming(with settings: LiveStreamSettings) async throws
+    // func setupCamera(), setupAudio()
+    // func detachCamera(), detachAudio()
+}
+
+// LiveStreamViewModel - 스크린 캡처 전용
+class LiveStreamViewModel {
+    // ✅ 핵심 기능: 스크린 캡처 스트리밍만 지원
+    func startScreenCaptureStreaming() async
+    func stopStreaming() async
+    
+    // ❌ 제거: 일반 스트리밍 관련 프로퍼티 및 메서드
+    // var streamControlButtonText, isStreamControlButtonEnabled 등
+}
+```
+
+#### 🔄 개선된 아키텍처
+1. **단일 스트리밍 방식**: 스크린 캡처 스트리밍으로 통일
+2. **자동 컴포넌트 연결**: MainViewModel에서 CameraViewModel ↔ HaishinKitManager 자동 연결
+3. **최적화된 오디오 처리**: 스크린 캡처 전용 오디오 설정 (`setupAudioForScreenCapture`)
+4. **향상된 프레임 전달**: `RTMPStream.append()` 직접 호출로 성능 개선
+
+### 🐛 해결된 주요 이슈
+- **❌ 오디오 누락**: 스크린 캡처 모드에서 오디오 설정 완전 제거 → **✅ 해결**: `setupAudioForScreenCapture()` 추가
+- **❌ 프레임 전달 문제**: MediaMixer 의존성 → **✅ 해결**: RTMPStream 직접 전달 방식
+- **❌ 컴포넌트 연결 누락**: 수동 연결 → **✅ 해결**: MainViewModel 자동 초기화
 
 ## 🚀 설치 및 설정
 
@@ -102,51 +164,78 @@ RTMP URL: rtmp://a.rtmp.youtube.com/live2/
 
 ## 💻 주요 코드 구현
 
-### 🎥 HaishinKit 2.0.8 실제 구현
+### 🎥 스크린 캡처 스트리밍 구현
 ```swift
-// LiveStreamService.swift - 실제 HaishinKit 구현
-class LiveStreamService: ObservableObject {
+// HaishinKitManager.swift - 최신 스크린 캡처 구현
+class HaishinKitManager: ObservableObject {
     private var rtmpConnection: RTMPConnection?
     private var rtmpStream: RTMPStream?
     private var mediaMixer: MediaMixer?
     
-    func startStreaming(with captureSession: AVCaptureSession, 
-                       settings: LiveStreamSettings) async throws {
-        // 1. 실제 HaishinKit 객체 생성
+    // 스크린 캡처 전용 스트리밍 시작
+    func startScreenCaptureStreaming(settings: LiveStreamSettings) async throws {
+        // 1. HaishinKit 객체 생성
         rtmpConnection = RTMPConnection()
         rtmpStream = RTMPStream(connection: rtmpConnection!)
         mediaMixer = MediaMixer()
         
-        // 2. RTMP 서버 연결
-        _ = try await rtmpConnection!.connect(settings.rtmpURL)
+        // 2. 스크린 캡처 전용 오디오 설정
+        try await setupAudioForScreenCapture()
         
-        // 3. 스트림 설정 적용
-        var videoSettings = await rtmpStream!.videoSettings
-        videoSettings.videoSize = CGSize(width: 1920, height: 1080)
-        videoSettings.bitRate = 2500 * 1000 // 2.5 Mbps
-        await rtmpStream!.setVideoSettings(videoSettings)
+        // 3. RTMP 연결 및 설정 적용
+        _ = try await rtmpConnection!.connect(settings.rtmps)
+        await configureStreamSettings(settings)
         
-        // 4. 스트리밍 시작
+        // 4. 스트리밍 발행
         _ = try await rtmpStream!.publish(settings.streamKey)
+    }
+    
+    // 실시간 비디오 프레임 처리 (30fps)
+    func processVideoFrame(_ sampleBuffer: CMSampleBuffer) async {
+        guard let stream = rtmpStream else { return }
+        
+        do {
+            // 직접 RTMPStream에 프레임 전달 (최적화)
+            await stream.append(sampleBuffer)
+        } catch {
+            logger.warning("⚠️ Frame delivery failed: \(error)")
+        }
+    }
+    
+    // 스크린 캡처 전용 오디오 설정
+    private func setupAudioForScreenCapture() async throws {
+        guard let mixer = mediaMixer else { return }
+        
+        // 마이크 오디오 연결
+        let audioDevice = AVCaptureDevice.default(for: .audio)
+        try await mixer.attachAudio(audioDevice, track: 0)
+        
+        logger.info("🎤 Screen capture audio setup completed")
     }
 }
 ```
 
-### 📊 실시간 모니터링
+### 📊 스크린 캡처 통계 모니터링
 ```swift
-// 실시간 통계 수집 및 표시
-func updateStreamingStats() {
-    let streamInfo = await getStreamInfo(from: rtmpStream!)
+// LiveStreamViewModel.swift - 실시간 통계
+@MainActor
+class LiveStreamViewModel: ObservableObject {
+    @Published var streamingStats = StreamingStats()
     
-    // UI 업데이트
-    currentStats.videoBitrate = streamInfo.actualVideoBitrate
-    currentStats.audioBitrate = streamInfo.actualAudioBitrate
-    currentStats.frameRate = streamInfo.actualFrameRate
-    currentStats.droppedFrames = streamInfo.droppedFrames
-    
-    // 성능 문제 감지
-    if streamInfo.droppedFrames > 0 {
-        logWarning("⚠️ 프레임 드롭 감지: \(streamInfo.droppedFrames)개")
+    func updateStreamingStats() async {
+        guard let manager = haishinKitManager,
+              let streamInfo = await manager.getCurrentStreamInfo() else { return }
+        
+        // 스크린 캡처 전용 통계 업데이트
+        streamingStats.videoBitrate = streamInfo.actualVideoBitrate
+        streamingStats.audioBitrate = streamInfo.actualAudioBitrate
+        streamingStats.frameRate = streamInfo.actualFrameRate
+        streamingStats.screenCaptureFrames = streamInfo.totalFrames
+        
+        // 스크린 캡처 성능 모니터링
+        if streamInfo.droppedFrames > 0 {
+            logger.warning("⚠️ Screen capture frame drop: \(streamInfo.droppedFrames)")
+        }
     }
 }
 ```
@@ -220,10 +309,13 @@ frameRate: 60
 ### ✅ 완료된 기능
 - [x] HaishinKit 2.0.8 완전 통합
 - [x] 실시간 RTMP 스트리밍
+- [x] **스크린 캡처 스트리밍** - 카메라 + UI 오버레이 동시 스트리밍
 - [x] YouTube Live 연동
 - [x] USB 외장 카메라 지원
 - [x] 실시간 통계 모니터링
 - [x] 다국어 지원 (한국어/영어)
+- [x] **레거시 코드 정리** - 이전 카메라 스트리밍 시스템 제거
+- [x] **아키텍처 단순화** - 단일 스트리밍 방식으로 통일
 
 ### 🚀 개발 중인 기능
 - [ ] **화면 녹화 저장** - 로컬 MP4 파일 저장

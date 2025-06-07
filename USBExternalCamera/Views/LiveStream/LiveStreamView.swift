@@ -17,28 +17,7 @@ struct LiveStreamSectionView: View {
     
     var body: some View {
         Section(header: Text(NSLocalizedString("live_streaming_section", comment: "라이브 스트리밍 섹션"))) {
-            // 스트리밍 시작/중지 토글 메뉴
-            Button {
-                print("🎮 [UI] Stream button tapped")
-                viewModel.liveStreamViewModel.toggleStreaming(with: viewModel.cameraViewModel.captureSession)
-            } label: {
-                HStack {
-                    Label(
-                        viewModel.liveStreamViewModel.streamControlButtonText,
-                        systemImage: viewModel.liveStreamViewModel.status == .streaming ? "stop.circle.fill" : "play.circle.fill"
-                    )
-                    Spacer()
-                    
-                    // 스트리밍 상태 표시
-                    if viewModel.liveStreamViewModel.status != .idle {
-                        Image(systemName: viewModel.liveStreamViewModel.status.iconName)
-                            .foregroundColor(streamingStatusColor)
-                            .font(.caption)
-                    }
-                }
-            }
-            .disabled(!viewModel.liveStreamViewModel.isStreamControlButtonEnabled)
-            .foregroundColor(viewModel.liveStreamViewModel.status == .streaming ? .red : .primary)
+            // 기존 일반 스트리밍 버튼 제거 - 화면 캡처 스트리밍만 사용
             
             // MARK: - Screen Capture Streaming Button
             
@@ -64,7 +43,7 @@ struct LiveStreamSectionView: View {
             } label: {
                 HStack {
                     Label(
-                        screenCaptureButtonText,
+                        "화면 캡처 스트리밍",
                         systemImage: viewModel.isScreenCaptureStreaming ? "stop.circle.fill" : "camera.metering.partial"
                     )
                     Spacer()
@@ -86,7 +65,7 @@ struct LiveStreamSectionView: View {
                     }
                 }
             }
-            .disabled(!viewModel.liveStreamViewModel.isStreamControlButtonEnabled)
+            .disabled(viewModel.liveStreamViewModel.isLoading)
             .foregroundColor(viewModel.isScreenCaptureStreaming ? .red : .primary)
             
             // 라이브 스트리밍 설정 메뉴
@@ -232,8 +211,8 @@ struct LiveStreamView: View {
                 Button("재시도") {
                     Task {
                         if !viewModel.isStreaming {
-                            let captureSession = AVCaptureSession()
-                            await viewModel.startStreaming(with: captureSession)
+                            // 화면 캡처 스트리밍 재시도 (카메라 스트리밍 아님)
+                            await viewModel.startScreenCaptureStreaming()
                         }
                     }
                 }
@@ -730,10 +709,10 @@ struct LiveStreamView: View {
     private func toggleStreaming() {
         Task {
             if viewModel.isStreaming {
-                await viewModel.stopStreaming()
+                await viewModel.stopScreenCaptureStreaming()
             } else {
-                let captureSession = AVCaptureSession()
-                await viewModel.startStreaming(with: captureSession)
+                // 화면 캡처 스트리밍 시작 (카메라 스트리밍 아님)
+                await viewModel.startScreenCaptureStreaming()
             }
         }
     }

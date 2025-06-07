@@ -1063,8 +1063,8 @@ final class CameraPreviewUIView: UIView {
   /*
    사용 예시:
   
-   1. 일반 카메라 스트리밍:
-      try await haishinKitManager.startStreaming(with: settings, captureSession: captureSession)
+   1. 일반 카메라 스트리밍: (제거됨 - 화면 캡처 스트리밍만 사용)
+      // try await haishinKitManager.startStreaming(with: settings, captureSession: captureSession)
   
    2. 화면 캡처 스트리밍:
       // Step 1: 화면 캡처 모드로 스트리밍 시작

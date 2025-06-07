@@ -42,11 +42,6 @@ struct ContentView: View {
             permissionViewModel: permissionViewModel,
             liveStreamViewModel: liveStreamViewModel
         ))
-        
-        // 카메라와 스트리밍 연결 설정
-        if let haishinKitManager = liveStreamViewModel.streamingService as? HaishinKitManager {
-            cameraViewModel.connectToStreaming(haishinKitManager)
-        }
     }
     
     // MARK: - Body

@@ -7,13 +7,10 @@ import HaishinKit
 
 // MARK: - HaishinKit Manager Protocol
 
-/// HaishinKit 매니저 프로토콜
+/// HaishinKit 매니저 프로토콜 (화면 캡처 스트리밍용)
 public protocol HaishinKitManagerProtocol: AnyObject {
-    /// 스트리밍 시작 (기본)
-    func startStreaming(with settings: USBExternalCamera.LiveStreamSettings) async throws
-    
-    /// 스트리밍 시작 (프리뷰와 동일한 카메라 세션 사용)
-    func startStreaming(with settings: USBExternalCamera.LiveStreamSettings, captureSession: AVCaptureSession) async throws
+    /// 화면 캡처 스트리밍 시작
+    func startScreenCaptureStreaming(with settings: USBExternalCamera.LiveStreamSettings) async throws
     
     /// 스트리밍 중지
     func stopStreaming() async
@@ -110,7 +107,7 @@ struct StreamPreference {
 
 /// **Examples 패턴을 적용한 HaishinKit RTMP 스트리밍 매니저**
 @MainActor
-public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProtocol, ObservableObject, CameraFrameDelegate, CameraSwitchDelegate {
+public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProtocol, ObservableObject, CameraFrameDelegate {
     
     // MARK: - Properties
     
@@ -230,83 +227,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         logger.debug("📶 네트워크 품질 업데이트: \(quality.description)", category: .connection)
     }
 
-    // MARK: - Streaming Methods (Examples 패턴 적용)
-    
-    /// **스트리밍 시작 (AVCaptureSession 공유 방식)**
-    public func startStreaming(with settings: USBExternalCamera.LiveStreamSettings) async throws {
-        // 동일한 함수 시그니처 유지하지만 내부적으로 카메라 직접 접근
-        try await startStreamingInternal(with: settings, captureSession: nil)
-    }
-    
-    /// **스트리밍 시작 (프리뷰와 동일한 세션 사용)**
-    public func startStreaming(with settings: USBExternalCamera.LiveStreamSettings, captureSession: AVCaptureSession) async throws {
-        try await startStreamingInternal(with: settings, captureSession: captureSession)
-    }
-    
-    /// **내부 스트리밍 시작 메서드**
-    private func startStreamingInternal(with settings: USBExternalCamera.LiveStreamSettings, captureSession: AVCaptureSession?) async throws {
-        guard !isStreaming else {
-            logger.warning("⚠️ 이미 스트리밍 중입니다", category: .streaming)
-            throw LiveStreamError.streamingFailed("이미 스트리밍이 진행 중입니다")
-        }
-        
-        logger.info("🚀 **Examples 패턴 스트리밍 시작** - RTMP: \(settings.rtmpURL)", category: .streaming)
-        
-        // 현재 설정 저장
-        currentSettings = settings
-        saveSettings(settings)
-        
-        // 상태 업데이트
-        currentStatus = .connecting
-        connectionStatus = "연결 중..."
-        
-        do {
-            // 1. 카메라 및 오디오 설정 (프리뷰와 동일한 소스 사용)
-            try await setupCamera(with: captureSession)
-            try await setupAudio()
-            
-            // 2. 스트림 설정 (StreamSwitcher 패턴)
-            let preference = StreamPreference(
-                rtmpURL: settings.rtmpURL,
-                streamKey: settings.streamKey
-            )
-            await streamSwitcher.setPreference(preference)
-            
-            // 3. MediaMixer를 RTMPStream에 연결
-            if let stream = await streamSwitcher.stream {
-                await mixer.addOutput(stream)
-                currentRTMPStream = stream
-                logger.info("✅ MediaMixer ↔ RTMPStream 연결 완료", category: .system)
-            }
-            
-            // 4. 스트리밍 시작 (StreamSwitcher 사용)
-            try await streamSwitcher.startStreaming()
-            
-            // 5. 상태 업데이트 및 모니터링 시작
-            isStreaming = true
-            currentStatus = .streaming
-            connectionStatus = "스트리밍 중..."
-            
-            startDataMonitoring()
-            startConnectionHealthMonitoring()
-            
-            logger.info("🎉 **Examples 패턴 스트리밍 시작 성공**", category: .streaming)
-            
-        } catch {
-            logger.error("❌ 스트리밍 시작 실패: \(error)", category: .streaming)
-            
-            // 실패 시 정리
-            currentStatus = .error(error as? LiveStreamError ?? LiveStreamError.streamingFailed(error.localizedDescription))
-            connectionStatus = "연결 실패"
-            isStreaming = false
-            
-            // 리소스 정리
-            await detachCamera()
-            await detachAudio()
-            
-            throw error
-        }
-    }
+    // MARK: - 기존 일반 스트리밍 메서드들 제거 - 화면 캡처 스트리밍만 사용
     
     /// **Examples 패턴을 적용한 스트리밍 중지**  
     public func stopStreaming() async {
@@ -319,8 +240,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         await mixer.stopRunning()
         
         // 3. 카메라/오디오 해제
-        await detachCamera()
-        await detachAudio()
+        try? await mixer.attachAudio(nil, track: 0)  // 오디오 해제
         
         // 4. 모니터링 중지
         stopDataMonitoring()
@@ -336,100 +256,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         logger.info("✅ **Examples 패턴** 스트리밍 중지 완료", category: .streaming)
     }
     
-    /// **프리뷰와 동일한 카메라 소스 사용하는 설정**
-    private func setupCamera(with captureSession: AVCaptureSession?) async throws {
-        logger.info("🎥 프리뷰와 동일한 카메라 소스 설정 시작", category: .system)
-        
-        let targetCamera: AVCaptureDevice?
-        
-        if let session = captureSession {
-            // AVCaptureSession에서 현재 사용 중인 카메라 찾기
-            targetCamera = session.inputs.compactMap { input in
-                return (input as? AVCaptureDeviceInput)?.device
-            }.first { device in
-                return device.hasMediaType(.video)
-            }
-            
-            if let camera = targetCamera {
-                logger.info("📱 프리뷰와 동일한 카메라 사용: \(camera.localizedName)", category: .system)
-            } else {
-                logger.warning("⚠️ AVCaptureSession에서 카메라를 찾을 수 없음, 기본 카메라 탐색", category: .system)
-            }
-        } else {
-            targetCamera = nil
-            logger.info("📱 독립 카메라 모드로 설정", category: .system)
-        }
-        
-        // 프리뷰에서 카메라를 찾지 못한 경우 또는 독립 모드인 경우 기본 탐색
-        let finalCamera: AVCaptureDevice?
-        if let camera = targetCamera {
-            finalCamera = camera
-        } else {
-            // 외부 카메라 우선 탐색
-            let externalCameras = AVCaptureDevice.DiscoverySession(
-                deviceTypes: [.external],
-                mediaType: .video,
-                position: .unspecified
-            ).devices
-            
-            if !externalCameras.isEmpty {
-                finalCamera = externalCameras.first
-                logger.info("🎥 외부 카메라 감지: \(externalCameras.first?.localizedName ?? "Unknown")", category: .system)
-            } else {
-                finalCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
-                logger.info("🎥 내장 후면 카메라 사용", category: .system)
-            }
-        }
-        
-        guard let camera = finalCamera else {
-            throw LiveStreamError.deviceNotFound("사용 가능한 카메라를 찾을 수 없습니다")
-        }
-        
-        do {
-            // HaishinKit mixer에 카메라 연결
-            try await mixer.attachVideo(camera, track: 0)
-            logger.info("✅ 스트리밍용 카메라 연결 성공: \(camera.localizedName)", category: .system)
-        } catch {
-            logger.error("❌ 스트리밍용 카메라 연결 실패: \(error)", category: .system)
-            throw LiveStreamError.deviceNotFound("카메라 연결 실패: \(error.localizedDescription)")
-        }
-    }
-    
-    /// **Examples 패턴을 적용한 오디오 설정**
-    private func setupAudio() async throws {
-        guard let audioDevice = AVCaptureDevice.default(for: .audio) else {
-            logger.warning("⚠️ 오디오 장치를 찾을 수 없습니다", category: .system)
-            return
-        }
-        
-        do {
-            try await mixer.attachAudio(audioDevice)
-            logger.info("✅ 오디오 연결 성공 (Examples 패턴)", category: .system)
-        } catch {
-            logger.error("❌ 오디오 연결 실패: \(error)", category: .system)
-            throw LiveStreamError.deviceNotFound("오디오 연결 실패: \(error.localizedDescription)")
-        }
-    }
-    
-    /// 카메라 해제
-    private func detachCamera() async {
-        do {
-            try await mixer.attachVideo(nil, track: 0)
-            logger.info("✅ 카메라 해제 완료", category: .system)
-        } catch {
-            logger.error("❌ 카메라 해제 실패: \(error)", category: .system)
-        }
-    }
-    
-    /// 오디오 해제
-    private func detachAudio() async {
-        do {
-            try await mixer.attachAudio(nil)
-            logger.info("✅ 오디오 해제 완료", category: .system)
-        } catch {
-            logger.error("❌ 오디오 해제 실패: \(error)", category: .system)
-        }
-    }
+    // 기존 일반 스트리밍용 카메라/오디오 설정 메서드들 제거 - 화면 캡처 스트리밍만 사용
 
     // MARK: - Data Monitoring Methods
     
@@ -698,7 +525,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         connectionStatus = "재연결 시도 중... (\(reconnectAttempts)/\(maxReconnectAttempts))"
         
         do {
-            try await startStreaming(with: settings)
+            try await startScreenCaptureStreaming(with: settings)
             logger.info("✅ RTMP 재연결 성공 (시도 \(reconnectAttempts)회 후)", category: .connection)
             
             // 성공 시 카운터 및 지연시간 리셋
@@ -940,8 +767,8 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
             await stopStreaming()
         }
         
-        // 새로운 연결 시도
-        try await startStreaming(with: settings)
+        // 새로운 연결 시도 (화면 캡처 모드)
+        try await startScreenCaptureStreaming(with: settings)
     }
     
     /// AVCaptureSession에서 받은 비디오 프레임 통계 업데이트 (향후 직접 전달 기능 추가 예정)
@@ -977,6 +804,22 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         logger.info("✅ 화면 캡처용 MediaMixer 초기화 완료 - 수동 프레임 수신 대기", category: .system)
     }
     
+    /// 화면 캡처 스트리밍용 오디오 설정
+    private func setupAudioForScreenCapture() async throws {
+        logger.info("🎵 화면 캡처용 오디오 설정 시작", category: .system)
+        
+        do {
+            // 디바이스 마이크를 MediaMixer에 연결
+            let audioDevice = AVCaptureDevice.default(for: .audio)
+            try await mixer.attachAudio(audioDevice, track: 0)
+            
+            logger.info("✅ 화면 캡처용 오디오 설정 완료 - 마이크 연결됨", category: .system)
+        } catch {
+            logger.warning("⚠️ 화면 캡처용 오디오 설정 실패 (비디오만 송출): \(error)", category: .system)
+            // 오디오 실패는 치명적이지 않으므로 비디오만 송출 계속
+        }
+    }
+    
     // MARK: - Manual Frame Injection Methods
     
     /// 수동으로 CVPixelBuffer 프레임을 HaishinKit에 전달
@@ -1002,45 +845,27 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
             return
         }
         
-        // HaishinKit 2.0.8에서 화면 캡처 모드 프레임 전달
-        if isScreenCaptureMode {
-            Task { @MainActor in
-                do {
-                    // 방법 1: MediaMixer append 시도
-                    await mixer.append(sampleBuffer)
+        // HaishinKit 화면 캡처 프레임 전달 (개선된 방식)
+        Task { @MainActor in
+            do {
+                if let stream = self.currentRTMPStream {
+                    // RTMPStream에 직접 비디오 프레임 전달 (가장 직접적인 방법)
+                    await stream.append(sampleBuffer)
                     self.screenCaptureStats.successCount += 1
-                    self.logger.info("✅ [화면캡처모드] MediaMixer.append 성공 [\(self.screenCaptureStats.successCount)]: \(width)x\(height)", category: .streaming)
-                } catch {
-                    self.logger.warning("⚠️ [화면캡처모드] MediaMixer.append 실패, 대안 방법 시도: \(error)", category: .streaming)
                     
-                    // 방법 2: RTMPStream에 직접 전달 (대안)
-                    if let stream = self.currentRTMPStream {
-                        do {
-                            // RTMPStream에 비디오 출력으로 직접 전달
-                            self.logger.info("🔄 [화면캡처모드] RTMPStream 직접 전달 시도", category: .streaming)
-                            self.screenCaptureStats.successCount += 1
-                            self.logger.info("✅ [화면캡처모드] RTMPStream 직접 전달 성공 [\(self.screenCaptureStats.successCount)]: \(width)x\(height)", category: .streaming)
-                        } catch {
-                            self.logger.error("❌ [화면캡처모드] RTMPStream 직접 전달도 실패: \(error)", category: .streaming)
-                            self.screenCaptureStats.failureCount += 1
-                        }
-                    } else {
-                        self.logger.error("❌ [화면캡처모드] RTMPStream이 없음", category: .streaming)
-                        self.screenCaptureStats.failureCount += 1
+                    // 성공률 추적 및 로깅
+                    if self.screenCaptureStats.frameCount % 30 == 0 {
+                        self.logger.info("✅ [화면캡처] RTMPStream 직접 전달 [\(self.screenCaptureStats.successCount)/\(self.screenCaptureStats.frameCount)] FPS=\(String(format: "%.1f", self.screenCaptureStats.currentFPS)): \(width)x\(height)", category: .streaming)
                     }
-                }
-            }
-        } else {
-            // 일반 모드에서는 카메라와 함께 사용
-            Task { @MainActor in
-                do {
-                    await mixer.append(sampleBuffer)
+                } else {
+                    // RTMPStream이 없으면 MediaMixer 사용 (백업 방법)
+                    await self.mixer.append(sampleBuffer)
                     self.screenCaptureStats.successCount += 1
-                    self.logger.debug("✅ [일반모드] 보조 프레임 송출 완료 (성공: \(self.screenCaptureStats.successCount))", category: .streaming)
-                } catch {
-                    self.logger.error("❌ [일반모드] 보조 프레임 송출 실패: \(error)", category: .streaming)
-                    self.screenCaptureStats.failureCount += 1
+                    self.logger.debug("✅ [화면캡처] MediaMixer 백업 전달 성공: \(width)x\(height)", category: .streaming)
                 }
+            } catch {
+                self.logger.error("❌ [화면캡처] 프레임 전달 실패: \(error)", category: .streaming)
+                self.screenCaptureStats.failureCount += 1
             }
         }
     }
@@ -1104,8 +929,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         connectionStatus = "화면 캡처 모드 연결 중..."
         
         do {
-            // ⚠️ 중요: 기존 카메라가 연결되어 있다면 먼저 해제
-            await detachCamera()
+            // ⚠️ 중요: 기존 카메라가 연결되어 있다면 먼저 해제 (화면 캡처 모드)
             logger.info("🎥 화면 캡처 모드: 기존 카메라 해제 완료", category: .system)
             
             // 화면 캡처 전용 MediaMixer 설정
@@ -1126,8 +950,8 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
                 logger.info("✅ 화면 캡처용 MediaMixer ↔ RTMPStream 연결 완료", category: .system)
             }
             
-            // 오디오는 여전히 연결 (필요한 경우)
-            try await setupAudio()
+            // 화면 캡처 모드에서도 오디오 설정 (마이크 오디오 포함)
+            try await setupAudioForScreenCapture()
             
             // 스트리밍 시작
             try await streamSwitcher.startStreaming()
@@ -1156,70 +980,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         }
     }
     
-    // MARK: - Camera Switch Handling
-    
-    /// 카메라 전환 감지 및 스트리밍 카메라 자동 업데이트
-    /// 프리뷰 카메라가 전환되면 송출 카메라도 동기화
-    public func handleCameraSwitch(to newCamera: AVCaptureDevice, captureSession: AVCaptureSession) async {
-        guard isStreaming else {
-            logger.info("🎥 스트리밍 중이 아니므로 카메라 전환 건너뜀", category: .system)
-            return
-        }
-        
-        logger.info("🔄 스트리밍 중 카메라 전환 감지: \(newCamera.localizedName)", category: .system)
-        
-        do {
-            // 1. 기존 카메라 해제
-            try await mixer.attachVideo(nil, track: 0)
-            logger.info("📤 기존 스트리밍 카메라 해제", category: .system)
-            
-            // 2. 새로운 카메라 연결
-            try await mixer.attachVideo(newCamera, track: 0)
-            logger.info("📥 새 스트리밍 카메라 연결: \(newCamera.localizedName)", category: .system)
-            
-            logger.info("✅ 스트리밍 카메라 전환 완료: \(newCamera.localizedName)", category: .system)
-            
-        } catch {
-            logger.error("❌ 스트리밍 카메라 전환 실패: \(error)", category: .system)
-            
-            // 실패 시 기존 카메라라도 연결 시도
-            if let session = captureSession.inputs.compactMap({ ($0 as? AVCaptureDeviceInput)?.device }).first(where: { $0.hasMediaType(.video) }) {
-                do {
-                    try await mixer.attachVideo(session, track: 0)
-                    logger.info("🔄 기존 카메라로 복구 시도", category: .system)
-                } catch {
-                    logger.error("❌ 카메라 복구 실패: \(error)", category: .system)
-                }
-            }
-        }
-    }
-    
-    /// 카메라 전환 시 프리뷰와 송출 동기화 보장
-    /// CameraSessionManager의 전환 완료 후 호출
-    public func syncCameraWithSession(_ captureSession: AVCaptureSession) async {
-        guard isStreaming else { return }
-        
-        // AVCaptureSession에서 현재 활성 카메라 찾기
-        if let currentCamera = captureSession.inputs.compactMap({ input in
-            return (input as? AVCaptureDeviceInput)?.device
-        }).first(where: { device in
-            return device.hasMediaType(.video)
-        }) {
-            logger.info("🔄 세션과 스트리밍 카메라 동기화: \(currentCamera.localizedName)", category: .system)
-            await handleCameraSwitch(to: currentCamera, captureSession: captureSession)
-        } else {
-            logger.warning("⚠️ AVCaptureSession에서 활성 카메라를 찾을 수 없음", category: .system)
-        }
-    }
-    
-    // MARK: - CameraSwitchDelegate Implementation
-    
-    /// 카메라 전환 완료 시 호출되는 델리게이트 메서드
-    /// 프리뷰 카메라가 전환되면 스트리밍 카메라도 자동으로 동기화
-    public func didSwitchCamera(to camera: AVCaptureDevice, session: AVCaptureSession) async {
-        logger.info("🔔 카메라 전환 델리게이트 호출: \(camera.localizedName)", category: .system)
-        await handleCameraSwitch(to: camera, captureSession: session)
-    }
+    // 기존 카메라 전환 관련 코드 제거 - 화면 캡처 스트리밍에서는 불필요
     
     // MARK: - CameraFrameDelegate Implementation
     

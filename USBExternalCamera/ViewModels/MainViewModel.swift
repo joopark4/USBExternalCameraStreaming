@@ -50,8 +50,8 @@ final class MainViewModel: ObservableObject {
     /// - false: 화면 캡처 스트리밍이 비활성화됨 (일반 모드)
     ///
     /// **UI 바인딩:**
-    /// 사이드바의 "스트리밍 시작 - 캡처" 버튼 상태와 연동됩니다.
-    /// 상태 변화 시 자동으로 버튼 텍스트와 아이콘이 업데이트됩니다.
+    /// 사이드바의 "화면 캡처 스트리밍" 버튼 상태와 연동됩니다.
+    /// 상태 변화 시 자동으로 버튼 아이콘과 Live 배지가 업데이트됩니다.
     ///
     /// **업데이트 조건:**
     /// LiveStreamViewModel의 status가 변경될 때 자동으로 동기화됩니다.
@@ -85,6 +85,14 @@ final class MainViewModel: ObservableObject {
         self.cameraViewModel = cameraViewModel
         self.permissionViewModel = permissionViewModel
         self.liveStreamViewModel = liveStreamViewModel
+        
+        // CameraViewModel과 HaishinKitManager 연결 설정
+        if let haishinKitManager = liveStreamViewModel.streamingService as? HaishinKitManager {
+            cameraViewModel.connectToStreaming(haishinKitManager)
+            logDebug("🔗 [MainViewModel] CameraViewModel과 HaishinKitManager 연결 완료", category: .ui)
+        } else {
+            logError("❌ [MainViewModel] HaishinKitManager 연결 실패", category: .ui)
+        }
         
         setupBindings()
         

@@ -29,11 +29,7 @@ public protocol LiveStreamServiceProtocol: AnyObject {
     /// 현재 스트리밍 추천 설정
     var recommendations: StreamingRecommendations? { get }
     
-    /// 스트리밍 시작
-    func startStreaming(with settings: USBExternalCamera.LiveStreamSettings) async throws
-    
-    /// 스트리밍 중지
-    func stopStreaming()
+    // 기존 일반 스트리밍 메서드들 제거 - 화면 캡처 스트리밍만 사용
     
     /// 연결 테스트
     func testConnection(to settings: USBExternalCamera.LiveStreamSettings) async -> ConnectionTestResult
