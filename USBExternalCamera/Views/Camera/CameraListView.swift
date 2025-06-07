@@ -51,7 +51,7 @@ struct CameraListView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                         .font(.caption2)
-                    Text("선택됨: \(selectedCamera.name)")
+                    Text(NSLocalizedString("selected_camera", comment: "선택됨: ") + "\(selectedCamera.name)")
                         .font(.caption2)
                         .foregroundColor(.green)
                 }
@@ -60,7 +60,7 @@ struct CameraListView: View {
             }
             
             // 카메라 목록 상태 표시 (디버깅용)
-            Text("내장: \(builtInCount)개, 외장: \(externalCount)개")
+            Text(String.localizedStringWithFormat(NSLocalizedString("camera_count_status", comment: "내장: %d개, 외장: %d개"), builtInCount, externalCount))
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .padding(.leading, 20)
@@ -146,7 +146,7 @@ struct CameraListView: View {
             
             // 카메라가 전혀 없는 경우 안내 메시지
             if builtInCount == 0 && externalCount == 0 {
-                Text("카메라를 찾을 수 없습니다")
+                Text(NSLocalizedString("no_camera_found", comment: "카메라를 찾을 수 없습니다"))
                     .font(.caption)
                     .foregroundColor(.red)
                     .padding(.leading, 20)

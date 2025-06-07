@@ -40,7 +40,7 @@ struct DetailView: View {
                     Image(systemName: "sidebar.left")
                         .font(.system(size: 50))
                         .foregroundColor(.gray)
-                    Text("사이드바에서 메뉴를 선택하세요")
+                    Text(NSLocalizedString("select_menu_from_sidebar", comment: "사이드바에서 메뉴를 선택하세요"))
                         .font(.title2)
                         .foregroundColor(.gray)
                 }

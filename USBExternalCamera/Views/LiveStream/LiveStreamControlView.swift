@@ -86,7 +86,7 @@ struct CurrentStatusSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("현재 상태")
+            Text(NSLocalizedString("current_status", comment: "현재 상태"))
                 .font(.headline)
                 .fontWeight(.semibold)
             
@@ -157,7 +157,7 @@ struct AdvancedSettingsSection: View {
                     HStack {
                         Image(systemName: "play.rectangle.on.rectangle")
                             .foregroundColor(.red)
-                        Text("YouTube Live 설정 가이드")
+                        Text(NSLocalizedString("youtube_live_setup_guide", comment: "YouTube Live 설정 가이드"))
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -180,7 +180,7 @@ struct AdvancedSettingsSection: View {
                     HStack {
                         Image(systemName: "stethoscope")
                             .foregroundColor(.orange)
-                        Text("YouTube 스트리밍 진단")
+                        Text(NSLocalizedString("youtube_streaming_diagnosis", comment: "YouTube 스트리밍 진단"))
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -279,7 +279,7 @@ struct ConnectionTestView: View {
                         .font(.headline)
                         .multilineTextAlignment(.center)
                     
-                    Text("지연시간: \(Int(result.latency))ms")
+                    Text(String.localizedStringWithFormat(NSLocalizedString("latency_ms", comment: "지연시간: %dms"), Int(result.latency)))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 } else {

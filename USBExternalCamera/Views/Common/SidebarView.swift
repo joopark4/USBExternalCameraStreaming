@@ -82,7 +82,7 @@ struct LoadingOverlayView: View {
                     .scaleEffect(1.2)
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 
-                Text("새로고침 중...")
+                Text(NSLocalizedString("refreshing", comment: "새로고침 중..."))
                     .font(.caption)
                     .foregroundColor(.white)
             }

@@ -118,7 +118,7 @@ struct LiveStreamSettingsView: View {
             
             if viewModel.status != .idle {
                 // 스트리밍 중일 때는 제한된 설정만 변경 가능
-                Text("스트리밍 중에는 일부 설정을 변경할 수 없습니다")
+                Text(NSLocalizedString("streaming_settings_limited", comment: "스트리밍 중에는 일부 설정을 변경할 수 없습니다"))
                     .foregroundColor(.orange)
                     .font(.caption)
                     .padding(.bottom)
@@ -257,7 +257,7 @@ struct LiveStreamSettingsView: View {
                 
                 // 해상도 설정 (단순화)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("해상도")
+                    Text(NSLocalizedString("resolution", comment: "해상도"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                     
@@ -270,11 +270,11 @@ struct LiveStreamSettingsView: View {
                 
                 // 프레임레이트
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("프레임 레이트")
+                    Text(NSLocalizedString("frame_rate", comment: "프레임 레이트"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                     
-                    Picker("프레임 레이트", selection: $viewModel.settings.frameRate) {
+                    Picker(NSLocalizedString("frame_rate", comment: "프레임 레이트"), selection: $viewModel.settings.frameRate) {
                         Text("24fps").tag(24)
                         Text("30fps").tag(30)
                         Text("60fps").tag(60)
@@ -449,11 +449,11 @@ struct LiveStreamSettingsView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.red)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("⚠️ 비트레이트가 너무 높습니다")
+                    Text(NSLocalizedString("bitrate_too_high_warning", comment: "⚠️ 비트레이트가 너무 높습니다"))
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.red)
-                    Text("YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps")
+                    Text(NSLocalizedString("youtube_bitrate_warning", comment: "YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -467,7 +467,7 @@ struct LiveStreamSettingsView: View {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text("✅ YouTube Live 1080p 권장 범위")
+                Text(NSLocalizedString("youtube_recommended_range", comment: "✅ YouTube Live 1080p 권장 범위"))
                     .font(.caption)
                     .foregroundColor(.green)
                 Spacer()
@@ -480,7 +480,7 @@ struct LiveStreamSettingsView: View {
             HStack {
                 Image(systemName: "info.circle.fill")
                     .foregroundColor(.orange)
-                Text("📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다")
+                Text(NSLocalizedString("low_bitrate_warning", comment: "📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다"))
                     .font(.caption)
                     .foregroundColor(.orange)
                 Spacer()
@@ -621,7 +621,7 @@ struct VideoSettingsSectionView: View {
                 
                 // 해상도 설정 (단순화)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("해상도")
+                    Text(NSLocalizedString("resolution", comment: "해상도"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                     
@@ -634,11 +634,11 @@ struct VideoSettingsSectionView: View {
                 
                 // 프레임레이트
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("프레임 레이트")
+                    Text(NSLocalizedString("frame_rate", comment: "프레임 레이트"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                     
-                    Picker("프레임 레이트", selection: $viewModel.settings.frameRate) {
+                    Picker(NSLocalizedString("frame_rate", comment: "프레임 레이트"), selection: $viewModel.settings.frameRate) {
                         Text("24fps").tag(24)
                         Text("30fps").tag(30)
                         Text("60fps").tag(60)

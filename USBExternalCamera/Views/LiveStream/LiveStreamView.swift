@@ -75,7 +75,7 @@ struct LiveStreamSectionView: View {
                     /// 화면 캡처 스트리밍이 활성화되어 있을 때
                     /// 빨간색 "Live" 배지를 표시하여 사용자에게 명확한 시각적 피드백 제공
                     if viewModel.isScreenCaptureStreaming {
-                        Text("Live")
+                        Text(NSLocalizedString("live_status", comment: "Live"))
                             .font(.caption2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -133,11 +133,11 @@ struct LiveStreamSectionView: View {
     /// 사용자가 기능을 명확히 인식할 수 있도록 함
     private var screenCaptureButtonText: String {
         if viewModel.liveStreamViewModel.isLoading {
-            return "처리 중..."
+            return NSLocalizedString("processing", comment: "처리 중...")
         } else if viewModel.isScreenCaptureStreaming {
-            return "스트리밍 중지 - 캡처"
+            return NSLocalizedString("stop_streaming_capture", comment: "스트리밍 중지 - 캡처")
         } else {
-            return "스트리밍 시작 - 캡처"
+            return NSLocalizedString("start_streaming_capture", comment: "스트리밍 시작 - 캡처")
         }
     }
 } 
@@ -254,7 +254,7 @@ struct LiveStreamView: View {
     private var statusDashboard: some View {
         VStack(spacing: 16) {
             HStack {
-                Text("스트리밍 상태")
+                Text(NSLocalizedString("streaming_status", comment: "스트리밍 상태"))
                     .font(.headline)
                     .foregroundColor(.primary)
                 
@@ -265,7 +265,7 @@ struct LiveStreamView: View {
             
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("상태:")
+                    Text(NSLocalizedString("status_label", comment: "상태:"))
                         .foregroundColor(.secondary)
                     
                                     Text(statusText)
@@ -275,7 +275,7 @@ struct LiveStreamView: View {
                 
                 if viewModel.isStreaming {
                     HStack {
-                        Text("지속 시간:")
+                        Text(NSLocalizedString("duration_label", comment: "지속 시간:"))
                             .foregroundColor(.secondary)
                         
                         Text("00:00")
@@ -313,7 +313,7 @@ struct LiveStreamView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.red)
                 
-                Text("오류 발생")
+                Text(NSLocalizedString("error_occurred", comment: "오류 발생"))
                     .font(.headline)
                     .foregroundColor(.red)
                 
@@ -345,7 +345,7 @@ struct LiveStreamView: View {
     
     private var cameraPreviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("카메라 프리뷰")
+            Text(NSLocalizedString("camera_preview", comment: "카메라 프리뷰"))
                 .font(.headline)
             
             Rectangle()
@@ -357,7 +357,7 @@ struct LiveStreamView: View {
                             .font(.system(size: 40))
                             .foregroundColor(.white.opacity(0.6))
                         
-                        Text("카메라 프리뷰")
+                        Text(NSLocalizedString("camera_preview", comment: "카메라 프리뷰"))
                             .foregroundColor(.white.opacity(0.8))
                             .font(.caption)
                     }
@@ -399,7 +399,7 @@ struct LiveStreamView: View {
                 Button(action: testConnection) {
                     HStack {
                         Image(systemName: "network")
-                        Text("연결 테스트")
+                        Text(NSLocalizedString("connection_test", comment: "연결 테스트"))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
@@ -414,7 +414,7 @@ struct LiveStreamView: View {
                 Button(action: performQuickCheck) {
                     HStack {
                         Image(systemName: "checkmark.circle")
-                        Text("빠른 진단")
+                        Text(NSLocalizedString("quick_diagnosis", comment: "빠른 진단"))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
@@ -435,7 +435,7 @@ struct LiveStreamView: View {
                 }) {
                     HStack {
                         Image(systemName: "stethoscope")
-                        Text("전체 진단")
+                        Text(NSLocalizedString("full_diagnosis", comment: "전체 진단"))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
@@ -449,7 +449,7 @@ struct LiveStreamView: View {
                 NavigationLink(destination: LiveStreamSettingsView(viewModel: LiveStreamViewModel(modelContext: modelContext))) {
                     HStack {
                         Image(systemName: "gearshape.fill")
-                        Text("설정")
+                        Text(NSLocalizedString("settings", comment: "설정"))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
@@ -466,7 +466,7 @@ struct LiveStreamView: View {
     
     private var streamingInfoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("스트리밍 정보")
+            Text(NSLocalizedString("streaming_info", comment: "스트리밍 정보"))
                 .font(.headline)
             
             LazyVGrid(columns: [
@@ -519,7 +519,7 @@ struct LiveStreamView: View {
     private var realTimeTransmissionSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("📡 실시간 송출 데이터")
+                Text(NSLocalizedString("realtime_transmission_data", comment: "📡 실시간 송출 데이터"))
                     .font(.headline)
                 
                 Spacer()
@@ -535,7 +535,7 @@ struct LiveStreamView: View {
                             pulseAnimation = true
                         }
                     
-                    Text("LIVE")
+                    Text(NSLocalizedString("live_status", comment: "LIVE"))
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.red)

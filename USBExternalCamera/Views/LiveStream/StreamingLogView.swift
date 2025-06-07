@@ -128,7 +128,7 @@ struct StreamingLogView: View {
                         }
                     } label: {
                         HStack {
-                            Text("레벨: \(selectedLogLevel.rawValue)")
+                            Text(NSLocalizedString("level_label", comment: "레벨: ") + "\(selectedLogLevel.rawValue)")
                             Image(systemName: "chevron.down")
                         }
                         .padding(.horizontal, 12)
@@ -139,7 +139,7 @@ struct StreamingLogView: View {
                     
                     // 카테고리 필터
                     Menu {
-                        Button("전체") {
+                        Button(NSLocalizedString("all_categories", comment: "전체")) {
                             selectedCategory = nil
                         }
                         
@@ -150,7 +150,7 @@ struct StreamingLogView: View {
                         }
                     } label: {
                         HStack {
-                            Text("카테고리: \(selectedCategory?.rawValue ?? "전체")")
+                            Text(NSLocalizedString("category_label", comment: "카테고리: ") + "\(selectedCategory?.rawValue ?? NSLocalizedString("all_categories", comment: "전체"))")
                             Image(systemName: "chevron.down")
                         }
                         .padding(.horizontal, 12)

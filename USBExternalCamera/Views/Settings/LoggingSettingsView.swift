@@ -61,30 +61,30 @@ struct LoggingSettingsView: View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("🚀 글로벌 로깅 설정")
+                    Text(NSLocalizedString("global_logging_settings", comment: "🚀 글로벌 로깅 설정"))
                         .font(.headline)
                     Spacer()
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("디버그 모드:")
+                        Text(NSLocalizedString("debug_mode_label", comment: "디버그 모드:"))
                         Spacer()
-                        Text(status.isDebugMode ? "✅ 활성화" : "❌ 비활성화")
+                        Text(status.isDebugMode ? NSLocalizedString("enabled", comment: "✅ 활성화") : NSLocalizedString("disabled", comment: "❌ 비활성화"))
                             .foregroundColor(status.isDebugMode ? .green : .red)
                     }
                     .font(.caption)
                     
                     HStack {
-                        Text("배포 버전:")
+                        Text(NSLocalizedString("release_version_label", comment: "배포 버전:"))
                         Spacer()
-                        Text(status.isDebugMode ? "❌ 아니오" : "✅ 예")
+                        Text(status.isDebugMode ? NSLocalizedString("no", comment: "❌ 아니오") : NSLocalizedString("yes", comment: "✅ 예"))
                             .foregroundColor(status.isDebugMode ? .orange : .blue)
                     }
                     .font(.caption)
                     
                     if !status.isDebugMode {
-                        Text("⚠️ 배포 버전에서는 모든 로그가 자동으로 비활성화됩니다")
+                        Text(NSLocalizedString("release_logging_warning", comment: "⚠️ 배포 버전에서는 모든 로그가 자동으로 비활성화됩니다"))
                             .font(.caption2)
                             .foregroundColor(.orange)
                             .padding(.top, 4)
@@ -93,7 +93,7 @@ struct LoggingSettingsView: View {
                 .padding(.vertical, 4)
             }
         } header: {
-            Text("전역 설정")
+            Text(NSLocalizedString("global_settings", comment: "전역 설정"))
         }
     }
     
@@ -107,7 +107,7 @@ struct LoggingSettingsView: View {
             
             if status.availableCategories.count > 1 {
                 HStack {
-                    Button("모두 활성화") {
+                    Button(NSLocalizedString("enable_all", comment: "모두 활성화")) {
                         Task { @MainActor in
                             loggingManager.setAllCategoriesEnabled(true)
                             refreshStatus()
@@ -117,7 +117,7 @@ struct LoggingSettingsView: View {
                     
                     Spacer()
                     
-                    Button("모두 비활성화") {
+                    Button(NSLocalizedString("disable_all", comment: "모두 비활성화")) {
                         Task { @MainActor in
                             loggingManager.setAllCategoriesEnabled(false)
                             refreshStatus()
@@ -128,9 +128,9 @@ struct LoggingSettingsView: View {
                 .buttonStyle(.borderless)
             }
         } header: {
-            Text("카테고리별 설정 (\(status.availableCategories.count)개)")
+            Text(String.localizedStringWithFormat(NSLocalizedString("category_settings_count", comment: "카테고리별 설정 (%d개)"), status.availableCategories.count))
         } footer: {
-            Text("특정 기능의 로그만 선택적으로 활성화할 수 있습니다.")
+            Text(NSLocalizedString("category_settings_description", comment: "특정 기능의 로그만 선택적으로 활성화할 수 있습니다."))
         }
     }
     
@@ -168,7 +168,7 @@ struct LoggingSettingsView: View {
     
     private var logLevelSection: some View {
         Section {
-            Picker("로그 레벨", selection: Binding(
+            Picker(NSLocalizedString("log_level", comment: "로그 레벨"), selection: Binding(
                 get: { status.minimumLogLevel },
                 set: { newLevel in
                     Task { @MainActor in
@@ -188,24 +188,24 @@ struct LoggingSettingsView: View {
             .pickerStyle(.segmented)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("로그 레벨 설명:")
+                Text(NSLocalizedString("log_level_description_title", comment: "로그 레벨 설명:"))
                     .font(.caption)
                     .fontWeight(.medium)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("🔍 DEBUG: 개발 중 상세 정보")
-                    Text("ℹ️ INFO: 일반적인 정보")
-                    Text("⚠️ WARNING: 주의가 필요한 상황")
-                    Text("❌ ERROR: 오류 및 예외 상황")
+                    Text(NSLocalizedString("debug_level_desc", comment: "🔍 DEBUG: 개발 중 상세 정보"))
+                    Text(NSLocalizedString("info_level_desc", comment: "ℹ️ INFO: 일반적인 정보"))
+                    Text(NSLocalizedString("warning_level_desc", comment: "⚠️ WARNING: 주의가 필요한 상황"))
+                    Text(NSLocalizedString("error_level_desc", comment: "❌ ERROR: 오류 및 예외 상황"))
                 }
                 .font(.caption2)
                 .foregroundColor(.secondary)
             }
             .padding(.vertical, 4)
         } header: {
-            Text("최소 로그 레벨")
+            Text(NSLocalizedString("minimum_log_level", comment: "최소 로그 레벨"))
         } footer: {
-            Text("선택한 레벨 이상의 로그만 출력됩니다.")
+            Text(NSLocalizedString("minimum_log_level_desc", comment: "선택한 레벨 이상의 로그만 출력됩니다."))
         }
     }
     
@@ -213,7 +213,7 @@ struct LoggingSettingsView: View {
     
     private var outputOptionsSection: some View {
         Section {
-            Toggle("콘솔 출력", isOn: Binding(
+            Toggle(NSLocalizedString("console_output", comment: "콘솔 출력"), isOn: Binding(
                 get: { status.shouldPrintToConsole },
                 set: { newValue in
                     Task { @MainActor in
@@ -223,7 +223,7 @@ struct LoggingSettingsView: View {
                 }
             ))
             
-            Toggle("타임스탬프 포함", isOn: Binding(
+            Toggle(NSLocalizedString("include_timestamp", comment: "타임스탬프 포함"), isOn: Binding(
                 get: { status.shouldIncludeTimestamp },
                 set: { newValue in
                     Task { @MainActor in
@@ -233,7 +233,7 @@ struct LoggingSettingsView: View {
                 }
             ))
             
-            Toggle("파일 정보 포함", isOn: Binding(
+            Toggle(NSLocalizedString("include_file_info", comment: "파일 정보 포함"), isOn: Binding(
                 get: { status.shouldIncludeFileInfo },
                 set: { newValue in
                     Task { @MainActor in
@@ -243,9 +243,9 @@ struct LoggingSettingsView: View {
                 }
             ))
         } header: {
-            Text("출력 옵션")
+            Text(NSLocalizedString("output_options", comment: "출력 옵션"))
         } footer: {
-            Text("로그 메시지에 포함할 추가 정보를 선택하세요.")
+            Text(NSLocalizedString("output_options_desc", comment: "로그 메시지에 포함할 추가 정보를 선택하세요."))
         }
     }
     
@@ -254,7 +254,7 @@ struct LoggingSettingsView: View {
     private var currentStatusSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text("현재 상태")
+                Text(NSLocalizedString("current_status", comment: "현재 상태"))
                     .font(.headline)
                 
                 Text(status.summary)
@@ -265,7 +265,7 @@ struct LoggingSettingsView: View {
                     .cornerRadius(8)
             }
         } header: {
-            Text("현재 설정 상태")
+            Text(NSLocalizedString("current_settings_status", comment: "현재 설정 상태"))
         }
     }
     

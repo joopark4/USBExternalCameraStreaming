@@ -547,4 +547,88 @@
 
 // MARK: - Connection and Stats
 "connection_latency" = " (지연: %.0fms)";
-"stream_stats_format" = "비디오: %.1f kbps\n오디오: %.1f kbps\n프레임률: %.1f fps\n드롭 프레임: %d"; 
+"stream_stats_format" = "비디오: %.1f kbps\n오디오: %.1f kbps\n프레임률: %.1f fps\n드롭 프레임: %d";
+
+// MARK: - Views - Common
+"select_menu_from_sidebar" = "사이드바에서 메뉴를 선택하세요";
+"refreshing" = "새로고침 중...";
+"loading" = "로딩 중";
+
+// MARK: - Views - Camera
+"selected_camera" = "선택됨: ";
+"camera_count_status" = "내장: %d개, 외장: %d개";
+"no_camera_found" = "카메라를 찾을 수 없습니다";
+
+// MARK: - Views - Live Stream  
+"live_status" = "Live";
+"processing" = "처리 중...";
+"stop_streaming_capture" = "스트리밍 중지 - 캡처";
+"start_streaming_capture" = "스트리밍 시작 - 캡처";
+"streaming_status" = "스트리밍 상태";
+"status_label" = "상태:";
+"duration_label" = "지속 시간:";
+"error_occurred" = "오류 발생";
+"camera_preview" = "카메라 프리뷰";
+"quick_diagnosis" = "빠른 진단";
+"full_diagnosis" = "전체 진단";
+"streaming_info" = "스트리밍 정보";
+"realtime_transmission_data" = "📡 실시간 송출 데이터";
+
+// MARK: - Views - Live Stream Settings
+"streaming_settings_limited" = "스트리밍 중에는 일부 설정을 변경할 수 없습니다";
+"bitrate_too_high_warning" = "⚠️ 비트레이트가 너무 높습니다";
+"youtube_bitrate_warning" = "YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps";
+"youtube_recommended_range" = "✅ YouTube Live 1080p 권장 범위";
+"low_bitrate_warning" = "📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다";
+"reset_settings_confirmation" = "설정 초기화 확인";
+"reset_settings_message" = "모든 설정이 기본값으로 초기화됩니다. 계속하시겠습니까?";
+
+// MARK: - Views - Live Stream Control
+"current_status" = "현재 상태";
+"advanced_features" = "고급 기능";
+"youtube_live_setup_guide" = "YouTube Live 설정 가이드";
+"youtube_streaming_diagnosis" = "YouTube 스트리밍 진단";
+"test_connection" = "연결 테스트";
+"testing_connection" = "연결 테스트 중...";
+"latency_ms" = "지연시간: %dms";
+"ready_to_test" = "연결 테스트 준비됨";
+"start_test" = "테스트 시작";
+"encoder_settings" = "인코더 설정";
+"network_settings" = "네트워크 설정";
+"automation" = "자동화";
+"select_quality_preset" = "화질 프리셋 선택";
+"preset_will_override_settings" = "프리셋 적용 시 현재 설정이 변경됩니다";
+
+// MARK: - Views - Streaming Log
+"level_label" = "레벨: ";
+"all_categories" = "전체";
+"category_label" = "카테고리: ";
+
+// MARK: - Views - Logging Settings
+"global_logging_settings" = "🚀 글로벌 로깅 설정";
+"debug_mode_label" = "디버그 모드:";
+"enabled" = "✅ 활성화";
+"disabled" = "❌ 비활성화";
+"release_version_label" = "배포 버전:";
+"no" = "❌ 아니오";
+"yes" = "✅ 예";
+"release_logging_warning" = "⚠️ 배포 버전에서는 모든 로그가 자동으로 비활성화됩니다";
+"global_settings" = "전역 설정";
+"enable_all" = "모두 활성화";
+"disable_all" = "모두 비활성화";
+"category_settings_count" = "카테고리별 설정 (%d개)";
+"category_settings_description" = "특정 기능의 로그만 선택적으로 활성화할 수 있습니다.";
+"log_level" = "로그 레벨";
+"log_level_description_title" = "로그 레벨 설명:";
+"debug_level_desc" = "🔍 DEBUG: 개발 중 상세 정보";
+"info_level_desc" = "ℹ️ INFO: 일반적인 정보";
+"warning_level_desc" = "⚠️ WARNING: 주의가 필요한 상황";
+"error_level_desc" = "❌ ERROR: 오류 및 예외 상황";
+"minimum_log_level" = "최소 로그 레벨";
+"minimum_log_level_desc" = "선택한 레벨 이상의 로그만 출력됩니다.";
+"console_output" = "콘솔 출력";
+"include_timestamp" = "타임스탬프 포함";
+"include_file_info" = "파일 정보 포함";
+"output_options" = "출력 옵션";
+"output_options_desc" = "로그 메시지에 포함할 추가 정보를 선택하세요.";
+"current_settings_status" = "현재 설정 상태"; 
