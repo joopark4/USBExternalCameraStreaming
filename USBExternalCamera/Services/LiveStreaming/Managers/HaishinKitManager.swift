@@ -84,10 +84,10 @@ final actor StreamSwitcher {
         
         do {
             // 스트림 중지
-            try await stream.close()
+            _ = try await stream.close()
             
             // 연결 중지
-            try await connection.close()
+            _ = try await connection.close()
             print("✅ RTMP 연결 종료됨")
         } catch {
             print("⚠️ 연결 종료 중 오류: \(error)")
@@ -847,25 +847,20 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         
         // HaishinKit 화면 캡처 프레임 전달 (개선된 방식)
         Task { @MainActor in
-            do {
-                if let stream = self.currentRTMPStream {
-                    // RTMPStream에 직접 비디오 프레임 전달 (가장 직접적인 방법)
-                    await stream.append(sampleBuffer)
-                    self.screenCaptureStats.successCount += 1
-                    
-                    // 성공률 추적 및 로깅
-                    if self.screenCaptureStats.frameCount % 30 == 0 {
-                        self.logger.info("✅ [화면캡처] RTMPStream 직접 전달 [\(self.screenCaptureStats.successCount)/\(self.screenCaptureStats.frameCount)] FPS=\(String(format: "%.1f", self.screenCaptureStats.currentFPS)): \(width)x\(height)", category: .streaming)
-                    }
-                } else {
-                    // RTMPStream이 없으면 MediaMixer 사용 (백업 방법)
-                    await self.mixer.append(sampleBuffer)
-                    self.screenCaptureStats.successCount += 1
-                    self.logger.debug("✅ [화면캡처] MediaMixer 백업 전달 성공: \(width)x\(height)", category: .streaming)
+            if let stream = self.currentRTMPStream {
+                // RTMPStream에 직접 비디오 프레임 전달 (가장 직접적인 방법)
+                await stream.append(sampleBuffer)
+                self.screenCaptureStats.successCount += 1
+                
+                // 성공률 추적 및 로깅
+                if self.screenCaptureStats.frameCount % 30 == 0 {
+                    self.logger.info("✅ [화면캡처] RTMPStream 직접 전달 [\(self.screenCaptureStats.successCount)/\(self.screenCaptureStats.frameCount)] FPS=\(String(format: "%.1f", self.screenCaptureStats.currentFPS)): \(width)x\(height)", category: .streaming)
                 }
-            } catch {
-                self.logger.error("❌ [화면캡처] 프레임 전달 실패: \(error)", category: .streaming)
-                self.screenCaptureStats.failureCount += 1
+            } else {
+                // RTMPStream이 없으면 MediaMixer 사용 (백업 방법)
+                await self.mixer.append(sampleBuffer)
+                self.screenCaptureStats.successCount += 1
+                self.logger.debug("✅ [화면캡처] MediaMixer 백업 전달 성공: \(width)x\(height)", category: .streaming)
             }
         }
     }

@@ -187,7 +187,7 @@ struct StreamingLogView: View {
                     }
                 }
                 .listStyle(PlainListStyle())
-                .onChange(of: filteredLogs.count) { _ in
+                .onChange(of: filteredLogs.count) {
                     if autoScroll && !filteredLogs.isEmpty {
                         withAnimation(.easeOut(duration: 0.3)) {
                             proxy.scrollTo(filteredLogs.last?.id, anchor: .bottom)

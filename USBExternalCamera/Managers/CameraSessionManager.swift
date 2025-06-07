@@ -44,7 +44,7 @@ public protocol CameraSessionManaging: AnyObject {
 /// 카메라 세션 관리를 담당하는 클래스
 /// - AVCaptureSession을 관리하고 카메라 전환을 처리
 /// - 비디오 데이터 출력을 처리하기 위한 델리게이트 구현
-public final class CameraSessionManager: NSObject, CameraSessionManaging {
+public final class CameraSessionManager: NSObject, CameraSessionManaging, @unchecked Sendable {
     /// 카메라 캡처 세션
     /// - 카메라 입력과 출력을 관리하는 핵심 객체
     public let captureSession = AVCaptureSession()
@@ -167,7 +167,8 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging {
             logInfo("🎥 카메라 전환 완료: \(camera.name)", category: .camera)
             
             // 카메라 전환 완료를 델리게이트에 알림 (스트리밍 동기화용)
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 await self.switchDelegate?.didSwitchCamera(to: camera.device, session: self.captureSession)
             }
         }
@@ -215,7 +216,7 @@ extension CameraSessionManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             let fps = Double(frameCount) / (currentTime - lastFrameTime)
             
             // 비동기로 로깅 (성능 영향 최소화)
-            Task {
+            Task { @Sendable in
                 logDebug("📊 카메라 FPS: \(String(format: "%.1f", fps))", category: .camera)
             }
             
@@ -233,7 +234,7 @@ extension CameraSessionManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         didDrop sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
-        Task {
+        Task { @Sendable in
             logWarning("⚠️ 비디오 프레임이 드랍되었습니다", category: .camera)
         }
     }

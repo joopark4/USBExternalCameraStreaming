@@ -1441,8 +1441,8 @@ extension UIImage {
   func toCVPixelBuffer() -> CVPixelBuffer? {
     let attrs =
       [
-        kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue,
-        kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue,
+        kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue as Any,
+        kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue as Any,
         kCVPixelBufferIOSurfacePropertiesKey: [:],
       ] as CFDictionary
 

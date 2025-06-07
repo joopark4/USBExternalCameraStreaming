@@ -964,7 +964,7 @@ struct TransmissionInfoCard: View {
 struct LiveStreamView_Previews: PreviewProvider {
     static var previews: some View {
         // Preview를 위한 더미 ViewModel
-        let dummyViewModel = LiveStreamViewModelStub()
+        let _ = LiveStreamViewModelStub()
         return AnyView(Text("LiveStreamView Preview"))
     }
 }
