@@ -2,7 +2,7 @@
 //  ConnectionInfo.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 6/5/25.
 //
 
 import Foundation

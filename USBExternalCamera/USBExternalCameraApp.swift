@@ -2,7 +2,7 @@
 //  USBExternalCameraApp.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import SwiftUI
@@ -21,7 +21,7 @@ struct USBExternalCameraApp: App {
         
         // SwiftData ModelContainer 초기화
         do {
-            modelContainer = try ModelContainer(for: LiveStreamSettings.self)
+            modelContainer = try ModelContainer(for: LiveStreamSettingsModel.self)
         } catch {
             fatalError(String(format: NSLocalizedString("swiftdata_init_failed", comment: ""), error.localizedDescription))
         }

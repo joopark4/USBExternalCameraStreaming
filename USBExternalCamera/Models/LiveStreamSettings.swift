@@ -2,7 +2,7 @@
 //  LiveStreamSettings.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import SwiftData
 
 /// 라이브 스트리밍 설정 모델
 @Model
-final class LiveStreamSettings: @unchecked Sendable {
+final class LiveStreamSettingsModel: @unchecked Sendable {
     
     // MARK: - Basic Settings
     
@@ -331,27 +331,27 @@ final class LiveStreamSettings: @unchecked Sendable {
     }
     
     /// 플랫폼별 최적화 설정 적용
-    func applyPlatformOptimization(_ platform: StreamingPlatform) {
-        switch platform {
-        case .youtube:
+    func applyPlatformOptimization(_ platformName: String) {
+        switch platformName.lowercased() {
+        case "youtube":
             // YouTube 권장 설정
             videoBitrate = 4500
             audioBitrate = 128
             frameRate = 30
             keyframeInterval = 2
-        case .twitch:
+        case "twitch":
             // Twitch 권장 설정
             videoBitrate = 3500
             audioBitrate = 160
             frameRate = 30
             keyframeInterval = 2
-        case .facebook:
+        case "facebook":
             // Facebook 권장 설정
             videoBitrate = 4000
             audioBitrate = 128
             frameRate = 30
             keyframeInterval = 2
-        case .custom:
+        default:
             // 사용자 정의 - 변경하지 않음
             break
         }
@@ -400,31 +400,7 @@ enum QualityPreset: String, CaseIterable {
     }
 }
 
-/// 스트리밍 플랫폼
-enum StreamingPlatform: String, CaseIterable {
-    case youtube = "youtube"
-    case twitch = "twitch"
-    case facebook = "facebook"
-    case custom = "custom"
-    
-    var displayName: String {
-        switch self {
-        case .youtube: return "YouTube"
-        case .twitch: return "Twitch"
-        case .facebook: return "Facebook"
-        case .custom: return "사용자 정의"
-        }
-    }
-    
-    var rtmpURLTemplate: String {
-        switch self {
-        case .youtube: return "rtmp://a.rtmp.youtube.com/live2/"
-        case .twitch: return "rtmp://live.twitch.tv/app/"
-        case .facebook: return "rtmp://live-api-s.facebook.com/rtmp/"
-        case .custom: return ""
-        }
-    }
-}
+// StreamingPlatform은 StreamingValidation.swift에 정의됨
 
 // MARK: - Export/Import Data Structure
 

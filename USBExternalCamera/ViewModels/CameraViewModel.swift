@@ -27,6 +27,9 @@ final class CameraViewModel: NSObject, ObservableObject {
     /// - 카메라 세션 관리 및 카메라 전환 처리
     private let sessionManager: CameraSessionManager
     
+    /// 스트리밍 매니저 (카메라 프레임 수신용)
+    private var streamingManager: HaishinKitManager?
+    
     /// 카메라 세션 접근자
     /// - 현재 카메라 세션에 대한 읽기 전용 접근 제공
     var captureSession: AVCaptureSession {
@@ -341,6 +344,16 @@ final class CameraViewModel: NSObject, ObservableObject {
                 self.selectedCamera = nil
             }
         }
+    }
+    
+    /// 카메라와 스트리밍 연결 설정 (화면 캡처용)
+    /// - Parameters:
+    ///   - streamingManager: 스트리밍 매니저 인스턴스
+    func connectToStreaming(_ streamingManager: HaishinKitManager) {
+        self.streamingManager = streamingManager
+        sessionManager.frameDelegate = streamingManager
+        // 화면 캡처 모드에서는 카메라 전환 델리게이트가 불필요
+        logInfo("🔗 카메라와 스트리밍 매니저가 연결되었습니다 (프레임 델리게이트만)", category: .camera)
     }
     
     /// 소멸자

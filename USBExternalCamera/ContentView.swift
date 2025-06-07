@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import SwiftUI
@@ -28,7 +28,7 @@ struct ContentView: View {
     /// 의존성 주입을 통해 필요한 ViewModel들을 생성하고 주입합니다.
     init() {
         // SwiftData ModelContainer 접근
-        let container = try! ModelContainer(for: LiveStreamSettings.self)
+        let container = try! ModelContainer(for: LiveStreamSettingsModel.self)
         
         // 의존성 생성 및 주입
         let cameraViewModel = CameraViewModel()

@@ -54,8 +54,10 @@
 // Video Settings
 "video_settings" = "Video Settings";
 "resolution" = "Resolution";
-"video_bitrate" = "Video Bitrate: %d kbps";
-"frame_rate" = "Frame Rate: %d fps";
+"video_bitrate" = "Video Bitrate";
+"video_bitrate_label" = "Video Bitrate: %d kbps";
+"frame_rate" = "Frame Rate";
+"frame_rate_label" = "Frame Rate: %d fps";
 "frame_rate_picker" = "Frame Rate";
 "fps_24" = "24 fps";
 "fps_30" = "30 fps";
@@ -63,7 +65,8 @@
 
 // Audio Settings
 "audio_settings" = "Audio Settings";
-"audio_bitrate" = "Audio Bitrate: %d kbps";
+"audio_bitrate" = "Audio Bitrate";
+"audio_bitrate_label" = "Audio Bitrate: %d kbps";
 "audio_bitrate_picker" = "Audio Bitrate";
 "kbps_64" = "64 kbps";
 "kbps_128" = "128 kbps";
@@ -544,4 +547,88 @@
 
 // MARK: - Connection and Stats
 "connection_latency" = " (Latency: %.0fms)";
-"stream_stats_format" = "Video: %.1f kbps\nAudio: %.1f kbps\nFrame Rate: %.1f fps\nDropped Frames: %d"; 
+"stream_stats_format" = "Video: %.1f kbps\nAudio: %.1f kbps\nFrame Rate: %.1f fps\nDropped Frames: %d";
+
+// MARK: - Views - Common
+"select_menu_from_sidebar" = "Please select a menu from the sidebar";
+"refreshing" = "Refreshing...";
+"loading" = "Loading";
+
+// MARK: - Views - Camera
+"selected_camera" = "Selected: ";
+"camera_count_status" = "Built-in: %d, External: %d";
+"no_camera_found" = "No camera found";
+
+// MARK: - Views - Live Stream  
+"live_status" = "Live";
+"processing" = "Processing...";
+"stop_streaming_capture" = "Stop Streaming - Capture";
+"start_streaming_capture" = "Start Streaming - Capture";
+"streaming_status" = "Streaming Status";
+"status_label" = "Status:";
+"duration_label" = "Duration:";
+"error_occurred" = "Error Occurred";
+"camera_preview" = "Camera Preview";
+"quick_diagnosis" = "Quick Diagnosis";
+"full_diagnosis" = "Full Diagnosis";
+"streaming_info" = "Streaming Info";
+"realtime_transmission_data" = "📡 Real-time Transmission Data";
+
+// MARK: - Views - Live Stream Settings
+"streaming_settings_limited" = "Some settings cannot be changed while streaming";
+"bitrate_too_high_warning" = "⚠️ Bitrate is too high";
+"youtube_bitrate_warning" = "YouTube Live may disconnect. Recommended: 1500-4000 kbps";
+"youtube_recommended_range" = "✅ YouTube Live 1080p recommended range";
+"low_bitrate_warning" = "📹 Low bitrate - Quality may be poor";
+"reset_settings_confirmation" = "Reset Settings Confirmation";
+"reset_settings_message" = "All settings will be reset to default values. Do you want to continue?";
+
+// MARK: - Views - Live Stream Control
+"current_status" = "Current Status";
+"advanced_features" = "Advanced Features";
+"youtube_live_setup_guide" = "YouTube Live Setup Guide";
+"youtube_streaming_diagnosis" = "YouTube Streaming Diagnosis";
+"test_connection" = "Test Connection";
+"testing_connection" = "Testing connection...";
+"latency_ms" = "Latency: %dms";
+"ready_to_test" = "Ready to test connection";
+"start_test" = "Start Test";
+"encoder_settings" = "Encoder Settings";
+"network_settings" = "Network Settings";
+"automation" = "Automation";
+"select_quality_preset" = "Select Quality Preset";
+"preset_will_override_settings" = "Applying preset will change current settings";
+
+// MARK: - Views - Streaming Log
+"level_label" = "Level: ";
+"all_categories" = "All";
+"category_label" = "Category: ";
+
+// MARK: - Views - Logging Settings
+"global_logging_settings" = "🚀 Global Logging Settings";
+"debug_mode_label" = "Debug Mode:";
+"enabled" = "✅ Enabled";
+"disabled" = "❌ Disabled";
+"release_version_label" = "Release Version:";
+"no" = "❌ No";
+"yes" = "✅ Yes";
+"release_logging_warning" = "⚠️ All logs are automatically disabled in release version";
+"global_settings" = "Global Settings";
+"enable_all" = "Enable All";
+"disable_all" = "Disable All";
+"category_settings_count" = "Category Settings (%d items)";
+"category_settings_description" = "You can selectively enable logs for specific features.";
+"log_level" = "Log Level";
+"log_level_description_title" = "Log Level Description:";
+"debug_level_desc" = "🔍 DEBUG: Detailed information during development";
+"info_level_desc" = "ℹ️ INFO: General information";
+"warning_level_desc" = "⚠️ WARNING: Situations requiring attention";
+"error_level_desc" = "❌ ERROR: Errors and exceptions";
+"minimum_log_level" = "Minimum Log Level";
+"minimum_log_level_desc" = "Only logs at or above the selected level will be output.";
+"console_output" = "Console Output";
+"include_timestamp" = "Include Timestamp";
+"include_file_info" = "Include File Info";
+"output_options" = "Output Options";
+"output_options_desc" = "Select additional information to include in log messages.";
+"current_settings_status" = "Current Settings Status"; 
