@@ -2,10 +2,18 @@
 //  DetailView.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import SwiftUI
+
+// MARK: - Notification Names
+
+extension NSNotification.Name {
+    static let startScreenCapture = NSNotification.Name("startScreenCapture")
+    static let stopScreenCapture = NSNotification.Name("stopScreenCapture")
+    static let testWatermarkCapture = NSNotification.Name("testWatermarkCapture")
+}
 
 // MARK: - Detail View Components
 
@@ -14,14 +22,71 @@ import SwiftUI
 struct DetailView: View {
     @ObservedObject var viewModel: MainViewModel
     
+    // 화면 캡처 테스트 관련 상태
+    @State private var screenCaptureEnabled = false
+    @State private var testMessage: String?
+    @State private var screenCaptureStats: String?
+    @State private var statsTimer: Timer?
+    
     var body: some View {
-        switch viewModel.selectedSidebarItem {
-        case .cameras:
-            // 카메라 상세 화면
-            CameraDetailContentView(viewModel: viewModel)
-        case .liveStream:
-            // 라이브 스트리밍 상세 화면
-            LiveStreamDetailView(viewModel: viewModel)
+        Group {
+            switch viewModel.selectedSidebarItem {
+            case .cameras:
+                // 카메라 상세 화면
+                CameraDetailContentView(viewModel: viewModel)
+            case .none:
+                // 아무것도 선택되지 않은 상태
+                VStack {
+                    Image(systemName: "sidebar.left")
+                        .font(.system(size: 50))
+                        .foregroundColor(.gray)
+                    Text("사이드바에서 메뉴를 선택하세요")
+                        .font(.title2)
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+    
+    // 화면 캡처 관련 메서드들
+    private func toggleScreenCapture() {
+        guard let cameraView = getCameraPreviewView() else { return }
+        
+        if screenCaptureEnabled {
+            cameraView.stopScreenCapture()
+            stopStatsTimer()
+            screenCaptureStats = nil
+        } else {
+            cameraView.startScreenCapture()
+            startStatsTimer()
+        }
+        screenCaptureEnabled.toggle()
+    }
+    
+    private func getCameraPreviewView() -> CameraPreviewUIView? {
+        // UIViewRepresentable에서 실제 UIView에 접근하는 방법
+        // 이 부분은 CameraPreviewView의 구조에 따라 수정이 필요할 수 있음
+        return nil // TODO: 실제 구현 필요
+    }
+    
+    private func startStatsTimer() {
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            updateScreenCaptureStats()
+        }
+    }
+    
+    private func stopStatsTimer() {
+        statsTimer?.invalidate()
+        statsTimer = nil
+    }
+    
+    private func updateScreenCaptureStats() {
+        guard let cameraView = getCameraPreviewView() else { return }
+        let status = cameraView.getScreenCaptureStatus()
+        
+        if let stats = status.stats {
+            screenCaptureStats = stats
         }
     }
 }
@@ -57,9 +122,11 @@ struct CameraPreviewContainerView: View {
     var body: some View {
         CameraPreviewView(
             session: viewModel.cameraViewModel.captureSession,
-            streamViewModel: viewModel.liveStreamViewModel
+            streamViewModel: viewModel.liveStreamViewModel,
+            haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+
         .padding(30)
         .background(Color.black)
     }
@@ -134,23 +201,4 @@ struct LoadingView: View {
     }
 }
 
-/// 라이브 스트리밍 상세 화면 View 컴포넌트
-/// 라이브 스트리밍 컨트롤과 상태를 표시하는 컴포넌트입니다.
-struct LiveStreamDetailView: View {
-    @ObservedObject var viewModel: MainViewModel
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            // 라이브 스트리밍 컨트롤 - 새로운 고급 컨트롤 사용
-            LiveStreamControlView(
-                viewModel: viewModel.liveStreamViewModel,
-                captureSession: viewModel.cameraViewModel.captureSession
-            )
-            
-            Spacer()
-        }
-        .padding()
-        .navigationTitle(NSLocalizedString("live_streaming_nav", comment: "라이브 스트리밍"))
-        .navigationBarTitleDisplayMode(.inline)
-    }
-} 
+ 

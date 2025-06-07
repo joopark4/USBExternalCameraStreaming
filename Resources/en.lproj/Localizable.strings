@@ -54,8 +54,10 @@
 // Video Settings
 "video_settings" = "Video Settings";
 "resolution" = "Resolution";
-"video_bitrate" = "Video Bitrate: %d kbps";
-"frame_rate" = "Frame Rate: %d fps";
+"video_bitrate" = "Video Bitrate";
+"video_bitrate_label" = "Video Bitrate: %d kbps";
+"frame_rate" = "Frame Rate";
+"frame_rate_label" = "Frame Rate: %d fps";
 "frame_rate_picker" = "Frame Rate";
 "fps_24" = "24 fps";
 "fps_30" = "30 fps";
@@ -63,7 +65,8 @@
 
 // Audio Settings
 "audio_settings" = "Audio Settings";
-"audio_bitrate" = "Audio Bitrate: %d kbps";
+"audio_bitrate" = "Audio Bitrate";
+"audio_bitrate_label" = "Audio Bitrate: %d kbps";
 "audio_bitrate_picker" = "Audio Bitrate";
 "kbps_64" = "64 kbps";
 "kbps_128" = "128 kbps";

@@ -2,7 +2,7 @@
 //  LiveStreamControlView.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import SwiftUI
@@ -325,7 +325,7 @@ struct ConnectionTestView: View {
                 
                 self.testResult = ConnectionTestResult(
                     isSuccessful: isSuccessful,
-                    latency: isSuccessful ? 100.0 : 0.0,
+                    latency: isSuccessful ? 100 : 0,
                     message: message,
                     networkQuality: isSuccessful ? .good : .poor
                 )
@@ -626,7 +626,7 @@ struct YouTubeSetupPrompt: View {
 // MARK: - Preview
 
 #Preview {
-    let viewModel = LiveStreamViewModel(modelContext: try! ModelContainer(for: LiveStreamSettings.self).mainContext)
+    let viewModel = LiveStreamViewModel(modelContext: try! ModelContainer(for: LiveStreamSettingsModel.self).mainContext)
     let session = AVCaptureSession()
     
     return LiveStreamControlView(viewModel: viewModel, captureSession: session)

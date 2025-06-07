@@ -2,7 +2,7 @@
 //  MainViewModel.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import Foundation
@@ -21,7 +21,7 @@ final class MainViewModel: ObservableObject {
     
     /// 현재 선택된 사이드바 항목
     /// 메인 화면의 상세 내용을 결정합니다.
-    @Published var selectedSidebarItem: SidebarItem = .cameras
+    @Published var selectedSidebarItem: SidebarItem? = .cameras
     
     /// 권한 설정 시트 표시 여부
     /// 카메라/마이크 권한 설정 UI 제어
@@ -42,6 +42,20 @@ final class MainViewModel: ObservableObject {
     /// 현재 권한 상태에 따른 UI 상태
     /// 권한이 있으면 카메라 화면, 없으면 권한 요청 화면 표시
     @Published var currentUIState: UIState = .loading
+    
+    /// 화면 캡처 스트리밍 상태
+    /// 
+    /// **상태 관리:**
+    /// - true: 화면 캡처 스트리밍이 활성화됨 (30fps로 화면 캡처 중)
+    /// - false: 화면 캡처 스트리밍이 비활성화됨 (일반 모드)
+    ///
+    /// **UI 바인딩:**
+    /// 사이드바의 "스트리밍 시작 - 캡처" 버튼 상태와 연동됩니다.
+    /// 상태 변화 시 자동으로 버튼 텍스트와 아이콘이 업데이트됩니다.
+    ///
+    /// **업데이트 조건:**
+    /// LiveStreamViewModel의 status가 변경될 때 자동으로 동기화됩니다.
+    @Published var isScreenCaptureStreaming: Bool = false
     
     // MARK: - Dependencies (Models)
     
@@ -97,7 +111,7 @@ final class MainViewModel: ObservableObject {
     
     /// 사이드바 항목 선택 처리
     /// - Parameter item: 선택된 사이드바 항목
-    func selectSidebarItem(_ item: SidebarItem) {
+    func selectSidebarItem(_ item: SidebarItem?) {
         selectedSidebarItem = item
     }
     
@@ -134,6 +148,35 @@ final class MainViewModel: ObservableObject {
             isRefreshing = false
             logDebug("🔄 MainViewModel: isRefreshing set to \(isRefreshing)", category: .ui)
         }
+    }
+    
+    /// 화면 캡처 스트리밍 토글 (UI용 공개 메서드)
+    /// 
+    /// **사용처:**
+    /// - 사이드바의 "스트리밍 시작 - 캡처" 버튼에서 호출
+    /// - SwiftUI View에서 직접 접근 가능한 인터페이스
+    ///
+    /// **동작 원리:**
+    /// 1. 사용자가 버튼을 탭하면 이 메서드가 호출됨
+    /// 2. LiveStreamViewModel의 toggleScreenCaptureStreaming() 호출
+    /// 3. LiveStreamViewModel이 실제 스트리밍 상태 관리 수행
+    /// 4. setupBindings()에서 상태 변화를 감지하여 isScreenCaptureStreaming 업데이트
+    ///
+    /// **상태 동기화:**
+    /// - MainViewModel은 UI 상태만 관리
+    /// - LiveStreamViewModel이 실제 스트리밍 로직 담당
+    /// - 두 ViewModel 간 상태는 Combine을 통해 자동 동기화
+    ///
+    /// **Thread Safety:**
+    /// 메인 스레드에서 호출되며, 내부적으로 비동기 처리됩니다.
+    func toggleScreenCaptureStreaming() {
+        logDebug("🎮 [MainViewModel] 화면 캡처 스트리밍 토글 요청", category: .ui)
+        
+        // LiveStreamViewModel에 실제 스트리밍 제어 위임
+        // 상태 변화는 setupBindings()의 Combine을 통해 자동 반영
+        liveStreamViewModel.toggleScreenCaptureStreaming()
+        
+        logDebug("✅ [MainViewModel] 화면 캡처 스트리밍 토글 요청 완료", category: .ui)
     }
     
     /// 카메라 선택 처리
@@ -187,6 +230,35 @@ final class MainViewModel: ObservableObject {
                 self?.updateUIState()
             }
             .store(in: &cancellables)
+        
+        // 스트리밍 상태 변화 감지 (화면 캡처 스트리밍 상태 업데이트용)
+        /// 
+        /// **화면 캡처 스트리밍 상태 동기화**
+        /// LiveStreamViewModel의 스트리밍 상태가 변경될 때마다
+        /// MainViewModel의 isScreenCaptureStreaming을 자동으로 업데이트합니다.
+        ///
+        /// **상태 매핑:**
+        /// - .streaming: 화면 캡처 스트리밍 활성화 (true)
+        /// - 기타 상태: 화면 캡처 스트리밍 비활성화 (false)
+        ///
+        /// **UI 반영:**
+        /// 이 바인딩을 통해 사이드바의 "스트리밍 시작 - 캡처" 버튼이
+        /// 실시간으로 상태에 맞게 업데이트됩니다.
+        liveStreamViewModel.$status
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                // 스트리밍 상태에 따른 화면 캡처 상태 업데이트
+                let newScreenCaptureState = (status == .streaming)
+                
+                // 상태가 실제로 변경된 경우에만 업데이트 (불필요한 UI 갱신 방지)
+                if self?.isScreenCaptureStreaming != newScreenCaptureState {
+                    self?.isScreenCaptureStreaming = newScreenCaptureState
+                    
+                    let statusText = newScreenCaptureState ? "활성화" : "비활성화"
+                    logDebug("🔄 [MainViewModel] 화면 캡처 스트리밍 상태 \(statusText): \(status)", category: .ui)
+                }
+            }
+            .store(in: &cancellables)
     }
     
     /// 현재 상태에 따른 UI 상태 업데이트
@@ -229,14 +301,11 @@ enum UIState {
 /// 앱의 주요 기능 영역을 구분합니다.
 enum SidebarItem: String, CaseIterable {
     case cameras = "cameras_tab"
-    case liveStream = "live_stream_tab"
     
     var displayName: String {
         switch self {
         case .cameras:
             return NSLocalizedString("camera", comment: "카메라")
-        case .liveStream:
-            return NSLocalizedString("live_streaming", comment: "라이브 스트리밍")
         }
     }
     
@@ -245,8 +314,6 @@ enum SidebarItem: String, CaseIterable {
         switch self {
         case .cameras:
             return "camera"
-        case .liveStream:
-            return "dot.radiowaves.left.and.right"
         }
     }
 } 

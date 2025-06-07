@@ -2,7 +2,7 @@
 //  CameraListView.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import SwiftUI
@@ -17,7 +17,9 @@ struct CameraSectionView: View {
     var body: some View {
         Section(header: Text(NSLocalizedString("camera_section", comment: "카메라 섹션"))) {
             // 카메라 메인 메뉴 아이템
-            NavigationLink(value: SidebarItem.cameras) {
+            Button {
+                viewModel.selectSidebarItem(.cameras)
+            } label: {
                 Label(NSLocalizedString("camera", comment: "카메라"), systemImage: "camera")
             }
             

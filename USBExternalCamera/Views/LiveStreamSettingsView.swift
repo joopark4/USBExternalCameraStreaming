@@ -2,7 +2,7 @@
 //  LiveStreamSettingsView.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import SwiftUI
@@ -235,84 +235,49 @@ struct LiveStreamSettingsView: View {
     private var videoSettingsSection: some View {
         SettingsSectionView(title: NSLocalizedString("video_settings", comment: ""), icon: "video") {
             VStack(spacing: 16) {
-                // 해상도 설정
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(NSLocalizedString("resolution", comment: ""))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Picker(NSLocalizedString("resolution", comment: ""), selection: Binding(
-                        get: {
-                            ResolutionPreset.allCases.first { resolution in
-                                let (width, height) = getResolutionDimensions(resolution)
-                                return width == viewModel.settings.videoWidth &&
-                                       height == viewModel.settings.videoHeight
-                            } ?? .fhd1080p
-                        },
-                        set: { resolution in
-                            let (width, height) = getResolutionDimensions(resolution)
-                            viewModel.settings.videoWidth = width
-                            viewModel.settings.videoHeight = height
-                        }
-                    )) {
-                        ForEach(ResolutionPreset.allCases, id: \.self) { resolution in
-                            VStack {
-                                Text(resolution.displayName)
-                                let (width, height) = getResolutionDimensions(resolution)
-                                Text("\(width)×\(height)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .tag(resolution)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                
-                // 비디오 비트레이트
+                // 비트레이트 설정
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(NSLocalizedString("video_bitrate", comment: ""))
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        
                         Spacer()
                         Text("\(viewModel.settings.videoBitrate) kbps")
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
+                            .foregroundColor(bitrateColor)
                             .fontWeight(.medium)
                     }
                     
-                    Slider(
-                        value: Binding(
-                            get: { Double(viewModel.settings.videoBitrate) },
-                            set: { viewModel.settings.videoBitrate = Int($0) }
-                        ),
-                        in: 500...10000,
-                        step: 100
-                    )
+                    // 비트레이트 슬라이더
+                    Slider(value: Binding(
+                        get: { Double(viewModel.settings.videoBitrate) },
+                        set: { viewModel.settings.videoBitrate = Int($0) }
+                    ), in: 500...10000, step: 100)
+                    
+                    // YouTube Live 권장사항 및 경고
+                    bitrateWarningView
+                }
+                
+                // 해상도 설정 (단순화)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("해상도")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                     
                     HStack {
-                        Text("500 kbps")
-                            .font(.caption)
+                        Text("\(viewModel.settings.videoWidth) × \(viewModel.settings.videoHeight)")
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text("10,000 kbps")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
                 }
                 
                 // 프레임레이트
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(NSLocalizedString("frame_rate", comment: ""))
+                    Text("프레임 레이트")
                         .font(.subheadline)
                         .fontWeight(.medium)
                     
-                    Picker(NSLocalizedString("frame_rate", comment: ""), selection: $viewModel.settings.frameRate) {
-                        Text(NSLocalizedString("fps_24_movie", comment: "")).tag(24)
-                        Text(NSLocalizedString("fps_30_standard", comment: "")).tag(30)
-                        Text(NSLocalizedString("fps_60_high", comment: "")).tag(60)
+                    Picker("프레임 레이트", selection: $viewModel.settings.frameRate) {
+                        Text("24fps").tag(24)
+                        Text("30fps").tag(30)
+                        Text("60fps").tag(60)
                     }
                     .pickerStyle(.segmented)
                 }
@@ -458,12 +423,113 @@ struct LiveStreamSettingsView: View {
     }
     
     // MARK: - Helper Methods
-    private func getResolutionDimensions(_ resolution: ResolutionPreset) -> (Int, Int) {
+    private func getResolutionDimensions(_ resolution: ResolutionPreset) -> (width: Int, height: Int) {
         switch resolution {
         case .sd480p: return (854, 480)
         case .hd720p: return (1280, 720)
         case .fhd1080p: return (1920, 1080)
         case .uhd4k: return (3840, 2160)
+        }
+    }
+    
+    /// 비트레이트 색상 (권장사항 기준)
+    private var bitrateColor: Color {
+        switch viewModel.settings.videoBitrate {
+        case 1500...4000: return .green      // YouTube Live 권장 범위
+        case 1000..<1500: return .orange     // 낮음
+        default: return .red                 // 너무 높음
+        }
+    }
+    
+    /// 비트레이트 경고 및 권장사항 뷰
+    @ViewBuilder
+    private var bitrateWarningView: some View {
+        if viewModel.settings.videoBitrate > 4000 {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.red)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("⚠️ 비트레이트가 너무 높습니다")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.red)
+                    Text("YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(Color.red.opacity(0.1))
+            .cornerRadius(8)
+        } else if viewModel.settings.videoBitrate >= 1500 && viewModel.settings.videoBitrate <= 4000 {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("✅ YouTube Live 1080p 권장 범위")
+                    .font(.caption)
+                    .foregroundColor(.green)
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(8)
+        } else {
+            HStack {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.orange)
+                Text("📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(Color.orange.opacity(0.1))
+            .cornerRadius(8)
+        }
+        
+        // 빠른 설정 버튼들
+        HStack(spacing: 12) {
+            Button("720p (1000)") {
+                viewModel.settings.videoBitrate = 1000
+                viewModel.settings.videoWidth = 1280
+                viewModel.settings.videoHeight = 720
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.1))
+            .foregroundColor(.blue)
+            .cornerRadius(4)
+            
+            Button("1080p (1500)") {
+                viewModel.settings.videoBitrate = 1500
+                viewModel.settings.videoWidth = 1920
+                viewModel.settings.videoHeight = 1080
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.green.opacity(0.1))
+            .foregroundColor(.green)
+            .cornerRadius(4)
+            
+            Button("1080p (2500)") {
+                viewModel.settings.videoBitrate = 2500
+                viewModel.settings.videoWidth = 1920
+                viewModel.settings.videoHeight = 1080
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.1))
+            .foregroundColor(.blue)
+            .cornerRadius(4)
+            
+            Spacer()
         }
     }
 }
@@ -533,18 +599,154 @@ struct VideoSettingsSectionView: View {
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("video_settings", comment: ""), icon: "video") {
             VStack(spacing: 16) {
-                HStack {
-                    Text(NSLocalizedString("video_bitrate", comment: ""))
-                    Spacer()
-                    Text("\(viewModel.settings.videoBitrate) kbps")
-                        .foregroundColor(.secondary)
+                // 비트레이트 설정
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("video_bitrate", comment: ""))
+                        Spacer()
+                        Text("\(viewModel.settings.videoBitrate) kbps")
+                            .foregroundColor(bitrateColor)
+                            .fontWeight(.medium)
+                    }
+                    
+                    // 비트레이트 슬라이더
+                    Slider(value: Binding(
+                        get: { Double(viewModel.settings.videoBitrate) },
+                        set: { viewModel.settings.videoBitrate = Int($0) }
+                    ), in: 500...10000, step: 100)
+                    
+                    // YouTube Live 권장사항 및 경고
+                    bitrateWarningView
                 }
                 
-                Slider(value: Binding(
-                    get: { Double(viewModel.settings.videoBitrate) },
-                    set: { viewModel.settings.videoBitrate = Int($0) }
-                ), in: 500...10000, step: 100)
+                // 해상도 설정 (단순화)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("해상도")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    HStack {
+                        Text("\(viewModel.settings.videoWidth) × \(viewModel.settings.videoHeight)")
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                
+                // 프레임레이트
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("프레임 레이트")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Picker("프레임 레이트", selection: $viewModel.settings.frameRate) {
+                        Text("24fps").tag(24)
+                        Text("30fps").tag(30)
+                        Text("60fps").tag(60)
+                    }
+                    .pickerStyle(.segmented)
+                }
             }
+        }
+    }
+    
+    /// 비트레이트 색상 (권장사항 기준)
+    private var bitrateColor: Color {
+        switch viewModel.settings.videoBitrate {
+        case 1500...4000: return .green      // YouTube Live 권장 범위
+        case 1000..<1500: return .orange     // 낮음
+        default: return .red                 // 너무 높음
+        }
+    }
+    
+    /// 비트레이트 경고 및 권장사항 뷰
+    @ViewBuilder
+    private var bitrateWarningView: some View {
+        if viewModel.settings.videoBitrate > 4000 {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.red)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("⚠️ 비트레이트가 너무 높습니다")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.red)
+                    Text("YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(Color.red.opacity(0.1))
+            .cornerRadius(8)
+        } else if viewModel.settings.videoBitrate >= 1500 && viewModel.settings.videoBitrate <= 4000 {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("✅ YouTube Live 1080p 권장 범위")
+                    .font(.caption)
+                    .foregroundColor(.green)
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(8)
+        } else {
+            HStack {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.orange)
+                Text("📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(Color.orange.opacity(0.1))
+            .cornerRadius(8)
+        }
+        
+        // 빠른 설정 버튼들
+        HStack(spacing: 12) {
+            Button("720p (1000)") {
+                viewModel.settings.videoBitrate = 1000
+                viewModel.settings.videoWidth = 1280
+                viewModel.settings.videoHeight = 720
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.1))
+            .foregroundColor(.blue)
+            .cornerRadius(4)
+            
+            Button("1080p (1500)") {
+                viewModel.settings.videoBitrate = 1500
+                viewModel.settings.videoWidth = 1920
+                viewModel.settings.videoHeight = 1080
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.green.opacity(0.1))
+            .foregroundColor(.green)
+            .cornerRadius(4)
+            
+            Button("1080p (2500)") {
+                viewModel.settings.videoBitrate = 2500
+                viewModel.settings.videoWidth = 1920
+                viewModel.settings.videoHeight = 1080
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.1))
+            .foregroundColor(.blue)
+            .cornerRadius(4)
+            
+            Spacer()
         }
     }
 }

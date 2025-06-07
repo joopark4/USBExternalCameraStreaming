@@ -54,8 +54,10 @@
 // Video Settings
 "video_settings" = "비디오 설정";
 "resolution" = "해상도";
-"video_bitrate" = "비디오 비트레이트: %d kbps";
-"frame_rate" = "프레임률: %d fps";
+"video_bitrate" = "비디오 비트레이트";
+"video_bitrate_label" = "비디오 비트레이트: %d kbps";
+"frame_rate" = "프레임률";
+"frame_rate_label" = "프레임률: %d fps";
 "frame_rate_picker" = "프레임률";
 "fps_24" = "24 fps";
 "fps_30" = "30 fps";
@@ -63,7 +65,8 @@
 
 // Audio Settings
 "audio_settings" = "오디오 설정";
-"audio_bitrate" = "오디오 비트레이트: %d kbps";
+"audio_bitrate" = "오디오 비트레이트";
+"audio_bitrate_label" = "오디오 비트레이트: %d kbps";
 "audio_bitrate_picker" = "오디오 비트레이트";
 "kbps_64" = "64 kbps";
 "kbps_128" = "128 kbps";

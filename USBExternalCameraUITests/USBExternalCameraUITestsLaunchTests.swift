@@ -2,7 +2,7 @@
 //  USBExternalCameraUITestsLaunchTests.swift
 //  USBExternalCameraUITests
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import XCTest

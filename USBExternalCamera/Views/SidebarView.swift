@@ -2,7 +2,7 @@
 //  SidebarView.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 5/25/25.
 //
 
 import SwiftUI
@@ -25,10 +25,9 @@ struct SidebarView: View {
         }
         .navigationTitle(NSLocalizedString("menu", comment: "메뉴"))
         .navigationBarTitleDisplayMode(.inline)
-        // 툴바에 버튼들 배치
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack {
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 12) {
                     // 새로고침 버튼
                     Button {
                         logDebug("🔄 RefreshButton: Button tapped", category: .ui)
@@ -48,13 +47,14 @@ struct SidebarView: View {
                     .foregroundColor(.orange)
                     #endif
                     
-                    // 설정 버튼
+                    // 권한 설정 버튼
                     Button {
-                        logDebug("🔧 SettingsButton: Button tapped", category: .ui)
+                        logDebug("🔧 PermissionButton: Button tapped", category: .ui)
                         viewModel.showPermissionSettings()
                     } label: {
                         Image(systemName: "gear")
                     }
+                    .foregroundColor(.blue)
                 }
             }
         }

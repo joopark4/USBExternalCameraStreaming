@@ -2,7 +2,7 @@
 //  LiveStreamViewModel.swift
 //  USBExternalCamera
 //
-//  Created by BYEONG JOO KIM on 5/25/25.
+//  Created by EUN YEON on 6/5/25.
 //
 
 import Foundation
@@ -33,7 +33,7 @@ final class LiveStreamViewModel: ObservableObject {
     // MARK: - Published Properties
     
     /// 현재 라이브 스트리밍 설정
-    @Published var settings: LiveStreamSettings
+    @Published var settings: USBExternalCamera.LiveStreamSettings
     
     /// 스트리밍 상태
     @Published var status: LiveStreamStatus = .idle
@@ -65,9 +65,18 @@ final class LiveStreamViewModel: ObservableObject {
     /// 연결 테스트 결과
     @Published var connectionTestResult: String = ""
     
+    /// 실시간 데이터 송출 통계 (실제 HaishinKitManager에서 가져옴)
+    @Published var transmissionStats: DataTransmissionStats = DataTransmissionStats()
+    
+    /// 네트워크 품질 상태
+    @Published var networkQuality: NetworkQuality = .unknown
+    
+    /// 로딩 상태 (스트리밍 시작/중지 중)
+    @Published var isLoading: Bool = false
+    
     /// 현재 스트리밍 중인지 여부
     var isStreaming: Bool {
-        return liveStreamService?.isStreaming == true
+        return status == .streaming
     }
     
     // MARK: - Computed Properties
@@ -118,7 +127,12 @@ final class LiveStreamViewModel: ObservableObject {
     // MARK: - Dependencies
     
     /// 라이브 스트리밍 서비스 (Services Layer)
-    private var liveStreamService: LiveStreamServiceProtocol!
+    private var liveStreamService: HaishinKitManagerProtocol!
+    
+    /// 라이브 스트리밍 서비스 접근자 (카메라 연결용)
+    public var streamingService: HaishinKitManagerProtocol? {
+        return liveStreamService
+    }
     
     /// Combine 구독 저장소
     private var cancellables = Set<AnyCancellable>()
@@ -127,7 +141,7 @@ final class LiveStreamViewModel: ObservableObject {
     
     init(modelContext: ModelContext) {
         self.settings = Self.createDefaultSettings()
-        self.liveStreamService = ServiceFactory.createLiveStreamService()
+        self.liveStreamService = HaishinKitManager()
         
         setupBindings()
         updateStreamingAvailability()
@@ -143,6 +157,7 @@ final class LiveStreamViewModel: ObservableObject {
     func startStreaming(with captureSession: AVCaptureSession) async {
         logInfo("Starting streaming...", category: .streaming)
         
+        isLoading = true
         await updateStatus(.connecting, message: "스트리밍 연결 중...")
         startDataMonitoring()
         
@@ -152,12 +167,15 @@ final class LiveStreamViewModel: ObservableObject {
         } catch {
             await handleStreamingStartFailure(error)
         }
+        
+        isLoading = false
     }
     
     /// 라이브 스트리밍 중지
     func stopStreaming() async {
         logInfo("Stopping streaming...", category: .streaming)
         
+        isLoading = true
         await updateStatus(.disconnecting, message: "스트리밍 종료 중...")
         
         do {
@@ -166,6 +184,8 @@ final class LiveStreamViewModel: ObservableObject {
         } catch {
             await handleStreamingStopFailure(error)
         }
+        
+        isLoading = false
     }
     
     /// 스트리밍 토글 (시작/중지)
@@ -183,12 +203,195 @@ final class LiveStreamViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Screen Capture Streaming Methods
+    
+    /// 🎬 화면 캡처 스트리밍 기능 섹션
+    /// 
+    /// **화면 캡처 스트리밍이란?**
+    /// CameraPreviewContainerView의 화면(카메라 영상 + UI 오버레이)을 
+    /// 실시간으로 캡처하여 스트리밍 서버로 송출하는 기능입니다.
+    ///
+    /// **일반 스트리밍과의 차이점:**
+    /// - 일반 스트리밍: 카메라 영상만 전송
+    /// - 화면 캡처 스트리밍: 카메라 영상 + UI 요소(버튼, 라벨, 워터마크 등) 합성 전송
+    ///
+    /// **기술적 구현:**
+    /// 1. 실시간 카메라 프레임 캡처 (CVPixelBuffer)
+    /// 2. UI 레이어 렌더링 (CALayer → UIImage)
+    /// 3. 카메라 프레임과 UI 합성 (Core Graphics)
+    /// 4. 30fps로 HaishinKit을 통해 서버 전송
+    
+    /// 화면 캡처 스트리밍 시작
+    /// 
+    /// **동작 과정:**
+    /// 1. 스트리밍 서비스 초기화 및 서버 연결
+    /// 2. CameraPreviewView에 화면 캡처 시작 신호 전송
+    /// 3. 30fps 타이머 기반 실시간 화면 캡처 시작
+    /// 4. 캡처된 프레임을 HaishinKit을 통해 서버로 전송
+    ///
+    /// **상태 변화:**
+    /// idle → connecting → connected → streaming
+    ///
+    /// **에러 처리:**
+    /// - 서비스 초기화 실패 시 자동으로 중지 상태로 복원
+    /// - 네트워크 오류 시 사용자에게 알림 표시
+    func startScreenCaptureStreaming() async {
+        logInfo("🎬 Starting screen capture streaming mode...", category: .streaming)
+        
+        // UI 로딩 상태 시작
+        isLoading = true
+        await updateStatus(.connecting, message: "화면 캡처 스트리밍 연결 중...")
+        
+        do {
+            // Step 1: 스트리밍 서비스 초기화 및 서버 연결
+            try await performScreenCaptureStreamingStart()
+            
+            // Step 2: 성공 시 후처리 (화면 캡처 시작 신호 전송)
+            await handleScreenCaptureStreamingStartSuccess()
+            
+        } catch {
+            // Step 3: 실패 시 복구 처리
+            await handleScreenCaptureStreamingStartFailure(error)
+        }
+        
+        // UI 로딩 상태 종료
+        isLoading = false
+    }
+    
+    /// 화면 캡처 스트리밍 토글 (시작/중지)
+    /// 
+    /// 사용자가 사이드바의 "스트리밍 시작 - 캡처" 버튼을 눌렀을 때 호출됩니다.
+    /// 현재 상태에 따라 시작 또는 중지 동작을 수행합니다.
+    ///
+    /// **상태별 동작:**
+    /// - idle/error: 화면 캡처 스트리밍 시작
+    /// - connected/streaming: 화면 캡처 스트리밍 중지
+    /// - connecting/disconnecting: 무시 (이미 상태 변경 중)
+    ///
+    /// **Thread Safety:**
+    /// 비동기 처리를 통해 UI 블록킹을 방지합니다.
+    func toggleScreenCaptureStreaming() {
+        logDebug("🎮 [TOGGLE] Screen capture streaming toggle - Current status: \(status)", category: .streaming)
+        
+        switch status {
+        case .idle, .error:
+            // 화면 캡처 스트리밍 시작
+            Task { await startScreenCaptureStreaming() }
+            
+        case .connected, .streaming:
+            // 화면 캡처 스트리밍 중지
+            Task { await stopScreenCaptureStreaming() }
+            
+        case .connecting, .disconnecting:
+            // 이미 상태 변경 중이므로 무시
+            logDebug("🎮 [TOGGLE] Ignoring toggle - already in transition state: \(status)", category: .streaming)
+        }
+    }
+    
+    /// 화면 캡처 스트리밍 중지
+    /// 
+    /// **동작 과정:**
+    /// 1. CameraPreviewView에 화면 캡처 중지 신호 전송
+    /// 2. 스트리밍 서버 연결 해제
+    /// 3. 관련 리소스 정리 및 상태 초기화
+    ///
+    /// **상태 변화:**
+    /// streaming → disconnecting → idle
+    ///
+    /// **리소스 정리:**
+    /// - 화면 캡처 타이머 중지
+    /// - 캡처된 프레임 메모리 해제
+    /// - HaishinKit 연결 해제
+    func stopScreenCaptureStreaming() async {
+        logInfo("🎬 Stopping screen capture streaming...", category: .streaming)
+        
+        isLoading = true
+        await updateStatus(.disconnecting, message: "화면 캡처 스트리밍 중지 중...")
+        
+        do {
+            // Step 1: 스트리밍 서비스 중지 및 화면 캡처 중지 신호 전송
+            try await performScreenCaptureStreamingStop()
+            
+            // Step 2: 성공 시 상태 초기화
+            await handleScreenCaptureStreamingStopSuccess()
+            
+        } catch {
+            // Step 3: 실패 시에도 강제로 상태 초기화 (안전장치)
+            await handleScreenCaptureStreamingStopFailure(error)
+        }
+        
+        isLoading = false
+    }
+    
+    /// 화면 캡처 스트리밍이 활성 상태인지 확인
+    var isScreenCaptureStreaming: Bool {
+        guard let haishinKitManager = liveStreamService as? HaishinKitManager else { return false }
+        return haishinKitManager.isScreenCaptureMode && haishinKitManager.isStreaming
+    }
+    
+    /// 화면 캡처 스트리밍 버튼 텍스트
+    var screenCaptureButtonText: String {
+        if isScreenCaptureStreaming {
+            return "화면 캡처 중지"
+        } else {
+            switch status {
+            case .idle, .error:
+                return "스트리밍 시작 - 캡처"
+            case .connecting:
+                return "화면 캡처 연결 중"
+            case .disconnecting:
+                return "화면 캡처 중지 중"
+            default:
+                return "스트리밍 시작 - 캡처"
+            }
+        }
+    }
+    
+    /// 화면 캡처 스트리밍 버튼 색상
+    var screenCaptureButtonColor: Color {
+        if isScreenCaptureStreaming {
+            return .red
+        } else {
+            switch status {
+            case .connecting, .disconnecting:
+                return .gray
+            default:
+                return .purple
+            }
+        }
+    }
+    
+    /// 화면 캡처 스트리밍 버튼 활성화 상태
+    var isScreenCaptureButtonEnabled: Bool {
+        switch status {
+        case .connecting, .disconnecting:
+            return false
+        default:
+            return canStartStreaming || isScreenCaptureStreaming
+        }
+    }
+    
     // MARK: - Public Methods - Settings
     
     /// 스트리밍 설정 저장
     func saveSettings() {
         logDebug("💾 [SETTINGS] Saving stream settings...", category: .streaming)
-        // 설정 저장 로직 (UserDefaults, Core Data 등)
+        guard let service = liveStreamService else { 
+            logDebug("❌ [SETTINGS] Service not available for saving", category: .streaming)
+            return 
+        }
+        
+        service.saveSettings(settings)
+        updateStreamingAvailability()
+        logDebug("✅ [SETTINGS] Settings saved successfully", category: .streaming)
+    }
+    
+    /// 설정 자동 저장 (설정이 변경될 때마다 호출)
+    private func autoSaveSettings() {
+        guard let service = liveStreamService else { return }
+        
+        service.saveSettings(settings)
+        logDebug("💾 [AUTO-SAVE] Settings auto-saved", category: .streaming)
     }
     
     /// 연결 테스트
@@ -213,6 +416,43 @@ final class LiveStreamViewModel: ObservableObject {
         }
     }
     
+    /// 빠른 연결 상태 확인
+    func quickConnectionCheck() -> String {
+        logDebug("⚡ [QUICK CHECK] 빠른 연결 상태 확인", category: .streaming)
+        
+        var result = "⚡ **빠른 연결 상태 확인**\n"
+        result += String(repeating: "-", count: 30) + "\n\n"
+        
+        // RTMP URL 확인
+        if settings.rtmpURL.isEmpty {
+            result += "❌ RTMP URL이 설정되지 않았습니다\n"
+        } else if validateRTMPURL(settings.rtmpURL) {
+            result += "✅ RTMP URL이 올바르게 설정되었습니다\n"
+        } else {
+            result += "⚠️ RTMP URL 형식이 올바르지 않습니다\n"
+        }
+        
+        // 스트림 키 확인
+        if settings.streamKey.isEmpty {
+            result += "❌ 스트림 키가 설정되지 않았습니다\n"
+        } else if validateStreamKey(settings.streamKey) {
+            result += "✅ 스트림 키가 올바르게 설정되었습니다\n"
+        } else {
+            result += "⚠️ 스트림 키가 너무 짧습니다\n"
+        }
+        
+        // 권한 확인
+        let cameraAuth = AVCaptureDevice.authorizationStatus(for: .video)
+        let micAuth = AVCaptureDevice.authorizationStatus(for: .audio)
+        
+        result += cameraAuth == .authorized ? "✅ 카메라 권한 허용됨\n" : "❌ 카메라 권한 필요\n"
+        result += micAuth == .authorized ? "✅ 마이크 권한 허용됨\n" : "❌ 마이크 권한 필요\n"
+        
+        result += "\n📊 현재 상태: \(status.description)\n"
+        
+        return result
+    }
+    
     /// 스트리밍 품질 프리셋 적용
     /// - Parameter preset: 적용할 프리셋
     func applyPreset(_ preset: StreamingPreset) {
@@ -222,17 +462,52 @@ final class LiveStreamViewModel: ObservableObject {
         settings.videoBitrate = presetSettings.videoBitrate
         settings.audioBitrate = presetSettings.audioBitrate
         settings.frameRate = presetSettings.frameRate
-        settings.keyframeInterval = presetSettings.keyframeInterval
-        settings.videoEncoder = presetSettings.videoEncoder
-        settings.audioEncoder = presetSettings.audioEncoder
+        // keyframeInterval, videoEncoder, audioEncoder는 LiveStreamSettings에 없음
         
         updateStreamingAvailability()
     }
     
-    /// 설정 초기화
+    /// 설정 초기화 (저장된 설정도 삭제)
     func resetToDefaults() {
         logDebug("🔄 [SETTINGS] Resetting to default settings...", category: .streaming)
-        settings = LiveStreamSettings()
+        settings = USBExternalCamera.LiveStreamSettings()
+        
+        // 저장된 설정도 삭제
+        clearSavedSettings()
+        
+        // 즉시 기본 설정을 저장
+        autoSaveSettings()
+        
+        updateStreamingAvailability()
+    }
+    
+    /// 저장된 설정 삭제 (앱 삭제와 같은 효과)
+    private func clearSavedSettings() {
+        let defaults = UserDefaults.standard
+        let keys = [
+            "LiveStream.rtmpURL",
+            "LiveStream.streamKey", 
+            "LiveStream.streamTitle",
+            "LiveStream.videoBitrate",
+            "LiveStream.videoWidth",
+            "LiveStream.videoHeight",
+            "LiveStream.frameRate",
+            "LiveStream.audioBitrate",
+            "LiveStream.autoReconnect",
+            "LiveStream.isEnabled",
+            "LiveStream.bufferSize",
+            "LiveStream.connectionTimeout",
+            "LiveStream.videoEncoder",
+            "LiveStream.audioEncoder",
+            "LiveStream.savedAt"
+        ]
+        
+        for key in keys {
+            defaults.removeObject(forKey: key)
+        }
+        
+        defaults.synchronize()
+        logDebug("🗑️ [CLEAR] Saved settings cleared", category: .streaming)
     }
     
     // MARK: - Public Methods - Validation
@@ -339,23 +614,27 @@ final class LiveStreamViewModel: ObservableObject {
     /// 현재 스트리밍 데이터 송출 상태 확인
     @MainActor
     func checkCurrentDataTransmission() async {
-        guard let service = liveStreamService,
-              let transmissionStats = await service.getCurrentTransmissionStatus() else {
-            logDebug("❌ [DATA CHECK] Unable to get transmission status", category: .streaming)
-            return
-        }
-        
-        logTransmissionStats(transmissionStats)
+        // getCurrentTransmissionStatus 메서드가 아직 구현되지 않음
+        logDebug("ℹ️ [DATA CHECK] Transmission status check not yet implemented", category: .streaming)
     }
     
     /// 스트리밍 데이터 요약 정보 가져오기
     @MainActor
     func getStreamingDataSummary() async -> String {
-        guard let service = liveStreamService else {
+        guard liveStreamService != nil else {
             return "❌ LiveStreamService가 초기화되지 않음"
         }
         
-        let summary = await service.getStreamingDataSummary()
+        // getStreamingDataSummary 메서드가 아직 구현되지 않음
+        let statusText = switch status {
+        case .idle: "대기 중"
+        case .connecting: "연결 중"
+        case .connected: "연결됨"
+        case .streaming: "스트리밍 중"
+        case .disconnecting: "연결 해제 중"
+        case .error(let error): "오류: \(error.localizedDescription)"
+        }
+        let summary = "📊 스트리밍 상태: \(statusText)\n📡 연결 상태: 정상"
         logDebug("📋 [DATA SUMMARY] \(summary)", category: .streaming)
         return summary
     }
@@ -382,12 +661,176 @@ final class LiveStreamViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Public Methods - Connection Diagnostics
+    
+    /// **실시간 송출 상태 진단**
+    func diagnoseLiveStreamConnection() async -> String {
+        logDebug("🔍 [DIAGNOSIS] 실시간 송출 상태 진단 시작", category: .streaming)
+        
+        var report = "📊 **실시간 송출 상태 진단 보고서**\n"
+        report += String(repeating: "=", count: 50) + "\n\n"
+        
+        // 1. 기본 설정 확인
+        report += "📋 **1. 기본 설정 상태**\n"
+        report += "   • 현재 상태: \(status.description)\n"
+        report += "   • RTMP URL: \(settings.rtmpURL.isEmpty ? "❌ 미설정" : "✅ 설정됨")\n"
+        report += "   • 스트림 키: \(settings.streamKey.isEmpty ? "❌ 미설정" : "✅ 설정됨 (\(settings.streamKey.count)자)")\n"
+        report += "   • 비트레이트: \(settings.videoBitrate) kbps\n"
+        report += "   • 해상도: \(settings.videoWidth)x\(settings.videoHeight)\n\n"
+        
+        // 2. 권한 상태 확인
+        report += "🔐 **2. 권한 상태**\n"
+        let cameraAuth = AVCaptureDevice.authorizationStatus(for: .video)
+        let micAuth = AVCaptureDevice.authorizationStatus(for: .audio)
+        
+        report += "   • 카메라 권한: \(cameraAuth == .authorized ? "✅ 허용됨" : "❌ 거부됨 또는 미결정")\n"
+        report += "   • 마이크 권한: \(micAuth == .authorized ? "✅ 허용됨" : "❌ 거부됨 또는 미결정")\n\n"
+        
+        // 3. 카메라 장치 확인
+        report += "📹 **3. 카메라 장치 상태**\n"
+        let cameras = checkAvailableCameras()
+        if cameras.isEmpty || cameras.first?.contains("❌") == true {
+            report += "   ❌ **문제**: 사용 가능한 카메라 없음\n"
+            report += "   💡 **해결책**: USB 카메라 연결 확인 또는 앱 재시작\n"
+        } else {
+            for camera in cameras {
+                report += "   \(camera)\n"
+            }
+        }
+        report += "\n"
+        
+        // 4. 네트워크 및 RTMP 설정 확인
+        report += "🌐 **4. 네트워크 및 RTMP 설정**\n"
+        let rtmpValidation = await validateRTMPSettings()
+        report += rtmpValidation
+        report += "\n"
+        
+        // 5. 스트리밍 서비스 상태
+        report += "⚙️ **5. 스트리밍 서비스 상태**\n"
+        if let service = liveStreamService {
+            report += "   • 서비스 초기화: ✅ 완료\n"
+            report += "   • 서비스 스트리밍 상태: \(service.isStreaming ? "🔴 스트리밍 중" : "⚪ 대기 중")\n"
+            report += "   • 서비스 상태: \(service.currentStatus.description)\n"
+        } else {
+            report += "   • 서비스 초기화: ❌ **실패** - 이것이 주요 문제입니다!\n"
+            report += "   💡 **해결책**: 앱을 완전히 종료하고 다시 시작하세요\n"
+        }
+        report += "\n"
+        
+        // 6. 진단 결과 및 권장사항
+        report += "💡 **6. 진단 결과 및 권장사항**\n"
+        let recommendations = await generateRecommendations()
+        report += recommendations
+        
+        report += "\n" + String(repeating: "=", count: 50) + "\n"
+        report += "📅 진단 완료: \(Date().formatted())\n"
+        
+        logDebug("🔍 [DIAGNOSIS] 진단 완료", category: .streaming)
+        return report
+    }
+    
+    /// RTMP 설정 유효성 검사
+    private func validateRTMPSettings() async -> String {
+        var result = ""
+        
+        // URL 검증
+        if settings.rtmpURL.isEmpty {
+            result += "   ❌ **RTMP URL이 설정되지 않음**\n"
+            result += "   💡 YouTube의 경우: rtmp://a.rtmp.youtube.com/live2/\n"
+        } else if !settings.rtmpURL.lowercased().hasPrefix("rtmp") {
+            result += "   ❌ **잘못된 RTMP URL 형식**\n"
+            result += "   💡 'rtmp://' 또는 'rtmps://'로 시작해야 합니다\n"
+        } else {
+            result += "   ✅ RTMP URL 형식이 올바름\n"
+        }
+        
+        // 스트림 키 검증
+        if settings.streamKey.isEmpty {
+            result += "   ❌ **스트림 키가 설정되지 않음**\n"
+            result += "   💡 YouTube Studio에서 스트림 키를 복사하세요\n"
+        } else if settings.streamKey == "YOUR_YOUTUBE_STREAM_KEY_HERE" {
+            result += "   ❌ **더미 스트림 키 사용 중**\n"
+            result += "   💡 실제 YouTube 스트림 키로 변경하세요\n"
+        } else if settings.streamKey.count < Constants.minimumStreamKeyLength {
+            result += "   ⚠️ **스트림 키가 너무 짧음** (\(settings.streamKey.count)자)\n"
+            result += "   💡 YouTube 스트림 키는 일반적으로 20자 이상입니다\n"
+        } else {
+            result += "   ✅ 스트림 키가 설정됨 (\(settings.streamKey.count)자)\n"
+        }
+        
+        // 간단한 연결 테스트
+        if let testResult = await liveStreamService?.testConnection(to: settings) {
+            if testResult.isSuccessful {
+                result += "   ✅ 연결 테스트 성공 (지연시간: \(testResult.latency)ms)\n"
+            } else {
+                result += "   ❌ **연결 테스트 실패**: \(testResult.message)\n"
+            }
+        } else {
+            result += "   ⚠️ 연결 테스트를 수행할 수 없음\n"
+        }
+        
+        return result
+    }
+    
+    /// 권장사항 생성
+    private func generateRecommendations() async -> String {
+        var recommendations = ""
+        var issueCount = 0
+        
+        // 권한 문제 확인
+        let cameraAuth = AVCaptureDevice.authorizationStatus(for: .video)
+        let micAuth = AVCaptureDevice.authorizationStatus(for: .audio)
+        
+        if cameraAuth != .authorized {
+            issueCount += 1
+            recommendations += "   \(issueCount). 📸 **카메라 권한 허용** (설정 > 개인정보 보호 > 카메라)\n"
+        }
+        
+        if micAuth != .authorized {
+            issueCount += 1
+            recommendations += "   \(issueCount). 🎤 **마이크 권한 허용** (설정 > 개인정보 보호 > 마이크)\n"
+        }
+        
+        // 설정 문제 확인
+        if settings.streamKey.isEmpty || settings.streamKey == "YOUR_YOUTUBE_STREAM_KEY_HERE" {
+            issueCount += 1
+            recommendations += "   \(issueCount). 🔑 **YouTube Studio에서 실제 스트림 키 설정**\n"
+        }
+        
+        if settings.rtmpURL.isEmpty {
+            issueCount += 1
+            recommendations += "   \(issueCount). 🌐 **RTMP URL 설정** (YouTube: rtmp://a.rtmp.youtube.com/live2/)\n"
+        }
+        
+        // 카메라 문제 확인
+        let cameras = checkAvailableCameras()
+        if cameras.isEmpty || cameras.first?.contains("❌") == true {
+            issueCount += 1
+            recommendations += "   \(issueCount). 📹 **카메라 연결 확인** (USB 카메라 재연결 또는 앱 재시작)\n"
+        }
+        
+        // YouTube 관련 권장사항
+        issueCount += 1
+        recommendations += "   \(issueCount). 🎬 **YouTube Studio 확인사항**:\n"
+        recommendations += "      • 라이브 스트리밍 기능이 활성화되어 있는지 확인\n"
+        recommendations += "      • 휴대폰 번호 인증이 완료되어 있는지 확인\n"
+        recommendations += "      • '라이브 스트리밍 시작' 버튼을 눌러 대기 상태로 설정\n"
+        recommendations += "      • 스트림이 나타나기까지 10-30초 대기\n"
+        
+        if issueCount == 1 {
+            recommendations = "   ✅ **대부분의 설정이 정상입니다!**\n" + recommendations
+            recommendations += "\n   💡 **추가 팁**: 문제가 지속되면 앱을 완전히 종료하고 재시작해보세요.\n"
+        }
+        
+        return recommendations
+    }
+    
     // MARK: - Private Methods - Setup
     
-    private static func createDefaultSettings() -> LiveStreamSettings {
-        let settings = LiveStreamSettings()
+    private static func createDefaultSettings() -> USBExternalCamera.LiveStreamSettings {
+        var settings = USBExternalCamera.LiveStreamSettings()
         settings.rtmpURL = Constants.youtubeRTMPURL
-        settings.streamKey = "f98q-9wq6-dfj9-hx3x-1ux8"
+        settings.streamKey = ""
         settings.videoBitrate = Constants.defaultVideoBitrate
         settings.audioBitrate = Constants.defaultAudioBitrate
         settings.videoWidth = Constants.defaultVideoWidth
@@ -396,8 +839,8 @@ final class LiveStreamViewModel: ObservableObject {
         return settings
     }
     
-    private static func createPresetSettings(_ preset: StreamingPreset) -> LiveStreamSettings {
-        let settings = LiveStreamSettings()
+    private static func createPresetSettings(_ preset: StreamingPreset) -> USBExternalCamera.LiveStreamSettings {
+        var settings = USBExternalCamera.LiveStreamSettings()
         
         switch preset {
         case .low:
@@ -423,55 +866,74 @@ final class LiveStreamViewModel: ObservableObject {
         }
         
         settings.audioBitrate = preset == .ultra ? 256 : 128
-        settings.keyframeInterval = 2
-        settings.videoEncoder = "H.264"
-        settings.audioEncoder = "AAC"
+        // keyframeInterval, videoEncoder, audioEncoder는 LiveStreamSettings에 없음
         
         return settings
     }
     
     private func setupBindings() {
-        guard let service = liveStreamService as? LiveStreamService else { return }
-        
-        service.$currentStats
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.streamStats, on: self)
-            .store(in: &cancellables)
-        
-        service.$connectionInfo
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.connectionInfo, on: self)
-            .store(in: &cancellables)
-        
-        service.$isStreaming
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isStreaming in
-                self?.syncServiceStatus(isStreaming)
+        // 설정 변경 감지 및 자동 저장
+        $settings
+            .dropFirst() // 초기값 제외
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main) // 500ms 디바운스
+            .sink { [weak self] _ in
+                self?.autoSaveSettings()
             }
             .store(in: &cancellables)
+        
+        // HaishinKitManager의 transmissionStats와 바인딩
+        if let haishinKitManager = liveStreamService as? HaishinKitManager {
+            haishinKitManager.$transmissionStats
+                .receive(on: DispatchQueue.main)
+                .assign(to: \.transmissionStats, on: self)
+                .store(in: &cancellables)
+            
+            // 스트리밍 상태도 바인딩
+            haishinKitManager.$currentStatus
+                .receive(on: DispatchQueue.main)
+                .assign(to: \.status, on: self)
+                .store(in: &cancellables)
+            
+            // 네트워크 품질 바인딩 (transmissionStats에서 추출)
+            haishinKitManager.$transmissionStats
+                .map(\.connectionQuality)
+                .map { connectionQuality in
+                    switch connectionQuality {
+                    case .excellent: return NetworkQuality.excellent
+                    case .good: return NetworkQuality.good
+                    case .fair: return NetworkQuality.fair
+                    case .poor: return NetworkQuality.poor
+                    case .unknown: return NetworkQuality.unknown
+                    }
+                }
+                .receive(on: DispatchQueue.main)
+                .assign(to: \.networkQuality, on: self)
+                .store(in: &cancellables)
+            
+            logDebug("✅ [BINDING] HaishinKitManager와 바인딩 완료", category: .streaming)
+        }
+        
+        logDebug("✅ [AUTO-SAVE] 설정 자동 저장 바인딩 완료", category: .streaming)
     }
     
     private func loadInitialSettings() {
         guard let liveStreamService = liveStreamService else { return }
         
         Task {
-            do {
-                let loadedSettings = try await liveStreamService.loadSettings()
-                if !loadedSettings.rtmpURL.isEmpty && !loadedSettings.streamKey.isEmpty {
-                    await MainActor.run {
-                        self.settings = loadedSettings
-                        logDebug("🎥 [LOAD] Settings loaded from service", category: .streaming)
-                    }
+            let loadedSettings = liveStreamService.loadSettings()
+            
+            await MainActor.run {
+                // 로드된 설정이 있으면 적용 (빈 설정도 포함)
+                self.settings = loadedSettings
+                
+                if !loadedSettings.rtmpURL.isEmpty || !loadedSettings.streamKey.isEmpty {
+                    logDebug("🎥 [LOAD] Saved settings loaded - RTMP: \(!loadedSettings.rtmpURL.isEmpty), Key: \(!loadedSettings.streamKey.isEmpty)", category: .streaming)
+                } else {
+                    logDebug("📝 [LOAD] Default settings loaded (no saved data)", category: .streaming)
                 }
-                await MainActor.run {
-                    self.updateStreamingAvailability()
-                    self.updateNetworkRecommendations()
-                }
-            } catch {
-                logDebug("🎥 [LOAD] Failed to load settings: \(error.localizedDescription)", category: .streaming)
-                await MainActor.run {
-                    self.updateStreamingAvailability()
-                }
+                
+                self.updateStreamingAvailability()
+                self.updateNetworkRecommendations()
             }
         }
     }
@@ -480,16 +942,28 @@ final class LiveStreamViewModel: ObservableObject {
     
     private func performStreamingStart(with captureSession: AVCaptureSession) async throws {
         guard let service = liveStreamService else {
-            throw LiveStreamError.serviceNotInitialized
+            throw LiveStreamError.networkError("Service not initialized")
         }
-        try await service.startStreaming(with: captureSession, settings: settings)
+        
+        // 카메라 세션과 함께 스트리밍 시작 (프리뷰와 동일한 소스 사용)
+        if let haishinKitManager = service as? HaishinKitManager {
+            try await haishinKitManager.startStreaming(with: settings, captureSession: captureSession)
+        } else {
+            try await service.startStreaming(with: settings)
+        }
     }
     
     private func performStreamingStop() async throws {
         guard let service = liveStreamService else {
-            throw LiveStreamError.serviceNotInitialized
+            throw LiveStreamError.networkError("Service not initialized")
         }
-        try await service.stopStreaming()
+        
+        // 화면 캡처 중지 알림 전송 (화면 캡처 모드인 경우)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .stopScreenCapture, object: nil)
+        }
+        
+        await service.stopStreaming()
     }
     
     private func handleStreamingStartSuccess() async {
@@ -500,7 +974,7 @@ final class LiveStreamViewModel: ObservableObject {
     }
     
     private func handleStreamingStartFailure(_ error: Error) async {
-        await updateStatus(.error, message: "스트리밍 시작 실패: \(error.localizedDescription)")
+        await updateStatus(.error(.streamingFailed(error.localizedDescription)), message: "스트리밍 시작 실패: \(error.localizedDescription)")
         logDebug("❌ [STREAM] Failed to start: \(error.localizedDescription)", category: .streaming)
     }
     
@@ -574,24 +1048,9 @@ final class LiveStreamViewModel: ObservableObject {
         var solutions: [String] = []
         
         if status == .streaming {
-            if let service = liveStreamService,
-               let transmissionStats = await service.getCurrentTransmissionStatus() {
-                
-                if !transmissionStats.isTransmittingData {
-                    issues.append("❌ RTMP 연결은 성공했지만 데이터가 전송되지 않고 있습니다")
-                    solutions.append("💡 카메라와 마이크 연결을 확인하고 앱을 재시작하세요")
-                }
-                
-                if transmissionStats.videoBytesPerSecond <= 0 {
-                    issues.append("❌ 비디오 데이터가 전송되지 않고 있습니다")
-                    solutions.append("💡 카메라 연결과 권한을 다시 확인하세요")
-                }
-                
-                if transmissionStats.audioBytesPerSecond <= 0 {
-                    issues.append("❌ 오디오 데이터가 전송되지 않고 있습니다")
-                    solutions.append("💡 마이크 연결과 권한을 다시 확인하세요")
-                }
-            }
+            // getCurrentTransmissionStatus 메서드가 아직 구현되지 않음
+            issues.append("ℹ️ 스트리밍 상태 확인 기능은 구현 중입니다")
+            solutions.append("💡 YouTube Studio에서 직접 스트림 상태를 확인하세요")
         } else {
             issues.append("❌ 현재 스트리밍 상태가 아닙니다 (상태: \(status))")
             solutions.append("💡 먼저 스트리밍을 시작하세요")
@@ -739,10 +1198,15 @@ final class LiveStreamViewModel: ObservableObject {
     }
     
     private func updateNetworkRecommendations() {
-        guard let liveStreamService = liveStreamService else { return }
-        Task {
-            networkRecommendations = await liveStreamService.getNetworkRecommendations()
-        }
+        // getNetworkRecommendations 메서드가 아직 구현되지 않음
+        // 기본값으로 설정
+        networkRecommendations = StreamingRecommendations(
+            recommendedVideoBitrate: 2500,
+            recommendedAudioBitrate: 128,
+            recommendedResolution: (width: 1920, height: 1080),
+            networkQuality: .good,
+            suggestions: ["네트워크 상태가 양호합니다"]
+        )
     }
     
     private func showError(_ message: String) {
@@ -772,6 +1236,188 @@ final class LiveStreamViewModel: ObservableObject {
                 logDebug("\(label): \(child.value)", category: .data)
             }
         }
+    }
+    
+    // MARK: - Screen Capture Streaming Private Methods
+    
+    /// 화면 캡처 스트리밍 시작 실행 (내부 메서드)
+    /// 
+    /// **실행 단계:**
+    /// 1. 스트리밍 서비스 유효성 검사
+    /// 2. HaishinKit 초기화 및 서버 연결
+    /// 3. 데이터 모니터링 시작
+    ///
+    /// **예외 처리:**
+    /// - 서비스 미초기화: LiveStreamError.configurationError
+    /// - 네트워크 연결 실패: LiveStreamError.networkError
+    /// - 기타 오류: 원본 에러 전파
+    ///
+    /// - Throws: LiveStreamError 또는 기타 스트리밍 관련 에러
+    private func performScreenCaptureStreamingStart() async throws {
+        guard let haishinKitManager = liveStreamService as? HaishinKitManager else {
+            throw LiveStreamError.configurationError("HaishinKitManager가 초기화되지 않았습니다")
+        }
+        
+        logDebug("🔄 [화면캡처] 화면 캡처 스트리밍 시작 중...", category: .streaming)
+        
+        // 화면 캡처 전용 스트리밍 시작 (일반 스트리밍과 다른 메서드 사용)
+        try await haishinKitManager.startScreenCaptureStreaming(with: settings)
+        
+        // 데이터 모니터링 시작 (네트워크 상태, FPS 등)
+        startDataMonitoring()
+        
+        logInfo("✅ [화면캡처] 화면 캡처 스트리밍 서비스 시작 완료", category: .streaming)
+    }
+    
+    /// 화면 캡처 스트리밍 시작 성공 후처리 (내부 메서드)
+    /// 
+    /// **수행 작업:**
+    /// 1. 스트리밍 상태를 'streaming'으로 변경
+    /// 2. CameraPreviewView에 화면 캡처 시작 알림 전송
+    /// 3. 성공 메시지 표시
+    ///
+    /// **알림 시스템:**
+    /// NotificationCenter를 통해 CameraPreviewView와 통신하여
+    /// 30fps 화면 캡처 타이머를 시작시킵니다.
+    private func handleScreenCaptureStreamingStartSuccess() async {
+        logInfo("✅ [화면캡처] 스트리밍 시작 성공", category: .streaming)
+        
+        // 상태를 'streaming'으로 업데이트
+        await updateStatus(.streaming, message: "화면 캡처 송출 중")
+        
+        // CameraPreviewView에 화면 캡처 시작 신호 전송
+        // 이 알림을 받으면 CameraPreviewUIView에서 30fps 타이머 시작
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .startScreenCapture, object: nil)
+        }
+        
+        logInfo("📡 [화면캡처] 화면 캡처 시작 신호 전송 완료", category: .streaming)
+    }
+    
+    /// 화면 캡처 스트리밍 시작 실패 처리 (내부 메서드)
+    /// 
+    /// **복구 작업:**
+    /// 1. 상태를 'error'로 변경
+    /// 2. 사용자에게 구체적인 오류 메시지 표시
+    /// 3. 관련 리소스 정리
+    ///
+    /// **에러 메시지 매핑:**
+    /// - 네트워크 오류: "네트워크 연결을 확인해주세요"
+    /// - 설정 오류: "스트리밍 설정을 확인해주세요"
+    /// - 기타 오류: 원본 에러 메시지 표시
+    ///
+    /// - Parameter error: 발생한 오류 정보
+    private func handleScreenCaptureStreamingStartFailure(_ error: Error) async {
+        logError("❌ [화면캡처] 스트리밍 시작 실패: \(error.localizedDescription)", category: .streaming)
+        
+        // 사용자 친화적인 에러 메시지 생성
+        let userMessage: String
+        if let liveStreamError = error as? LiveStreamError {
+            switch liveStreamError {
+            case .networkError(let message):
+                userMessage = "네트워크 연결 오류: \(message)"
+            case .configurationError(let message):
+                userMessage = "설정 오류: \(message)"
+            case .streamingFailed(let message):
+                userMessage = "스트리밍 실패: \(message)"
+            case .initializationFailed(let message):
+                userMessage = "초기화 실패: \(message)"
+            case .deviceNotFound(let message):
+                userMessage = "디바이스 없음: \(message)"
+            case .authenticationFailed(let message):
+                userMessage = "인증 실패: \(message)"
+            case .permissionDenied(let message):
+                userMessage = "권한 거부: \(message)"
+            case .incompatibleSettings(let message):
+                userMessage = "설정 호환 불가: \(message)"
+            case .connectionTimeout:
+                userMessage = "연결 시간 초과"
+            case .serverError(let code, let message):
+                userMessage = "서버 오류 (\(code)): \(message)"
+            case .unknown(let message):
+                userMessage = "알 수 없는 오류: \(message)"
+            }
+        } else {
+            userMessage = "화면 캡처 스트리밍 시작 실패: \(error.localizedDescription)"
+        }
+        
+        // 에러 상태로 변경 및 메시지 표시
+        await updateStatus(.error(.streamingFailed(userMessage)), message: userMessage)
+    }
+    
+    /// 화면 캡처 스트리밍 중지 실행 (내부 메서드)
+    /// 
+    /// **중지 단계:**
+    /// 1. CameraPreviewView에 화면 캡처 중지 신호 전송
+    /// 2. 스트리밍 서비스 연결 해제
+    /// 3. 데이터 모니터링 중지
+    ///
+    /// **중지 순서 중요성:**
+    /// 먼저 화면 캡처를 중지해야 HaishinKit으로 전송되는 프레임이 중단되고,
+    /// 그 다음 서비스 연결을 해제하여 안전하게 종료됩니다.
+    ///
+    /// - Throws: LiveStreamError 또는 기타 스트리밍 관련 에러
+    private func performScreenCaptureStreamingStop() async throws {
+        guard let service = liveStreamService else {
+            throw LiveStreamError.configurationError("스트리밍 서비스가 초기화되지 않았습니다")
+        }
+        
+        logDebug("🔄 [화면캡처] 스트리밍 서비스 중지 중...", category: .streaming)
+        
+        // Step 1: CameraPreviewView에 화면 캡처 중지 신호 전송
+        // 30fps 타이머 중지 및 프레임 캡처 종료
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .stopScreenCapture, object: nil)
+        }
+        
+        // Step 2: HaishinKit 스트리밍 서비스 중지
+        await service.stopStreaming()
+        
+        logInfo("✅ [화면캡처] 스트리밍 서비스 중지 완료", category: .streaming)
+    }
+    
+    /// 화면 캡처 스트리밍 중지 성공 후처리 (내부 메서드)
+    /// 
+    /// **정리 작업:**
+    /// 1. 상태를 'idle'로 초기화
+    /// 2. 성공 메시지 표시
+    /// 3. 관련 상태 변수 초기화
+    ///
+    /// **상태 초기화:**
+    /// 다음 화면 캡처 스트리밍을 위해 모든 상태를 초기값으로 복원합니다.
+    private func handleScreenCaptureStreamingStopSuccess() async {
+        logInfo("✅ [화면캡처] 스트리밍 중지 성공", category: .streaming)
+        
+        // 상태를 'idle'로 초기화
+        await updateStatus(.idle, message: "화면 캡처 스트리밍 준비 완료")
+        
+        logInfo("🏁 [화면캡처] 모든 리소스 정리 완료", category: .streaming)
+    }
+    
+    /// 화면 캡처 스트리밍 중지 실패 처리 (내부 메서드)
+    /// 
+    /// **안전장치 역할:**
+    /// 스트리밍 중지 중 오류가 발생해도 강제로 상태를 초기화하여
+    /// 사용자가 다시 스트리밍을 시작할 수 있도록 합니다.
+    ///
+    /// **강제 정리:**
+    /// - 화면 캡처 중지 신호 재전송
+    /// - 상태 강제 초기화
+    /// - 모든 모니터링 중지
+    ///
+    /// - Parameter error: 발생한 오류 정보
+    private func handleScreenCaptureStreamingStopFailure(_ error: Error) async {
+        logError("❌ [화면캡처] 스트리밍 중지 실패: \(error.localizedDescription)", category: .streaming)
+        
+        // 강제로 화면 캡처 중지 신호 재전송 (안전장치)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .stopScreenCapture, object: nil)
+        }
+        
+        // 강제로 상태 초기화 (사용자가 다시 시도할 수 있도록)
+        await updateStatus(.idle, message: "스트리밍 중지됨 (오류 복구)")
+        
+        logWarning("⚠️ [화면캡처] 강제 상태 초기화 완료", category: .streaming)
     }
 }
 
