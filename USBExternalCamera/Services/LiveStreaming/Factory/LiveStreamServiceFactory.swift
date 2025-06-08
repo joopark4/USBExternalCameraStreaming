@@ -85,16 +85,16 @@ public enum StreamingQuality: CaseIterable {
     
     public var bitrate: Int {
         switch self {
-        case .low: return 1000
+        case .low: return 1500
         case .medium: return 2500
-        case .high: return 4000
+        case .high: return 4500
         case .ultra: return 6000
         }
     }
     
     public var resolution: (width: Int, height: Int) {
         switch self {
-        case .low: return (854, 480)
+        case .low: return (848, 480)  // 16의 배수 호환성 개선
         case .medium: return (1280, 720)
         case .high: return (1920, 1080)
         case .ultra: return (1920, 1080)

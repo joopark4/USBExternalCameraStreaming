@@ -19,6 +19,7 @@ class PermissionManager: ObservableObject {
     /// 사진첩 권한 상태
     @Published var photoLibraryStatus: PermissionStatus = .notDetermined
 
+
     /// 초기화
     init() {
         checkPermissions()
@@ -113,4 +114,6 @@ class PermissionManager: ObservableObject {
             }
         }
     }
+    
+
 } 

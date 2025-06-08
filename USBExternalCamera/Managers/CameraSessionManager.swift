@@ -73,6 +73,9 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     private var frameCount: Int = 0
     private var lastFrameTime: CFTimeInterval = 0
     
+    /// 현재 적용된 스트리밍 설정 (하드웨어 최적화용)
+    private var currentStreamingSettings: USBExternalCamera.LiveStreamSettings?
+    
     /// 초기화 및 기본 세션 설정
     /// - 세션 프리셋과 비디오 출력을 초기화
     public override init() {
@@ -90,7 +93,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             
             self.captureSession.beginConfiguration()
             
-            // 고품질 비디오 프리셋 설정
+            // 기본 고품질 비디오 프리셋 설정 (스트리밍 설정 없을 때)
             if self.captureSession.canSetSessionPreset(.high) {
                 self.captureSession.sessionPreset = .high
             }
@@ -116,6 +119,203 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             self.captureSession.commitConfiguration()
             logInfo("🎥 카메라 세션이 초기화되었습니다", category: .camera)
         }
+    }
+    
+    /// 스트리밍 설정에 맞춰 카메라 하드웨어 품질 최적화
+    /// - 해상도, 프레임레이트를 스트리밍 설정에 맞춰 조정
+    /// - 불필요한 업/다운스케일링 방지로 성능 향상
+    public func optimizeForStreamingSettings(_ settings: USBExternalCamera.LiveStreamSettings) {
+        sessionQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 동일한 설정이면 재적용 생략
+            if let current = self.currentStreamingSettings,
+               current.videoWidth == settings.videoWidth &&
+               current.videoHeight == settings.videoHeight &&
+               current.frameRate == settings.frameRate {
+                return
+            }
+            
+            self.currentStreamingSettings = settings
+            
+            logInfo("🎛️ 스트리밍 설정에 맞춰 카메라 하드웨어 최적화 시작", category: .camera)
+            logInfo("  📺 목표: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.frameRate)fps", category: .camera)
+            
+            self.captureSession.beginConfiguration()
+            
+            // 1. 세션 프리셋 최적화 (해상도 기반)
+            self.optimizeSessionPreset(for: settings)
+            
+            // 2. 카메라 디바이스 포맷 최적화 (고급 설정)
+            self.optimizeCameraFormat(for: settings)
+            
+            self.captureSession.commitConfiguration()
+            
+            logInfo("✅ 카메라 하드웨어 최적화 완료", category: .camera)
+        }
+    }
+    
+    /// 스트리밍 설정에 맞는 최적 세션 프리셋 선택
+    private func optimizeSessionPreset(for settings: USBExternalCamera.LiveStreamSettings) {
+        let targetResolution = (width: settings.videoWidth, height: settings.videoHeight)
+        
+        // 해상도별 최적 프리셋 선택
+        let optimalPreset: AVCaptureSession.Preset
+        switch targetResolution {
+        case (854, 480), (848, 480), (640, 480):
+            optimalPreset = .vga640x480
+            logInfo("📐 480p 스트리밍 → VGA 프리셋 적용", category: .camera)
+            
+        case (1280, 720):
+            optimalPreset = .hd1280x720
+            logInfo("📐 720p 스트리밍 → HD 프리셋 적용", category: .camera)
+            
+        case (1920, 1080):
+            optimalPreset = .hd1920x1080
+            logInfo("📐 1080p 스트리밍 → Full HD 프리셋 적용", category: .camera)
+            
+        case (3840, 2160):
+            if self.captureSession.canSetSessionPreset(.hd4K3840x2160) {
+                optimalPreset = .hd4K3840x2160
+                logInfo("📐 4K 스트리밍 → 4K 프리셋 적용", category: .camera)
+            } else {
+                optimalPreset = .hd1920x1080
+                logInfo("📐 4K 스트리밍 (지원안함) → Full HD 프리셋으로 대체", category: .camera)
+            }
+            
+        default:
+            optimalPreset = .high
+            logInfo("📐 사용자 정의 해상도 → High 프리셋 적용", category: .camera)
+        }
+        
+        // 프리셋 적용
+        if self.captureSession.canSetSessionPreset(optimalPreset) {
+            self.captureSession.sessionPreset = optimalPreset
+            logInfo("✅ 세션 프리셋 적용: \(optimalPreset.rawValue)", category: .camera)
+        } else {
+            logWarning("⚠️ 프리셋 적용 실패, 기본 .high 유지", category: .camera)
+            if self.captureSession.canSetSessionPreset(.high) {
+                self.captureSession.sessionPreset = .high
+            }
+        }
+    }
+    
+    /// 카메라 디바이스 고급 포맷 최적화 (프레임레이트 등)
+    private func optimizeCameraFormat(for settings: USBExternalCamera.LiveStreamSettings) {
+        guard let device = self.videoInput?.device else {
+            logWarning("⚠️ 비디오 입력 디바이스를 찾을 수 없음", category: .camera)
+            return
+        }
+        
+        do {
+            try device.lockForConfiguration()
+            
+            // 프레임레이트 최적화
+            self.optimizeFrameRate(device: device, targetFPS: settings.frameRate)
+            
+            // 기타 카메라 설정 최적화
+            self.optimizeCameraSettings(device: device, settings: settings)
+            
+            device.unlockForConfiguration()
+            
+        } catch {
+            logError("❌ 카메라 디바이스 설정 실패: \(error.localizedDescription)", category: .camera)
+        }
+    }
+    
+    /// 프레임레이트 최적화
+    private func optimizeFrameRate(device: AVCaptureDevice, targetFPS: Int) {
+        let targetFrameRate = Double(targetFPS)
+        
+        // 현재 포맷에서 지원하는 프레임레이트 범위 확인
+        let frameRateRanges = device.activeFormat.videoSupportedFrameRateRanges
+        
+        for range in frameRateRanges {
+            if targetFrameRate >= range.minFrameRate && targetFrameRate <= range.maxFrameRate {
+                let frameDuration = CMTimeMake(value: 1, timescale: CMTimeScale(targetFPS))
+                device.activeVideoMinFrameDuration = frameDuration
+                device.activeVideoMaxFrameDuration = frameDuration
+                
+                logInfo("🎬 프레임레이트 최적화: \(targetFPS)fps 적용", category: .camera)
+                return
+            }
+        }
+        
+        // 목표 프레임레이트가 지원되지 않으면 가장 가까운 값 사용
+        if let closestRange = frameRateRanges.min(by: { abs($0.maxFrameRate - targetFrameRate) < abs($1.maxFrameRate - targetFrameRate) }) {
+            let adjustedFPS = min(targetFrameRate, closestRange.maxFrameRate)
+            let frameDuration = CMTimeMake(value: 1, timescale: CMTimeScale(adjustedFPS))
+            device.activeVideoMinFrameDuration = frameDuration
+            device.activeVideoMaxFrameDuration = frameDuration
+            
+            logInfo("🎬 프레임레이트 조정: \(Int(adjustedFPS))fps (목표 \(targetFPS)fps)", category: .camera)
+        }
+    }
+    
+    /// 기타 카메라 설정 최적화
+    private func optimizeCameraSettings(device: AVCaptureDevice, settings: USBExternalCamera.LiveStreamSettings) {
+        // 고해상도 스트리밍을 위한 카메라 최적화
+        if settings.videoWidth >= 1920 && settings.videoHeight >= 1080 {
+            // 1080p 이상: 안정성 우선 설정
+            if device.isFocusModeSupported(.continuousAutoFocus) {
+                device.focusMode = .continuousAutoFocus
+            }
+            
+            if device.isExposureModeSupported(.continuousAutoExposure) {
+                device.exposureMode = .continuousAutoExposure
+            }
+            
+            logInfo("🔧 고해상도 모드: 연속 자동 포커스/노출 활성화", category: .camera)
+            
+        } else {
+            // 720p 이하: 성능 우선 설정
+            if device.isFocusModeSupported(.autoFocus) {
+                device.focusMode = .autoFocus
+            }
+            
+            if device.isExposureModeSupported(.autoExpose) {
+                device.exposureMode = .autoExpose
+            }
+            
+            logInfo("🔧 표준 해상도 모드: 자동 포커스/노출 설정", category: .camera)
+        }
+        
+        // 화이트 밸런스 최적화
+        if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) {
+            device.whiteBalanceMode = .continuousAutoWhiteBalance
+        }
+    }
+    
+    /// 현재 적용된 카메라 하드웨어 설정 정보 반환
+    public func getCurrentHardwareSettings() -> (resolution: String, frameRate: String, preset: String) {
+        let preset = self.captureSession.sessionPreset.rawValue
+        
+        let frameRate: String
+        if let device = self.videoInput?.device {
+            let currentFPS = 1.0 / CMTimeGetSeconds(device.activeVideoMinFrameDuration)
+            frameRate = String(format: "%.0f fps", currentFPS)
+        } else {
+            frameRate = "알 수 없음"
+        }
+        
+        // 세션 프리셋에서 대략적인 해상도 추정
+        let resolution: String
+        switch self.captureSession.sessionPreset {
+        case .vga640x480:
+            resolution = "640×480"
+        case .hd1280x720:
+            resolution = "1280×720"
+        case .hd1920x1080:
+            resolution = "1920×1080"
+        case .hd4K3840x2160:
+            resolution = "3840×2160"
+        case .high:
+            resolution = "High (가변)"
+        default:
+            resolution = "알 수 없음"
+        }
+        
+        return (resolution, frameRate, preset)
     }
     
     /// 카메라 전환 처리

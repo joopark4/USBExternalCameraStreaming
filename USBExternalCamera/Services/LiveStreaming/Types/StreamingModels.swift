@@ -7,6 +7,69 @@
 
 import Foundation
 
+// MARK: - YouTube Live Preset Enum
+
+/// 유튜브 라이브 스트리밍 표준 프리셋
+public enum YouTubeLivePreset: String, CaseIterable, Identifiable {
+    case sd480p = "youtube_480p"
+    case hd720p = "youtube_720p"
+    case fhd1080p = "youtube_1080p"
+    case custom = "custom"
+    
+    public var id: String { rawValue }
+    
+    public var displayName: String {
+        switch self {
+        case .sd480p: return "YouTube 480p (SD)"
+        case .hd720p: return "YouTube 720p (HD)"
+        case .fhd1080p: return "YouTube 1080p (Full HD)"
+        case .custom: return "사용자 정의"
+        }
+    }
+    
+    public var description: String {
+        switch self {
+        case .sd480p: return "848×480 • 30fps • 1,500 kbps (1,000-2,000)"
+        case .hd720p: return "1280×720 • 30fps • 2,500 kbps (2,500-5,000)"
+        case .fhd1080p: return "1920×1080 • 30fps • 4,500 kbps (4,500-9,000)"
+        case .custom: return "사용자가 직접 설정"
+        }
+    }
+    
+    public var icon: String {
+        switch self {
+        case .sd480p: return "video.circle"
+        case .hd720p: return "video.circle.fill"
+        case .fhd1080p: return "4k.tv"
+        case .custom: return "slider.horizontal.3"
+        }
+    }
+    
+    /// 유튜브 표준 설정값 반환
+    public var settings: (width: Int, height: Int, frameRate: Int, videoBitrate: Int, audioBitrate: Int, keyframeInterval: Int) {
+        switch self {
+        case .sd480p:
+            return (848, 480, 30, 1500, 128, 2) // 16의 배수 호환성 개선
+        case .hd720p:
+            return (1280, 720, 30, 2500, 128, 2) // 권장 기본값 (LiveStreamSettings 기본값과 일치)
+        case .fhd1080p:
+            return (1920, 1080, 30, 4500, 128, 2) // 권장 기본값 (유튜브 표준)
+        case .custom:
+            return (1920, 1080, 30, 4500, 128, 2) // 기본값
+        }
+    }
+    
+    /// 유튜브 표준 비트레이트 범위
+    public var bitrateRange: (min: Int, max: Int) {
+        switch self {
+        case .sd480p: return (1000, 2000)
+        case .hd720p: return (2500, 5000)
+        case .fhd1080p: return (4500, 9000)
+        case .custom: return (500, 15000)
+        }
+    }
+}
+
 // MARK: - USBExternalCamera Namespace
 
 public enum USBExternalCamera {
@@ -60,12 +123,12 @@ public enum USBExternalCamera {
         /// 기본 초기화
         public init() {
             self.streamTitle = ""
-            self.rtmpURL = ""
+            self.rtmpURL = "rtmp://a.rtmp.youtube.com/live2"  // YouTube Live 기본 RTMP URL
             self.streamKey = ""
-            self.videoBitrate = 1500  // YouTube Live 1080p 권장 최소값으로 변경
+            self.videoBitrate = 2500  // YouTube Live 720p 권장값
             self.audioBitrate = 128
-            self.videoWidth = 1920
-            self.videoHeight = 1080
+            self.videoWidth = 1280
+            self.videoHeight = 720
             self.frameRate = 30
             self.autoReconnect = true
             self.isEnabled = true
@@ -87,13 +150,51 @@ public enum USBExternalCamera {
             return settings
         }
         
+        /// 유튜브 라이브 스트리밍 표준 프리셋 적용
+        public mutating func applyYouTubeLivePreset(_ preset: YouTubeLivePreset) {
+            let settings = preset.settings
+            
+            videoWidth = settings.width
+            videoHeight = settings.height
+            frameRate = settings.frameRate
+            videoBitrate = settings.videoBitrate
+            audioBitrate = settings.audioBitrate
+            // keyframeInterval은 LiveStreamSettings에 없으므로 생략
+            
+            // 유튜브 최적화 기본 설정
+            videoEncoder = "H.264"
+            audioEncoder = "AAC"
+            autoReconnect = true
+            connectionTimeout = 30
+            bufferSize = 3
+        }
+        
+        /// 현재 설정이 어떤 유튜브 프리셋에 가장 가까운지 검사
+        public func detectYouTubePreset() -> YouTubeLivePreset? {
+            for preset in YouTubeLivePreset.allCases {
+                if preset == .custom { continue }
+                
+                let presetSettings = preset.settings
+                let bitrateRange = preset.bitrateRange
+                
+                if videoWidth == presetSettings.width &&
+                   videoHeight == presetSettings.height &&
+                   frameRate == presetSettings.frameRate &&
+                   videoBitrate >= bitrateRange.min &&
+                   videoBitrate <= bitrateRange.max {
+                    return preset
+                }
+            }
+            return .custom
+        }
+        
         /// 해상도별 추천 비트레이트
         public var recommendedVideoBitrate: Int {
             switch (videoWidth, videoHeight) {
-            case (1920, 1080): return 1500  // 1080p: 1500-4000 kbps
-            case (1280, 720): return 1000   // 720p: 1000-2500 kbps  
-            case (854, 480): return 500     // 480p: 500-1000 kbps
-            default: return 1500
+            case (1920, 1080): return 4500  // 1080p: 4500-9000 kbps (유튜브 표준)
+            case (1280, 720): return 2500   // 720p: 2500-5000 kbps (유튜브 표준)
+            case (854, 480), (848, 480): return 1500    // 480p: 1000-2000 kbps (유튜브 표준)
+            default: return 2500
             }
         }
         

@@ -17,7 +17,6 @@ struct LiveStreamSettingsView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showResetAlert = false
-    @State private var showTestConnectionAlert = false
     @State private var showHelpSheet = false
     @State private var selectedHelpTopic: String = "rtmpURL"
     
@@ -31,22 +30,21 @@ struct LiveStreamSettingsView: View {
                     // 기본 설정
                     BasicSettingsSectionView(viewModel: viewModel)
                     
+                    // 유튜브 권장 송출 셋업 프리셋
+                    YouTubePresetSectionView(viewModel: viewModel)
+                    
                     // 비디오 설정
                     VideoSettingsSectionView(viewModel: viewModel)
                     
                     // 오디오 설정
                     AudioSettingsSectionView(viewModel: viewModel)
                     
-                    // 고급 설정
-                    AdvancedSettingsSectionView(viewModel: viewModel)
-                    
-                    // 프리셋
-                    PresetSectionView(viewModel: viewModel)
+                    // 하드웨어 최적화 상태
+                    HardwareOptimizationSectionView(viewModel: viewModel)
                     
                     // 액션 버튼들
                     ActionButtonsView(
                         viewModel: viewModel,
-                        showTestConnectionAlert: $showTestConnectionAlert,
                         showResetAlert: $showResetAlert
                     )
                 }
@@ -78,11 +76,6 @@ struct LiveStreamSettingsView: View {
             }
         } message: {
             Text(NSLocalizedString("reset_settings_message", comment: ""))
-        }
-        .alert(NSLocalizedString("connection_test", comment: ""), isPresented: $showTestConnectionAlert) {
-            Button(NSLocalizedString("ok", comment: "")) { }
-        } message: {
-            Text(viewModel.connectionTestResult)
         }
         .sheet(isPresented: $showHelpSheet) {
             HelpDetailView(topic: selectedHelpTopic, viewModel: viewModel)
@@ -425,7 +418,7 @@ struct LiveStreamSettingsView: View {
     // MARK: - Helper Methods
     private func getResolutionDimensions(_ resolution: ResolutionPreset) -> (width: Int, height: Int) {
         switch resolution {
-        case .sd480p: return (854, 480)
+        case .sd480p: return (848, 480)
         case .hd720p: return (1280, 720)
         case .fhd1080p: return (1920, 1080)
         case .uhd4k: return (3840, 2160)
@@ -490,47 +483,6 @@ struct LiveStreamSettingsView: View {
             .background(Color.orange.opacity(0.1))
             .cornerRadius(8)
         }
-        
-        // 빠른 설정 버튼들
-        HStack(spacing: 12) {
-            Button("720p (1000)") {
-                viewModel.settings.videoBitrate = 1000
-                viewModel.settings.videoWidth = 1280
-                viewModel.settings.videoHeight = 720
-            }
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.blue.opacity(0.1))
-            .foregroundColor(.blue)
-            .cornerRadius(4)
-            
-            Button("1080p (1500)") {
-                viewModel.settings.videoBitrate = 1500
-                viewModel.settings.videoWidth = 1920
-                viewModel.settings.videoHeight = 1080
-            }
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.green.opacity(0.1))
-            .foregroundColor(.green)
-            .cornerRadius(4)
-            
-            Button("1080p (2500)") {
-                viewModel.settings.videoBitrate = 2500
-                viewModel.settings.videoWidth = 1920
-                viewModel.settings.videoHeight = 1080
-            }
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.blue.opacity(0.1))
-            .foregroundColor(.blue)
-            .cornerRadius(4)
-            
-            Spacer()
-        }
     }
 }
 
@@ -572,6 +524,8 @@ struct BasicSettingsSectionView: View {
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("basic_settings", comment: ""), icon: "gear") {
             VStack(spacing: 16) {
+
+                
                 // RTMP URL
                 VStack(alignment: .leading, spacing: 8) {
                     Text(NSLocalizedString("rtmp_url", comment: ""))
@@ -582,13 +536,102 @@ struct BasicSettingsSectionView: View {
                 
                 // Stream Key
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(NSLocalizedString("stream_key", comment: ""))
-                        .font(.headline)
+                    HStack {
+                        Text(NSLocalizedString("stream_key", comment: ""))
+                            .font(.headline)
+                        Spacer()
+                        // 스트림 키 검증 상태 표시
+                        streamKeyValidationIcon
+                    }
                     SecureField(NSLocalizedString("stream_key_placeholder", comment: ""), text: $viewModel.settings.streamKey)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .onChange(of: viewModel.settings.streamKey) { oldValue, newValue in
+                            // 실시간 스트림 키 정제
+                            let cleaned = cleanStreamKey(newValue)
+                            if cleaned != newValue {
+                                viewModel.settings.streamKey = cleaned
+                            }
+                        }
+                    
+                    // 스트림 키 상태 메시지
+                    if !viewModel.settings.streamKey.isEmpty {
+                        streamKeyValidationMessage
+                    }
                 }
             }
         }
+    }
+    
+    /// 스트림 키 검증 아이콘
+    @ViewBuilder
+    private var streamKeyValidationIcon: some View {
+        let key = viewModel.settings.streamKey
+        let isValid = isValidStreamKey(key)
+        
+        if key.isEmpty {
+            Image(systemName: "key")
+                .foregroundColor(.gray)
+        } else if isValid {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+        } else {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+        }
+    }
+    
+    /// 스트림 키 검증 메시지
+    @ViewBuilder
+    private var streamKeyValidationMessage: some View {
+        let key = viewModel.settings.streamKey
+        let isValid = isValidStreamKey(key)
+        let cleanedLength = cleanStreamKey(key).count
+        
+        if !isValid {
+            VStack(alignment: .leading, spacing: 4) {
+                if key.count != cleanedLength {
+                    Text("⚠️ 공백이나 특수문자가 제거되었습니다")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                
+                if cleanedLength < 16 {
+                    Text("❌ 스트림 키가 너무 짧습니다 (16자 이상 필요)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                } else if cleanedLength > 50 {
+                    Text("⚠️ 스트림 키가 너무 깁니다 (50자 이하 권장)")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+            }
+        } else {
+            Text("✅ 유효한 스트림 키입니다 (\(cleanedLength)자)")
+                .font(.caption)
+                .foregroundColor(.green)
+        }
+    }
+    
+    /// 스트림 키 정제 함수
+    private func cleanStreamKey(_ streamKey: String) -> String {
+        // 앞뒤 공백 제거
+        let trimmed = streamKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 보이지 않는 특수 문자 제거
+        let cleaned = trimmed.components(separatedBy: .controlCharacters).joined()
+            .components(separatedBy: CharacterSet(charactersIn: "\u{FEFF}\u{200B}\u{200C}\u{200D}")).joined()
+        
+        return cleaned
+    }
+    
+    /// 스트림 키 유효성 검사
+    private func isValidStreamKey(_ streamKey: String) -> Bool {
+        let cleaned = cleanStreamKey(streamKey)
+        let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        
+        return cleaned.count >= 16 && 
+               cleaned.count <= 50 &&
+               cleaned.unicodeScalars.allSatisfy { allowedCharacters.contains($0) }
     }
 }
 
@@ -599,6 +642,81 @@ struct VideoSettingsSectionView: View {
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("video_settings", comment: ""), icon: "video") {
             VStack(spacing: 16) {
+                // 해상도 선택
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("resolution", comment: "해상도"))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    HStack(spacing: 8) {
+                        // 480p 버튼
+                        ResolutionButton(
+                            title: "480p",
+                            subtitle: "848×480",
+                            isSelected: currentResolution == .resolution480p,
+                            action: {
+                                setResolution(.resolution480p)
+                            }
+                        )
+                        
+                        // 720p 버튼
+                        ResolutionButton(
+                            title: "720p",
+                            subtitle: "1280×720",
+                            isSelected: currentResolution == .resolution720p,
+                            action: {
+                                setResolution(.resolution720p)
+                            }
+                        )
+                        
+                        // 1080p 버튼 (비활성화 - 성능상 문제로 사용 금지)
+                        ResolutionButton(
+                            title: "1080p",
+                            subtitle: "1920×1080",
+                            isSelected: false,
+                            isEnabled: false,
+                            action: {}
+                        )
+                    }
+                }
+                
+                // 프레임레이트
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("frame_rate", comment: "프레임 레이트"))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    HStack(spacing: 8) {
+                        FrameRateButton(
+                            title: "24fps",
+                            frameRate: 24,
+                            isSelected: viewModel.settings.frameRate == 24,
+                            isEnabled: isFrameRateSupported(24),
+                            action: {
+                                viewModel.settings.frameRate = 24
+                            }
+                        )
+                        
+                        FrameRateButton(
+                            title: "30fps",
+                            frameRate: 30,
+                            isSelected: viewModel.settings.frameRate == 30,
+                            isEnabled: isFrameRateSupported(30),
+                            action: {
+                                viewModel.settings.frameRate = 30
+                            }
+                        )
+                        
+                        FrameRateButton(
+                            title: "60fps",
+                            frameRate: 60,
+                            isSelected: false,
+                            isEnabled: false,
+                            action: {}
+                        )
+                    }
+                }
+                
                 // 비트레이트 설정
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -618,34 +736,61 @@ struct VideoSettingsSectionView: View {
                     // YouTube Live 권장사항 및 경고
                     bitrateWarningView
                 }
-                
-                // 해상도 설정 (단순화)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(NSLocalizedString("resolution", comment: "해상도"))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    HStack {
-                        Text("\(viewModel.settings.videoWidth) × \(viewModel.settings.videoHeight)")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                }
-                
-                // 프레임레이트
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(NSLocalizedString("frame_rate", comment: "프레임 레이트"))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Picker(NSLocalizedString("frame_rate", comment: "프레임 레이트"), selection: $viewModel.settings.frameRate) {
-                        Text("24fps").tag(24)
-                        Text("30fps").tag(30)
-                        Text("60fps").tag(60)
-                    }
-                    .pickerStyle(.segmented)
-                }
             }
+        }
+    }
+    
+    // MARK: - Helper Properties and Methods
+    
+    private enum Resolution {
+        case resolution480p, resolution720p, resolution1080p
+    }
+    
+    private var currentResolution: Resolution {
+        let width = viewModel.settings.videoWidth
+        let height = viewModel.settings.videoHeight
+        
+        if (width == 854 || width == 848) && height == 480 {
+            return .resolution480p
+        } else if width == 1280 && height == 720 {
+            return .resolution720p
+        } else if width == 1920 && height == 1080 {
+            return .resolution1080p
+        } else {
+            // 기본값은 720p
+            return .resolution720p
+        }
+    }
+    
+    private func setResolution(_ resolution: Resolution) {
+        switch resolution {
+        case .resolution480p:
+            viewModel.settings.videoWidth = 848  // 16의 배수 (854 → 848)
+            viewModel.settings.videoHeight = 480
+            viewModel.settings.videoBitrate = 1500
+            // 480p는 60fps 지원하지 않음
+            if viewModel.settings.frameRate == 60 {
+                viewModel.settings.frameRate = 30
+            }
+        case .resolution720p:
+            viewModel.settings.videoWidth = 1280
+            viewModel.settings.videoHeight = 720
+            viewModel.settings.videoBitrate = 2500
+        case .resolution1080p:
+            viewModel.settings.videoWidth = 1920
+            viewModel.settings.videoHeight = 1080
+            viewModel.settings.videoBitrate = 4500
+        }
+    }
+    
+    private func isFrameRateSupported(_ frameRate: Int) -> Bool {
+        switch currentResolution {
+        case .resolution480p:
+            // 480p는 24fps, 30fps만 지원
+            return frameRate == 24 || frameRate == 30
+        case .resolution720p, .resolution1080p:
+            // 720p, 1080p는 모든 프레임률 지원
+            return true
         }
     }
     
@@ -707,47 +852,6 @@ struct VideoSettingsSectionView: View {
             .background(Color.orange.opacity(0.1))
             .cornerRadius(8)
         }
-        
-        // 빠른 설정 버튼들
-        HStack(spacing: 12) {
-            Button("720p (1000)") {
-                viewModel.settings.videoBitrate = 1000
-                viewModel.settings.videoWidth = 1280
-                viewModel.settings.videoHeight = 720
-            }
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.blue.opacity(0.1))
-            .foregroundColor(.blue)
-            .cornerRadius(4)
-            
-            Button("1080p (1500)") {
-                viewModel.settings.videoBitrate = 1500
-                viewModel.settings.videoWidth = 1920
-                viewModel.settings.videoHeight = 1080
-            }
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.green.opacity(0.1))
-            .foregroundColor(.green)
-            .cornerRadius(4)
-            
-            Button("1080p (2500)") {
-                viewModel.settings.videoBitrate = 2500
-                viewModel.settings.videoWidth = 1920
-                viewModel.settings.videoHeight = 1080
-            }
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.blue.opacity(0.1))
-            .foregroundColor(.blue)
-            .cornerRadius(4)
-            
-            Spacer()
-        }
     }
 }
 
@@ -774,60 +878,13 @@ struct AudioSettingsSectionView: View {
     }
 }
 
-/// 고급 설정 섹션
-struct AdvancedSettingsSectionView: View {
-    @ObservedObject var viewModel: LiveStreamViewModel
-    
-    var body: some View {
-        SettingsSectionView(title: NSLocalizedString("advanced_settings", comment: ""), icon: "gearshape.2") {
-            VStack(spacing: 16) {
-                HStack {
-                    Text(NSLocalizedString("frame_rate", comment: ""))
-                    Spacer()
-                    Text("\(viewModel.settings.frameRate) fps")
-                        .foregroundColor(.secondary)
-                }
-                
-                Picker(NSLocalizedString("frame_rate", comment: ""), selection: $viewModel.settings.frameRate) {
-                    Text("24 fps").tag(24)
-                    Text("30 fps").tag(30)
-                    Text("60 fps").tag(60)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-            }
-        }
-    }
-}
-
-/// 프리셋 섹션
-struct PresetSectionView: View {
-    @ObservedObject var viewModel: LiveStreamViewModel
-    
-    var body: some View {
-        SettingsSectionView(title: NSLocalizedString("presets", comment: ""), icon: "slider.horizontal.3") {
-            Text(NSLocalizedString("preset_description", comment: ""))
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
 /// 액션 버튼 섹션
 struct ActionButtonsView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
-    @Binding var showTestConnectionAlert: Bool
     @Binding var showResetAlert: Bool
     
     var body: some View {
         VStack(spacing: 12) {
-            Button(NSLocalizedString("test_connection", comment: "")) {
-                Task {
-                    await viewModel.testConnection()
-                    showTestConnectionAlert = true
-                }
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            
             Button(NSLocalizedString("reset_settings", comment: "")) {
                 showResetAlert = true
             }
@@ -897,6 +954,110 @@ struct DestructiveButtonStyle: ButtonStyle {
 }
 
 // MARK: - Help Detail View
+
+/// 해상도 선택 버튼
+struct ResolutionButton: View {
+    let title: String
+    let subtitle: String
+    let isSelected: Bool
+    let isEnabled: Bool
+    let action: () -> Void
+    
+    init(title: String, subtitle: String, isSelected: Bool, isEnabled: Bool = true, action: @escaping () -> Void) {
+        self.title = title
+        self.subtitle = subtitle
+        self.isSelected = isSelected
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: isEnabled ? action : {}) {
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(isEnabled ? (isSelected ? .white : .primary) : .gray)
+                
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundColor(isEnabled ? (isSelected ? .white.opacity(0.8) : .secondary) : .gray.opacity(0.7))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                isEnabled ? 
+                    (isSelected ? Color.accentColor : Color(UIColor.secondarySystemGroupedBackground)) :
+                    Color.gray.opacity(0.1)
+            )
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isEnabled ? (isSelected ? Color.clear : Color.gray.opacity(0.3)) : Color.gray.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(!isEnabled)
+    }
+}
+
+/// 프레임률 선택 버튼
+struct FrameRateButton: View {
+    let title: String
+    let frameRate: Int
+    let isSelected: Bool
+    let isEnabled: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(buttonTextColor)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(buttonBackground)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(buttonBorderColor, lineWidth: 1)
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(!isEnabled)
+    }
+    
+    private var buttonTextColor: Color {
+        if !isEnabled {
+            return .gray
+        } else if isSelected {
+            return .white
+        } else {
+            return .primary
+        }
+    }
+    
+    private var buttonBackground: Color {
+        if !isEnabled {
+            return Color.gray.opacity(0.1)
+        } else if isSelected {
+            return Color.accentColor
+        } else {
+            return Color(UIColor.secondarySystemGroupedBackground)
+        }
+    }
+    
+    private var buttonBorderColor: Color {
+        if !isEnabled {
+            return Color.gray.opacity(0.2)
+        } else if isSelected {
+            return Color.clear
+        } else {
+            return Color.gray.opacity(0.3)
+        }
+    }
+}
 
 struct HelpDetailView: View {
     let topic: String
@@ -979,5 +1140,477 @@ struct HelpDetailView: View {
                 recommendedValues: []
             )
         }
+    }
+}
+
+// MARK: - YouTube Preset Section
+
+/// 유튜브 권장 송출 셋업 프리셋 섹션
+struct YouTubePresetSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: NSLocalizedString("youtube_preset_title", comment: "YouTube 권장 송출 설정"), icon: "play.rectangle.fill") {
+            VStack(spacing: 16) {
+                // 설명 텍스트
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                            .font(.caption)
+                        Text(NSLocalizedString("youtube_preset_description", comment: "YouTube Live에 최적화된 송출 설정을 빠르게 적용할 수 있습니다"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    
+                    // 커스텀 설정일 때 추가 안내문구
+                    if isCustomSettings {
+                        HStack {
+                            Image(systemName: "gearshape")
+                                .foregroundColor(.purple)
+                                .font(.caption)
+                            Text(NSLocalizedString("custom_settings_notice", comment: "현재 사용자가 직접 설정한 값을 사용 중입니다"))
+                                .font(.caption)
+                                .foregroundColor(.purple)
+                            Spacer()
+                        }
+                    }
+                }
+                .padding(.bottom, 4)
+                
+                // 프리셋 버튼들
+                VStack(spacing: 12) {
+                    // 480p 프리셋
+                    YouTubePresetCard(
+                        title: "480p (SD)",
+                                                    subtitle: "848×480 • 30fps • 1,000 kbps",
+                        description: "저화질 • 안정적인 연결",
+                        icon: "play.square",
+                        color: .orange,
+                        isSelected: isCurrentPreset(.sd480p),
+                        action: {
+                            applyYouTubePreset(.sd480p)
+                        }
+                    )
+                    
+                    // 720p 프리셋
+                    YouTubePresetCard(
+                        title: "720p (HD)",
+                        subtitle: "1280×720 • 30fps • 2,500 kbps",
+                        description: "표준화질 • 권장 설정",
+                        icon: "play.square.fill",
+                        color: .green,
+                        isSelected: isCurrentPreset(.hd720p),
+                        action: {
+                            applyYouTubePreset(.hd720p)
+                        }
+                    )
+                    
+                    // 1080p 프리셋 (비활성화 - 향후 지원 예정)
+                    YouTubePresetCard(
+                        title: "1080p (Full HD)",
+                        subtitle: "1920×1080 • 30fps • 4,500 kbps",
+                        description: "지원 예정",
+                        icon: "play.square.stack",
+                        color: .gray,
+                        isSelected: false,
+                        isEnabled: false,
+                        action: {}
+                    )
+                    
+                    // 커스텀 설정 (현재 설정이 어떤 프리셋과도 일치하지 않을 때)
+                    if isCustomSettings {
+                        YouTubePresetCard(
+                            title: NSLocalizedString("custom_settings", comment: "사용자 설정"),
+                            subtitle: currentSettingsDescription,
+                            description: NSLocalizedString("custom_settings_description", comment: "사용자가 직접 설정한 값"),
+                            icon: "gearshape.fill",
+                            color: .purple,
+                            isSelected: true,
+                            action: {
+                                // 커스텀 설정은 이미 적용된 상태이므로 아무 작업 없음
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func isCurrentPreset(_ preset: YouTubeLivePreset) -> Bool {
+        let settings = preset.settings
+        return viewModel.settings.videoWidth == settings.width &&
+               viewModel.settings.videoHeight == settings.height &&
+               viewModel.settings.frameRate == settings.frameRate &&
+               viewModel.settings.videoBitrate == settings.videoBitrate
+    }
+    
+    /// 현재 설정이 어떤 프리셋과도 일치하지 않는지 확인
+    private var isCustomSettings: Bool {
+        return !isCurrentPreset(.sd480p) && 
+               !isCurrentPreset(.hd720p) && 
+               !isCurrentPreset(.fhd1080p)
+    }
+    
+    /// 현재 커스텀 설정의 설명
+    private var currentSettingsDescription: String {
+        return "\(viewModel.settings.videoWidth)×\(viewModel.settings.videoHeight) • \(viewModel.settings.frameRate)fps • \(viewModel.settings.videoBitrate) kbps"
+    }
+    
+    private func applyYouTubePreset(_ preset: YouTubeLivePreset) {
+        let settings = preset.settings
+        
+        viewModel.settings.videoWidth = settings.width
+        viewModel.settings.videoHeight = settings.height
+        viewModel.settings.frameRate = settings.frameRate
+        viewModel.settings.videoBitrate = settings.videoBitrate
+        viewModel.settings.audioBitrate = settings.audioBitrate
+        
+        // 유튜브 최적화 기본 설정
+        viewModel.settings.videoEncoder = "H.264"
+        viewModel.settings.audioEncoder = "AAC"
+        viewModel.settings.autoReconnect = true
+        viewModel.settings.connectionTimeout = 30
+        viewModel.settings.bufferSize = 3
+        
+        // 설정 저장
+        viewModel.saveSettings()
+    }
+}
+
+/// 유튜브 프리셋 카드
+struct YouTubePresetCard: View {
+    let title: String
+    let subtitle: String
+    let description: String
+    let icon: String
+    let color: Color
+    let isSelected: Bool
+    let isEnabled: Bool
+    let action: () -> Void
+    
+    init(title: String, subtitle: String, description: String, icon: String, color: Color, isSelected: Bool, isEnabled: Bool = true, action: @escaping () -> Void) {
+        self.title = title
+        self.subtitle = subtitle
+        self.description = description
+        self.icon = icon
+        self.color = color
+        self.isSelected = isSelected
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: isEnabled ? action : {}) {
+            HStack(spacing: 12) {
+                // 아이콘
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(isEnabled ? (isSelected ? .white : color) : .gray)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(isEnabled ? (isSelected ? color : color.opacity(0.1)) : Color.gray.opacity(0.1))
+                    )
+                
+                // 텍스트 정보
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(isEnabled ? (isSelected ? .white : .primary) : .gray)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(isEnabled ? (isSelected ? .white.opacity(0.8) : .secondary) : .gray.opacity(0.7))
+                    
+                    Text(description)
+                        .font(.caption2)
+                        .foregroundColor(isEnabled ? (isSelected ? .white.opacity(0.7) : color) : .gray.opacity(0.6))
+                }
+                
+                Spacer()
+                
+                // 선택 표시
+                if isSelected && isEnabled {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                } else if !isEnabled {
+                    Image(systemName: "minus.circle")
+                        .font(.title3)
+                        .foregroundColor(.gray)
+                } else {
+                    Image(systemName: "circle")
+                        .font(.title3)
+                        .foregroundColor(.gray.opacity(0.5))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isEnabled ? (isSelected ? color : Color(UIColor.secondarySystemGroupedBackground)) : Color.gray.opacity(0.1))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isEnabled ? (isSelected ? Color.clear : color.opacity(0.3)) : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(!isEnabled)
+    }
+}
+
+/// 하드웨어 최적화 상태 섹션
+struct HardwareOptimizationSectionView: View {
+    @ObservedObject var viewModel: LiveStreamViewModel
+    
+    var body: some View {
+        SettingsSectionView(title: "하드웨어 품질 최적화", icon: "cpu") {
+            VStack(spacing: 16) {
+                // 설명 텍스트
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                            .font(.caption)
+                        Text("스트리밍 설정에 맞춰 카메라와 마이크 하드웨어 품질이 자동으로 최적화됩니다")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                .padding(.bottom, 4)
+                
+                // 최적화 상태 카드들
+                VStack(spacing: 12) {
+                    // 비디오 하드웨어 최적화
+                    HardwareOptimizationCard(
+                        title: "비디오 하드웨어",
+                        currentSetting: "\(viewModel.settings.videoWidth)×\(viewModel.settings.videoHeight) @ \(viewModel.settings.frameRate)fps",
+                        optimizationLevel: getVideoOptimizationLevel(),
+                        description: getVideoOptimizationDescription(),
+                        icon: "camera.circle.fill",
+                        color: getVideoOptimizationColor()
+                    )
+                    
+                    // 오디오 하드웨어 최적화
+                    HardwareOptimizationCard(
+                        title: "오디오 하드웨어",
+                        currentSetting: "\(viewModel.settings.audioBitrate) kbps",
+                        optimizationLevel: getAudioOptimizationLevel(),
+                        description: getAudioOptimizationDescription(),
+                        icon: "mic.circle.fill",
+                        color: getAudioOptimizationColor()
+                    )
+                    
+                    // 전체 최적화 상태
+                    HardwareOptimizationCard(
+                        title: "전체 최적화 상태",
+                        currentSetting: getOverallOptimizationStatus(),
+                        optimizationLevel: getOverallOptimizationLevel(),
+                        description: getOverallOptimizationDescription(),
+                        icon: "gearshape.circle.fill",
+                        color: getOverallOptimizationColor()
+                    )
+                }
+            }
+        }
+    }
+    
+    // MARK: - 비디오 최적화 관련
+    
+    private func getVideoOptimizationLevel() -> String {
+        let pixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
+        let fps = viewModel.settings.frameRate
+        
+        switch (pixels, fps) {
+        case (0..<(1280*720), 0..<30):
+            return "저해상도 모드"
+        case (0..<(1920*1080), 0..<30):
+            return "표준 HD 모드"
+        case (0..<(1920*1080), 30...):
+            return "고프레임 모드"
+        case ((1920*1080)..., _):
+            return "고해상도 모드"
+        default:
+            return "사용자 정의"
+        }
+    }
+    
+    private func getVideoOptimizationDescription() -> String {
+        let pixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
+        
+        if pixels >= 1920*1080 {
+            return "카메라 1080p 프리셋 + 연속 자동 포커스"
+        } else if pixels >= 1280*720 {
+            return "카메라 720p 프리셋 + 자동 포커스"
+        } else {
+            return "카메라 VGA 프리셋 + 기본 설정"
+        }
+    }
+    
+    private func getVideoOptimizationColor() -> Color {
+        let pixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
+        
+        if pixels >= 1920*1080 {
+            return .blue
+        } else if pixels >= 1280*720 {
+            return .green
+        } else {
+            return .orange
+        }
+    }
+    
+    // MARK: - 오디오 최적화 관련
+    
+    private func getAudioOptimizationLevel() -> String {
+        switch viewModel.settings.audioBitrate {
+        case 0..<96:
+            return "저품질 모드"
+        case 96..<160:
+            return "표준 품질 모드"
+        default:
+            return "고품질 모드"
+        }
+    }
+    
+    private func getAudioOptimizationDescription() -> String {
+        switch viewModel.settings.audioBitrate {
+        case 0..<96:
+            return "44.1kHz 샘플레이트 + 20ms 버퍼"
+        case 96..<160:
+            return "44.1kHz 샘플레이트 + 10ms 버퍼"
+        default:
+            return "48kHz 샘플레이트 + 5ms 버퍼"
+        }
+    }
+    
+    private func getAudioOptimizationColor() -> Color {
+        switch viewModel.settings.audioBitrate {
+        case 0..<96:
+            return .orange
+        case 96..<160:
+            return .green
+        default:
+            return .blue
+        }
+    }
+    
+    // MARK: - 전체 최적화 관련
+    
+    private func getOverallOptimizationStatus() -> String {
+        let audioLevel = getAudioOptimizationLevel()
+        let videoPixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
+        
+        let isBalanced = (audioLevel.contains("표준") && videoPixels >= 1280*720 && videoPixels < 1920*1080) ||
+                        (audioLevel.contains("고품질") && videoPixels >= 1920*1080)
+        
+        if isBalanced {
+            return "최적 균형 ⭐"
+        } else if audioLevel.contains("저품질") && videoPixels >= 1920*1080 {
+            return "비디오 편중 ⚠️"
+        } else if audioLevel.contains("고품질") && videoPixels < 1280*720 {
+            return "오디오 편중 ⚠️"
+        } else {
+            return "표준 설정 ✅"
+        }
+    }
+    
+    private func getOverallOptimizationLevel() -> String {
+        let status = getOverallOptimizationStatus()
+        
+        if status.contains("최적") {
+            return "완벽한 균형"
+        } else if status.contains("편중") {
+            return "부분 최적화"
+        } else {
+            return "표준 최적화"
+        }
+    }
+    
+    private func getOverallOptimizationDescription() -> String {
+        let status = getOverallOptimizationStatus()
+        
+        if status.contains("최적") {
+            return "오디오와 비디오 품질이 완벽히 균형잡혀 있습니다"
+        } else if status.contains("비디오 편중") {
+            return "오디오 품질을 높이면 더 균형잡힌 스트리밍이 됩니다"
+        } else if status.contains("오디오 편중") {
+            return "비디오 해상도를 높이면 더 균형잡힌 스트리밍이 됩니다"
+        } else {
+            return "현재 설정으로 안정적인 스트리밍이 가능합니다"
+        }
+    }
+    
+    private func getOverallOptimizationColor() -> Color {
+        let status = getOverallOptimizationStatus()
+        
+        if status.contains("최적") {
+            return .green
+        } else if status.contains("편중") {
+            return .orange
+        } else {
+            return .blue
+        }
+    }
+}
+
+/// 하드웨어 최적화 카드
+struct HardwareOptimizationCard: View {
+    let title: String
+    let currentSetting: String
+    let optimizationLevel: String
+    let description: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // 헤더
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(color)
+                    .font(.title2)
+                    .frame(width: 32)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(optimizationLevel)
+                        .font(.caption)
+                        .foregroundColor(color)
+                        .fontWeight(.medium)
+                }
+                
+                Spacer()
+                
+                Text(currentSetting)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.trailing)
+            }
+            
+            // 설명
+            Text(description)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 } 

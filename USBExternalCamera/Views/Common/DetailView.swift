@@ -12,7 +12,6 @@ import SwiftUI
 extension NSNotification.Name {
     static let startScreenCapture = NSNotification.Name("startScreenCapture")
     static let stopScreenCapture = NSNotification.Name("stopScreenCapture")
-    static let testWatermarkCapture = NSNotification.Name("testWatermarkCapture")
 }
 
 // MARK: - Detail View Components
@@ -116,19 +115,62 @@ struct CameraDetailContentView: View {
 
 /// 카메라 프리뷰 컨테이너 View 컴포넌트
 /// 실제 카메라 화면을 표시하는 컴포넌트입니다.
+/// 16:9 비율로 제한하여 실제 송출되는 영역만 표시합니다.
 struct CameraPreviewContainerView: View {
     @ObservedObject var viewModel: MainViewModel
     
     var body: some View {
-        CameraPreviewView(
-            session: viewModel.cameraViewModel.captureSession,
-            streamViewModel: viewModel.liveStreamViewModel,
-            haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
+        GeometryReader { geometry in
+            let containerSize = geometry.size
+            
+            // 16:9 비율 계산 (유튜브 라이브 표준)
+            let aspectRatio: CGFloat = 16.0 / 9.0
+            let maxWidth = containerSize.width - 60 // padding 고려
+            let maxHeight = containerSize.height - 60 // padding 고려
+            
+            // Aspect Fit 방식으로 16:9 프레임 계산
+            let previewSize: CGSize = {
+                if maxWidth / maxHeight > aspectRatio {
+                    // 세로가 기준: 높이에 맞춰서 너비 계산
+                    let width = maxHeight * aspectRatio
+                    return CGSize(width: width, height: maxHeight)
+                } else {
+                    // 가로가 기준: 너비에 맞춰서 높이 계산
+                    let height = maxWidth / aspectRatio
+                    return CGSize(width: maxWidth, height: height)
+                }
+            }()
+            
+            VStack {
+                // 16:9 비율 카메라 프리뷰
+                CameraPreviewView(
+                    session: viewModel.cameraViewModel.captureSession,
+                    streamViewModel: viewModel.liveStreamViewModel,
+                    haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager
+                )
+                .frame(width: previewSize.width, height: previewSize.height)
+                .background(Color.black)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                
+                // 송출 영역 안내 텍스트
+                Text("📺 실제 송출 영역 (16:9)")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .padding(.top, 8)
+                
+                // 프리뷰 크기 정보
+                Text("\(Int(previewSize.width)) × \(Int(previewSize.height))")
+                    .font(.caption2)
+                    .foregroundColor(.gray.opacity(0.7))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
         .padding(30)
-        .background(Color.black)
+        .background(Color.black.opacity(0.1))
     }
 }
 

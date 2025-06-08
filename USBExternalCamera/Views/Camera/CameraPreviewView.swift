@@ -8,6 +8,8 @@
 import AVFoundation
 import HaishinKit
 import SwiftUI
+import UIKit
+import Foundation
 
 // MARK: - String Extension for Regex
 
@@ -56,17 +58,17 @@ struct CameraPreviewView: UIViewRepresentable {
       let managerChanged = previewView.haishinKitManager !== haishinKitManager
 
       if sessionChanged {
-        print("🔄 [CameraPreview] 캡처 세션 변경 감지 - 업데이트")
+        logInfo("캡처 세션 변경 감지 - 업데이트", category: .camera)
         previewView.captureSession = session
       }
 
       if managerChanged {
-        print("🔄 [CameraPreview] HaishinKit 매니저 변경 감지 - 업데이트")
+        logInfo("HaishinKit 매니저 변경 감지 - 업데이트", category: .camera)
         previewView.haishinKitManager = haishinKitManager
       }
 
       // 프리뷰 새로고침은 하지 않음 (안정성 향상)
-      print("🔄 [CameraPreview] 업데이트 완료 - 프리뷰 새로고침 건너뜀")
+      logInfo("업데이트 완료 - 프리뷰 새로고침 건너뜀", category: .camera)
     }
   }
 
@@ -76,12 +78,12 @@ struct CameraPreviewView: UIViewRepresentable {
   func startScreenCapture() {
     // UIViewRepresentable에서 UIView에 접근하는 방법이 제한적이므로
     // HaishinKitManager를 통해 제어하는 것을 권장
-    print("🎬 [CameraPreviewView] 화면 캡처 요청됨 - HaishinKitManager 사용 권장")
+    logInfo("화면 캡처 요청됨 - HaishinKitManager 사용 권장", category: .streaming)
   }
 
   /// 화면 캡처 송출 중지 (외부에서 호출 가능)
   func stopScreenCapture() {
-    print("🎬 [CameraPreviewView] 화면 캡처 중지 요청됨")
+    logInfo("화면 캡처 중지 요청됨", category: .streaming)
 
     // 화면 캡처 중지 알림 전송
     DispatchQueue.main.async {
@@ -111,10 +113,10 @@ final class CameraPreviewUIView: UIView {
     didSet {
       // 처음 설정될 때만 프리뷰 레이어 생성
       if oldValue == nil && captureSession != nil {
-        print("🎥 [CameraPreview] 초기 캡처 세션 설정 - 프리뷰 레이어 생성")
+        logInfo("초기 캡처 세션 설정 - 프리뷰 레이어 생성", category: .camera)
         updatePreviewLayer()
       } else if oldValue !== captureSession {
-        print("🎥 [CameraPreview] 캡처 세션 변경 감지 - 프리뷰 레이어 업데이트")
+        logInfo("캡처 세션 변경 감지 - 프리뷰 레이어 업데이트", category: .camera)
         updatePreviewLayer()
       }
     }
@@ -164,6 +166,9 @@ final class CameraPreviewUIView: UIView {
   /// 최근 카메라 프레임 (화면 캡처용)
   private var latestCameraFrame: CVPixelBuffer?
   private let frameProcessingQueue = DispatchQueue(label: "CameraFrameProcessing", qos: .userInteractive)
+  
+  /// 프레임 카운터 (통계 출력용)
+  private var frameCounter = 0
 
   // MARK: - Initialization
 
@@ -189,7 +194,6 @@ final class CameraPreviewUIView: UIView {
     setupConstraints()
     setupGestureRecognizers()
     setupNotifications()
-    setupWatermark()
   }
 
   private func setupNotifications() {
@@ -208,138 +212,17 @@ final class CameraPreviewUIView: UIView {
       object: nil
     )
 
-    NotificationCenter.default.addObserver(
-      self,
-      selector: #selector(handleTestWatermarkCapture),
-      name: NSNotification.Name("testWatermarkCapture"),
-      object: nil
-    )
+
   }
 
   @objc private func handleStartScreenCapture() {
-    print("📩 [CameraPreview] 화면 캡처 시작 notification 수신")
+    logDebug("화면 캡처 시작 notification 수신", category: .streaming)
     startScreenCapture()
   }
 
   @objc private func handleStopScreenCapture() {
-    print("📩 [CameraPreview] 화면 캡처 중지 notification 수신")
+    logDebug("화면 캡처 중지 notification 수신", category: .streaming)
     stopScreenCapture()
-  }
-
-  @objc private func handleTestWatermarkCapture() {
-    print("🧪 [CameraPreview] 워터마크 캡처 테스트 notification 수신")
-
-    // 즉시 한 번의 프레임 캡처 실행
-    DispatchQueue.main.async { [weak self] in
-      self?.captureCurrentFrame()
-    }
-  }
-
-  private func setupWatermark() {
-    // 중앙 대형 워터마크 생성
-    let watermarkContainer = UIView()
-    watermarkContainer.backgroundColor = UIColor.clear
-    watermarkContainer.translatesAutoresizingMaskIntoConstraints = false
-    watermarkContainer.tag = 8888  // 워터마크 식별용 태그
-
-    // AAA TEST 메인 워터마크
-    let mainWatermark = UILabel()
-    mainWatermark.text = "AAA TEST"
-    mainWatermark.font = UIFont.boldSystemFont(ofSize: 48)
-    mainWatermark.textColor = .white
-    mainWatermark.backgroundColor = UIColor.red.withAlphaComponent(0.9)
-    mainWatermark.textAlignment = .center
-    mainWatermark.layer.cornerRadius = 16
-    mainWatermark.layer.borderWidth = 4
-    mainWatermark.layer.borderColor = UIColor.yellow.cgColor
-    mainWatermark.clipsToBounds = true
-    mainWatermark.translatesAutoresizingMaskIntoConstraints = false
-
-    // 그림자 효과
-    mainWatermark.layer.shadowColor = UIColor.black.cgColor
-    mainWatermark.layer.shadowOffset = CGSize(width: 2, height: 2)
-    mainWatermark.layer.shadowRadius = 4
-    mainWatermark.layer.shadowOpacity = 0.8
-
-    // 서브 워터마크
-    let subWatermark = UILabel()
-    subWatermark.text = "🎬 SCREEN CAPTURE TEST"
-    subWatermark.font = UIFont.boldSystemFont(ofSize: 20)
-    subWatermark.textColor = .yellow
-    subWatermark.backgroundColor = UIColor.blue.withAlphaComponent(0.8)
-    subWatermark.textAlignment = .center
-    subWatermark.layer.cornerRadius = 12
-    subWatermark.clipsToBounds = true
-    subWatermark.translatesAutoresizingMaskIntoConstraints = false
-
-    // 라이브 표시
-    let liveIndicator = UILabel()
-    liveIndicator.text = "● LIVE STREAMING ●"
-    liveIndicator.font = UIFont.boldSystemFont(ofSize: 16)
-    liveIndicator.textColor = .green
-    liveIndicator.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-    liveIndicator.textAlignment = .center
-    liveIndicator.layer.cornerRadius = 8
-    liveIndicator.clipsToBounds = true
-    liveIndicator.translatesAutoresizingMaskIntoConstraints = false
-
-    // 우하단 코너 워터마크
-    let cornerWatermark = UILabel()
-    cornerWatermark.text = "📱 CAPTURE\\nON AIR"
-    cornerWatermark.numberOfLines = 2
-    cornerWatermark.font = UIFont.boldSystemFont(ofSize: 14)
-    cornerWatermark.textColor = .white
-    cornerWatermark.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-    cornerWatermark.textAlignment = .center
-    cornerWatermark.layer.cornerRadius = 8
-    cornerWatermark.clipsToBounds = true
-    cornerWatermark.translatesAutoresizingMaskIntoConstraints = false
-
-    // 컨테이너에 추가
-    watermarkContainer.addSubview(mainWatermark)
-    watermarkContainer.addSubview(subWatermark)
-    watermarkContainer.addSubview(liveIndicator)
-    watermarkContainer.addSubview(cornerWatermark)
-
-    // 메인 뷰에 추가
-    addSubview(watermarkContainer)
-
-    // 제약 조건 설정
-    NSLayoutConstraint.activate([
-      // 컨테이너
-      watermarkContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
-      watermarkContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
-      watermarkContainer.topAnchor.constraint(equalTo: topAnchor),
-      watermarkContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-      // 메인 워터마크 (중앙)
-      mainWatermark.centerXAnchor.constraint(equalTo: watermarkContainer.centerXAnchor),
-      mainWatermark.centerYAnchor.constraint(equalTo: watermarkContainer.centerYAnchor),
-      mainWatermark.widthAnchor.constraint(equalToConstant: 300),
-      mainWatermark.heightAnchor.constraint(equalToConstant: 80),
-
-      // 서브 워터마크 (메인 워터마크 아래)
-      subWatermark.centerXAnchor.constraint(equalTo: mainWatermark.centerXAnchor),
-      subWatermark.topAnchor.constraint(equalTo: mainWatermark.bottomAnchor, constant: 16),
-      subWatermark.widthAnchor.constraint(equalToConstant: 350),
-      subWatermark.heightAnchor.constraint(equalToConstant: 40),
-
-      // 라이브 표시 (서브 워터마크 아래)
-      liveIndicator.centerXAnchor.constraint(equalTo: subWatermark.centerXAnchor),
-      liveIndicator.topAnchor.constraint(equalTo: subWatermark.bottomAnchor, constant: 12),
-      liveIndicator.widthAnchor.constraint(equalToConstant: 200),
-      liveIndicator.heightAnchor.constraint(equalToConstant: 30),
-
-      // 코너 워터마크 (우하단)
-      cornerWatermark.trailingAnchor.constraint(
-        equalTo: watermarkContainer.trailingAnchor, constant: -16),
-      cornerWatermark.bottomAnchor.constraint(
-        equalTo: watermarkContainer.bottomAnchor, constant: -20),
-      cornerWatermark.widthAnchor.constraint(equalToConstant: 80),
-      cornerWatermark.heightAnchor.constraint(equalToConstant: 50),
-    ])
-
-    print("🎨 [CameraPreview] 워터마크 UIView 추가 완료")
   }
 
   private func setupConstraints() {
@@ -397,7 +280,7 @@ final class CameraPreviewUIView: UIView {
     // 기존 스트리밍 표시 제거
     removeStreamingIndicator()
 
-    print("🔴 [CameraPreview] 스트리밍 표시 추가")
+    logDebug("스트리밍 표시 추가", category: .streaming)
 
     let streamingOverlay = UIView(frame: bounds)
     streamingOverlay.backgroundColor = UIColor.clear
@@ -438,7 +321,7 @@ final class CameraPreviewUIView: UIView {
     // 태그로 스트리밍 표시 찾아서 제거
     if let streamingOverlay = subviews.first(where: { $0.tag == 9999 }) {
       streamingOverlay.removeFromSuperview()
-      print("🔴 [CameraPreview] 스트리밍 표시 제거")
+      logDebug("스트리밍 표시 제거", category: .streaming)
     }
     hkPreviewLayer = nil
   }
@@ -451,18 +334,18 @@ final class CameraPreviewUIView: UIView {
   /// 프리뷰 레이어가 활성 상태인지 확인하고 필요시 복구
   private func ensurePreviewLayerActive() {
     guard let session = captureSession else {
-      print("❌ [CameraPreview] 캡처 세션이 없어 프리뷰 보호 불가")
+      logError("캡처 세션이 없어 프리뷰 보호 불가", category: .camera)
       return
     }
 
     // 프리뷰 레이어가 없거나 세션이 다르면 복구
     if previewLayer == nil || previewLayer?.session !== session {
-      print("🔧 [CameraPreview] 프리뷰 레이어 복구 필요 - 재생성")
+      logInfo("프리뷰 레이어 복구 필요 - 재생성", category: .camera)
       setupAVFoundationPreview(with: session)
     } else if let layer = previewLayer {
       // 프리뷰 레이어가 슈퍼레이어에서 제거되었으면 다시 추가
       if layer.superlayer == nil {
-        print("🔧 [CameraPreview] 프리뷰 레이어 다시 추가")
+        logInfo("프리뷰 레이어 다시 추가", category: .camera)
         self.layer.insertSublayer(layer, at: 0)
       }
 
@@ -470,12 +353,12 @@ final class CameraPreviewUIView: UIView {
       layer.frame = bounds
     }
 
-    print("✅ [CameraPreview] 프리뷰 레이어 보호 완료")
+    logDebug("프리뷰 레이어 보호 완료", category: .camera)
   }
 
   /// 비디오 프레임 모니터링 설정 (통계 목적)
   private func setupVideoMonitoring(with session: AVCaptureSession) {
-    print("📹 [CameraPreview] 비디오 프레임 모니터링 설정")
+            // print("📹 [CameraPreview] 비디오 프레임 모니터링 설정") // 반복적인 로그 비활성화
 
     // 기존 비디오 출력 제거
     if let existingOutput = videoOutput {
@@ -498,9 +381,9 @@ final class CameraPreviewUIView: UIView {
     if session.canAddOutput(newVideoOutput) {
       session.addOutput(newVideoOutput)
       videoOutput = newVideoOutput
-      print("✅ [CameraPreview] 비디오 프레임 모니터링 설정 완료")
-    } else {
-      print("❌ [CameraPreview] 비디오 프레임 모니터링 설정 실패")
+                  // print("✅ [CameraPreview] 비디오 프레임 모니터링 설정 완료") // 반복적인 로그 비활성화
+        } else {
+            logError("비디오 프레임 모니터링 설정 실패", category: .camera)
     }
   }
 
@@ -508,7 +391,7 @@ final class CameraPreviewUIView: UIView {
   private func removeVideoMonitoring() {
     guard let session = captureSession, let output = videoOutput else { return }
 
-    print("📹 [CameraPreview] 비디오 프레임 모니터링 해제")
+            // print("📹 [CameraPreview] 비디오 프레임 모니터링 해제") // 반복적인 로그 비활성화
     session.removeOutput(output)
     videoOutput = nil
   }
@@ -531,7 +414,7 @@ final class CameraPreviewUIView: UIView {
 
       // 상태 변화를 로깅
       if isStreaming {
-        print("🎥 [CameraPreview] 스트리밍 시작됨 - 스트리밍 표시 추가 및 프리뷰 보호")
+        logInfo("스트리밍 시작됨 - 스트리밍 표시 추가 및 프리뷰 보호", category: .streaming)
 
         // 스트리밍 표시 추가 및 비디오 모니터링 설정
         DispatchQueue.main.async { [weak self] in
@@ -544,7 +427,7 @@ final class CameraPreviewUIView: UIView {
           }
         }
       } else {
-        print("🎥 [CameraPreview] 스트리밍 종료됨 - 스트리밍 표시 제거")
+        logInfo("스트리밍 종료됨 - 스트리밍 표시 제거", category: .streaming)
 
         // 스트리밍 표시 제거 및 비디오 모니터링 해제
         DispatchQueue.main.async { [weak self] in
@@ -582,7 +465,7 @@ final class CameraPreviewUIView: UIView {
   private func updateStreamingStatusView() {
     // StreamingStatusView 사용하지 않음 (중복 방지)
     // 작은 라이브 표시만 사용
-    print("📊 [CameraPreview] 스트리밍 상태 뷰 업데이트 건너뜀 (중복 방지)")
+    logDebug("스트리밍 상태 뷰 업데이트 건너뜀 (중복 방지)", category: .streaming)
   }
 
   /// 스트리밍 상태 모니터링 설정
@@ -604,10 +487,10 @@ final class CameraPreviewUIView: UIView {
 
   /// 프리뷰 레이어 강제 새로고침 (스트리밍 상태 변화 시)
   func refreshPreviewLayer() {
-    print("🔄 [CameraPreview] 프리뷰 레이어 새로고침 시작 (스트리밍: \(isStreaming))")
+    logInfo("프리뷰 레이어 새로고침 시작 (스트리밍: \(isStreaming))", category: .camera)
 
     guard let session = captureSession else {
-      print("❌ [CameraPreview] 캡처 세션이 없어 새로고침 실패")
+      logError("캡처 세션이 없어 새로고침 실패", category: .camera)
       return
     }
 
@@ -621,24 +504,46 @@ final class CameraPreviewUIView: UIView {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
       guard let self = self else { return }
 
-      print("🎥 [CameraPreview] AVFoundation 프리뷰 설정")
+      logInfo("AVFoundation 프리뷰 설정", category: .camera)
       self.setupAVFoundationPreview(with: session)
 
       if self.isStreaming {
-        print("🎥 [CameraPreview] 스트리밍 표시 추가")
+        logInfo("스트리밍 표시 추가", category: .streaming)
         self.addStreamingIndicator()
       }
 
-      print("✅ [CameraPreview] 프리뷰 레이어 새로고침 완료")
+      logInfo("프리뷰 레이어 새로고침 완료", category: .camera)
     }
   }
 
   private func setupAVFoundationPreview(with session: AVCaptureSession) {
-    print("🎥 [CameraPreview] AVFoundation 프리뷰 레이어 설정 중...")
+    logInfo("AVFoundation 프리뷰 레이어 설정 중...", category: .camera)
 
     let newPreviewLayer = AVCaptureVideoPreviewLayer(session: session)
-    newPreviewLayer.frame = bounds
-    newPreviewLayer.videoGravity = .resizeAspect
+    
+    // 16:9 비율 계산 및 적용
+    let aspectRatio: CGFloat = 16.0 / 9.0
+    let viewBounds = bounds
+    
+    // 16:9 비율에 맞는 프레임 계산
+    let previewFrame: CGRect
+    if viewBounds.width / viewBounds.height > aspectRatio {
+      // 세로가 기준: 높이에 맞춰서 너비 계산
+      let width = viewBounds.height * aspectRatio
+      let offsetX = (viewBounds.width - width) / 2
+      previewFrame = CGRect(x: offsetX, y: 0, width: width, height: viewBounds.height)
+    } else {
+      // 가로가 기준: 너비에 맞춰서 높이 계산
+      let height = viewBounds.width / aspectRatio
+      let offsetY = (viewBounds.height - height) / 2
+      previewFrame = CGRect(x: 0, y: offsetY, width: viewBounds.width, height: height)
+    }
+    
+    newPreviewLayer.frame = previewFrame
+    
+    // 실제 송출 영역과 일치: resizeAspectFill 사용
+    // 카메라 이미지가 프레임을 완전히 채우도록 설정
+    newPreviewLayer.videoGravity = .resizeAspectFill
 
     if #available(iOS 17.0, *) {
       newPreviewLayer.connection?.videoRotationAngle = 0
@@ -649,23 +554,47 @@ final class CameraPreviewUIView: UIView {
     layer.insertSublayer(newPreviewLayer, at: 0)
     previewLayer = newPreviewLayer
 
-    print("✅ [CameraPreview] AVFoundation 프리뷰 레이어 설정 완료")
+    logInfo("AVFoundation 프리뷰 레이어 설정 완료", category: .camera)
+    logDebug("16:9 비율 프레임: \(previewFrame)", category: .camera)
+    logDebug("videoGravity: resizeAspectFill (송출 영역과 일치)", category: .camera)
   }
 
   override func layoutSubviews() {
     super.layoutSubviews()
 
-    // 프리뷰 레이어 프레임 업데이트
+    // 프리뷰 레이어 프레임 업데이트 (16:9 비율 유지)
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
-      self.previewLayer?.frame = self.bounds
-      self.hkPreviewLayer?.frame = self.bounds
+      
+      // 16:9 비율 계산
+      let aspectRatio: CGFloat = 16.0 / 9.0
+      let viewBounds = self.bounds
+      
+      // 16:9 비율에 맞는 프레임 재계산
+      let previewFrame: CGRect
+      if viewBounds.width / viewBounds.height > aspectRatio {
+        // 세로가 기준: 높이에 맞춰서 너비 계산
+        let width = viewBounds.height * aspectRatio
+        let offsetX = (viewBounds.width - width) / 2
+        previewFrame = CGRect(x: offsetX, y: 0, width: width, height: viewBounds.height)
+      } else {
+        // 가로가 기준: 너비에 맞춰서 높이 계산
+        let height = viewBounds.width / aspectRatio
+        let offsetY = (viewBounds.height - height) / 2
+        previewFrame = CGRect(x: 0, y: offsetY, width: viewBounds.width, height: height)
+      }
+      
+      // 프리뷰 레이어 프레임 업데이트 (16:9 비율 적용)
+      self.previewLayer?.frame = previewFrame
+      self.hkPreviewLayer?.frame = previewFrame
 
       // 레이어가 올바르게 표시되도록 강제 레이아웃 업데이트
       if let layer = self.previewLayer {
         layer.setNeedsLayout()
         layer.layoutIfNeeded()
       }
+      
+      logDebug("레이아웃 업데이트 - 16:9 프레임: \(previewFrame)", category: .camera)
     }
   }
 
@@ -709,7 +638,7 @@ final class CameraPreviewUIView: UIView {
       gesture.scale = 1.0
 
     } catch {
-      print("❌ Zoom adjustment failed: \(error)")
+              logError("Zoom adjustment failed: \(error)", category: .camera)
     }
   }
 
@@ -733,7 +662,7 @@ final class CameraPreviewUIView: UIView {
 
       device.unlockForConfiguration()
     } catch {
-      print("❌ Focus adjustment failed: \(error)")
+              logError("Focus adjustment failed: \(error)", category: .camera)
     }
   }
 
@@ -750,7 +679,7 @@ final class CameraPreviewUIView: UIView {
 
       device.unlockForConfiguration()
     } catch {
-      print("❌ Exposure adjustment failed: \(error)")
+              logError("Exposure adjustment failed: \(error)", category: .camera)
     }
   }
 
@@ -819,21 +748,21 @@ final class CameraPreviewUIView: UIView {
   /// 카메라 프레임과 UI를 합성한 완전한 화면이 송출됩니다.
   func startScreenCapture() {
     guard !isScreenCapturing else { 
-      print("⚠️ [CameraPreview] 이미 화면 캡처가 진행 중입니다")
+      logWarning("이미 화면 캡처가 진행 중입니다", category: .streaming)
       return 
     }
 
     isScreenCapturing = true
-    print("🎬 [CameraPreview] 화면 캡처 송출 시작 - 카메라 프레임 + UI 합성 모드")
+            logInfo("화면 캡처 송출 시작", category: .streaming)
 
-    // 30fps로 화면 캡처 (1초에 30번 캡처)
-    // 더 높은 프레임율은 성능에 영향을 줄 수 있으므로 30fps로 제한
-    screenCaptureTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) {
+    // **성능 최적화**: 30fps → 25fps로 낮춰서 CPU 부하 감소
+    // 25fps는 여전히 부드러운 스트리밍을 제공하면서 시스템 부하를 줄임
+    screenCaptureTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 25.0, repeats: true) {
       [weak self] _ in
       self?.captureCurrentFrame()
     }
     
-    print("✅ [CameraPreview] 화면 캡처 타이머 시작됨 (30fps)")
+            // print("✅ [CameraPreview] 화면 캡처 타이머 시작됨 (25fps - 성능 최적화)") // 반복적인 로그 비활성화
   }
   
   /// 화면 캡처 송출 중지
@@ -841,7 +770,7 @@ final class CameraPreviewUIView: UIView {
   /// 타이머를 중지하고 캡처된 프레임 데이터를 정리합니다.
   func stopScreenCapture() {
     guard isScreenCapturing else { 
-      print("⚠️ [CameraPreview] 화면 캡처가 실행 중이지 않습니다")
+      logWarning("화면 캡처가 실행 중이지 않습니다", category: .streaming)
       return 
     }
 
@@ -854,7 +783,7 @@ final class CameraPreviewUIView: UIView {
       self?.latestCameraFrame = nil
     }
     
-    print("🎬 [CameraPreview] 화면 캡처 송출 중지 및 리소스 정리 완료")
+    logInfo("화면 캡처 송출 중지 및 리소스 정리 완료", category: .streaming)
   }
 
   /// 현재 프레임 캡처 및 HaishinKit 전송
@@ -873,21 +802,23 @@ final class CameraPreviewUIView: UIView {
 
       // Step 1: 현재 화면을 이미지로 렌더링 (카메라 프레임 + UI 합성)
       guard let capturedImage = self.renderToImage() else {
-        print("❌ [화면캡처] UIImage 렌더링 실패 - 프레임 스킵")
+                    // print("❌ [화면캡처] UIImage 렌더링 실패 - 프레임 스킵") // 반복적인 로그 비활성화
         return
       }
       
-      print("✅ [화면캡처] 화면 렌더링 성공: \(capturedImage.size)")
+      // 성능 최적화: 프레임별 상세 로그 제거 (CPU 부하 감소)
+      // print("✅ [화면캡처] 화면 렌더링 성공: \(capturedImage.size)")
 
       // Step 2: UIImage를 CVPixelBuffer로 변환 (HaishinKit 호환 포맷)
       guard let pixelBuffer = capturedImage.toCVPixelBuffer() else {
-        print("❌ [화면캡처] CVPixelBuffer 변환 실패 - 프레임 스킵")
+                    // print("❌ [화면캡처] CVPixelBuffer 변환 실패 - 프레임 스킵") // 반복적인 로그 비활성화
         return
       }
       
-      let width = CVPixelBufferGetWidth(pixelBuffer)
-      let height = CVPixelBufferGetHeight(pixelBuffer)
-      print("✅ [화면캡처] CVPixelBuffer 변환 성공: \(width)x\(height)")
+      // 성능 최적화: 변환 성공 로그 제거
+      // let width = CVPixelBufferGetWidth(pixelBuffer)
+      // let height = CVPixelBufferGetHeight(pixelBuffer)
+      // print("✅ [화면캡처] CVPixelBuffer 변환 성공: \(width)x\(height)")
 
       // Step 3: HaishinKit을 통해 스트리밍 서버에 전송
       self.sendFrameToHaishinKit(pixelBuffer)
@@ -907,20 +838,58 @@ final class CameraPreviewUIView: UIView {
   ///
   /// - Returns: 캡처된 최종 이미지 (카메라 + UI 합성) 또는 nil
   private func renderToImage() -> UIImage? {
-    let size = bounds.size
-    guard size.width > 0 && size.height > 0 else { 
-      print("❌ [렌더링] 유효하지 않은 뷰 크기: \(size)")
-      return nil 
-    }
+    // 송출용 고해상도 렌더링 사용 (해상도 문제 해결)
+    return renderToImageForStreaming()
+  }
+  
+  /// 송출용 고해상도 UI 렌더링 (해상도 문제 해결)
+  /// 
+  /// **개선된 전략:**
+  /// - 480p 송출 → 약 1000p(1712x960) 캡처
+  /// - 720p 송출 → 약 1400p(2560x1440) 캡처  
+  /// - 1080p 송출 → 동일 해상도(1920x1080) 캡처 (안정성 우선)
+  /// - 송출 해상도보다 2배 정도 높은 해상도로 캡처하여 고품질 유지
+  /// 
+  /// - Returns: 송출 해상도에 따라 최적화된 고품질 이미지
+  private func renderToImageForStreaming() -> UIImage? {
+    // HaishinKitManager에서 현재 스트리밍 설정 가져오기
+    let streamingSize = getOptimalCaptureSize()
+    
+    logDebug("송출용 UI 렌더링 시작: \(streamingSize)", category: .performance)
     
     // 최근 카메라 프레임이 있는지 확인
     if let cameraFrame = latestCameraFrame {
-      // 케이스 1: 카메라 프레임 + UI 합성 (권장 모드)
-      print("🎥 [렌더링] 카메라 프레임 + UI 합성 모드")
+      // 케이스 1: 카메라 프레임 + UI 합성 (고해상도)
+              // print("🎥 [고해상도 렌더링] 카메라 프레임 + UI 합성 모드") // 반복적인 로그 비활성화
+      return renderCameraFrameWithUIForStreaming(cameraFrame: cameraFrame, streamingSize: streamingSize)
+    } else {
+      // 케이스 2: UI만 고해상도 캡처 (카메라 프레임 없음)
+      logDebug("UI만 캡처 모드 (고해상도)", category: .performance)
+      return renderUIOnlyForStreaming(streamingSize: streamingSize)
+    }
+  }
+  
+  /// 단말 표시용 일반 해상도 렌더링 (기존 방식 유지)
+  /// 
+  /// 사용자가 iPad에서 보는 화면용으로 기존 크기 유지
+  /// - Returns: 단말 화면 크기의 이미지
+  private func renderToImageForDisplay() -> UIImage? {
+    let size = bounds.size
+    guard size.width > 0 && size.height > 0 else { 
+      logError("유효하지 않은 뷰 크기: \(size)", category: .performance)
+      return nil 
+    }
+    
+    logDebug("표시용 UI 렌더링: \(size)", category: .performance)
+    
+    // 최근 카메라 프레임이 있는지 확인
+    if let cameraFrame = latestCameraFrame {
+      // 케이스 1: 카메라 프레임 + UI 합성 (단말 크기)
+              // print("🎥 [단말렌더링] 카메라 프레임 + UI 합성 모드") // 반복적인 로그 비활성화
       return renderCameraFrameWithUI(cameraFrame: cameraFrame, viewSize: size)
     } else {
-      // 케이스 2: UI만 캡처 (카메라 프레임 없음 - 폴백 모드)
-      print("📱 [렌더링] UI만 캡처 모드 (카메라 프레임 없음)")
+      // 케이스 2: UI만 캡처 (단말 크기)
+      logDebug("UI만 캡처 모드", category: .performance)
       let renderer = UIGraphicsImageRenderer(bounds: bounds)
       return renderer.image { context in
         layer.render(in: context.cgContext)
@@ -928,7 +897,272 @@ final class CameraPreviewUIView: UIView {
     }
   }
   
-  /// 카메라 프레임과 UI를 합성하여 최종 이미지 생성
+  /// 송출용 고해상도 카메라 프레임과 UI 합성
+  /// 
+  /// 1920x1080 크기로 고품질 렌더링하여 업스케일링으로 인한 화질 저하 방지
+  /// 
+  /// - Parameter cameraFrame: 실시간 카메라 프레임 (CVPixelBuffer)
+  /// - Parameter streamingSize: 송출 목표 해상도 (1920x1080)
+  /// - Returns: 고해상도 합성 이미지 또는 nil
+  private func renderCameraFrameWithUIForStreaming(cameraFrame: CVPixelBuffer, streamingSize: CGSize) -> UIImage? {
+    
+    // Step 1: 카메라 프레임을 UIImage로 변환
+    guard let cameraImage = cameraFrame.toUIImage() else {
+      logError("카메라 프레임 → UIImage 변환 실패", category: .performance)
+      return nil
+    }
+    logDebug("카메라 이미지 변환 성공: \(cameraImage.size)", category: .performance)
+    
+    // Step 2: UI 오버레이를 고해상도로 생성 (1:1 → 16:9 비율 강제 변환)
+    // 단말 크기에서 송출 크기로 스케일링 비율 계산
+    let currentSize = bounds.size
+    let originalAspectRatio = currentSize.width / currentSize.height
+    let targetAspectRatio = streamingSize.width / streamingSize.height
+    
+    let scaleX = streamingSize.width / currentSize.width
+    let scaleY = streamingSize.height / currentSize.height
+    let scale = max(scaleX, scaleY) // **Aspect Fill**: 화면 꽉 채우기 (1:1 문제 해결)
+    
+    logDebug("비율 분석:", category: .performance)
+    logDebug("  • 원본 UI: \(currentSize) (비율: \(String(format: "%.2f", originalAspectRatio)))", category: .performance)
+    logDebug("  • 목표 송출: \(streamingSize) (비율: \(String(format: "%.2f", targetAspectRatio)))", category: .performance)
+    logDebug("  • Aspect Fill 스케일: \(String(format: "%.2f", scale))x", category: .performance)
+    
+    // 1:1 비율 문제 감지
+    if abs(originalAspectRatio - 1.0) < 0.2 {
+      logWarning("1:1 문제 감지 - 카메라+UI 합성에서 정사각형 UI 감지 → Aspect Fill 적용", category: .performance)
+    }
+    
+    let uiRenderer = UIGraphicsImageRenderer(size: streamingSize)
+    let uiOverlay = uiRenderer.image { context in
+      // Aspect Fill 스케일링으로 UI 렌더링 (화면 꽉 채우기)
+      context.cgContext.scaleBy(x: scale, y: scale)
+      
+      // UI가 잘릴 수 있으므로 중앙 정렬
+      let scaledSize = CGSize(width: currentSize.width * scale, height: currentSize.height * scale)
+      let offsetX = (streamingSize.width - scaledSize.width) / 2.0
+      let offsetY = (streamingSize.height - scaledSize.height) / 2.0
+      context.cgContext.translateBy(x: offsetX / scale, y: offsetY / scale)
+      
+      // 프리뷰 레이어를 제외한 모든 서브뷰 렌더링
+      for subview in subviews {
+        // AVCaptureVideoPreviewLayer는 제외 (카메라 프레임으로 대체됨)
+        if !(subview.layer is AVCaptureVideoPreviewLayer) {
+          subview.layer.render(in: context.cgContext)
+        }
+      }
+    }
+    logDebug("UI 오버레이 생성 완료: \(streamingSize)", category: .performance)
+    
+    // Step 3: 카메라 이미지와 UI 오버레이를 고해상도로 합성
+    let finalRenderer = UIGraphicsImageRenderer(size: streamingSize)
+    let compositeImage = finalRenderer.image { context in
+      let rect = CGRect(origin: .zero, size: streamingSize)
+      
+      // 3-1: 카메라 이미지를 UI와 동일한 비율로 업스케일링
+      // 단말에서의 카메라 프리뷰 영역을 계산
+      let cameraPreviewRect = calculateCameraPreviewRect(in: currentSize)
+      
+      // 카메라 프리뷰 영역을 동일한 스케일 비율로 업스케일링
+      let scaledCameraRect = CGRect(
+        x: cameraPreviewRect.origin.x * scale,
+        y: cameraPreviewRect.origin.y * scale,
+        width: cameraPreviewRect.size.width * scale,
+        height: cameraPreviewRect.size.height * scale
+      )
+      
+      logDebug("카메라 영역 스케일링: \(cameraPreviewRect) → \(scaledCameraRect)", category: .performance)
+      
+      // 카메라 이미지를 스케일된 영역에 맞춰 그리기 (Aspect Fill 방식)
+      // Aspect Fill로 그려서 카메라 이미지가 잘리지 않도록 함
+      let cameraAspectRatio = cameraImage.size.width / cameraImage.size.height
+      let rectAspectRatio = scaledCameraRect.width / scaledCameraRect.height
+      
+      let drawRect: CGRect
+      if cameraAspectRatio > rectAspectRatio {
+        // 카메라가 더 넓음: 높이를 맞추고 가로는 넘침
+        let drawHeight = scaledCameraRect.height
+        let drawWidth = drawHeight * cameraAspectRatio
+        let offsetX = scaledCameraRect.origin.x + (scaledCameraRect.width - drawWidth) / 2
+        drawRect = CGRect(x: offsetX, y: scaledCameraRect.origin.y, width: drawWidth, height: drawHeight)
+      } else {
+        // 카메라가 더 높음: 너비를 맞추고 세로는 넘침
+        let drawWidth = scaledCameraRect.width
+        let drawHeight = drawWidth / cameraAspectRatio
+        let offsetY = scaledCameraRect.origin.y + (scaledCameraRect.height - drawHeight) / 2
+        drawRect = CGRect(x: scaledCameraRect.origin.x, y: offsetY, width: drawWidth, height: drawHeight)
+      }
+      
+      logDebug("카메라 이미지 Aspect Fill 그리기: \(scaledCameraRect) → \(drawRect)", category: .performance)
+      cameraImage.draw(in: drawRect)
+      
+      // 3-2: UI 오버레이를 전체 화면에 합성
+      uiOverlay.draw(in: rect, blendMode: .normal, alpha: 1.0)
+    }
+    
+    logDebug("최종 이미지 합성 완료: \(streamingSize)", category: .performance)
+    return compositeImage
+  }
+  
+  /// 단말 화면에서 카메라 프리뷰가 차지하는 16:9 영역 계산
+  /// 
+  /// 실제 송출되는 16:9 비율 영역을 계산합니다.
+  /// 이를 통해 프리뷰와 송출 화면이 정확히 일치하도록 합니다.
+  /// 
+  /// - Parameter containerSize: 컨테이너 뷰의 크기 (단말 화면 크기)
+  /// - Returns: 16:9 비율로 계산된 카메라 프리뷰 영역
+  private func calculateCameraPreviewRect(in containerSize: CGSize) -> CGRect {
+    // 16:9 비율로 고정된 송출 영역 계산
+    let aspectRatio: CGFloat = 16.0 / 9.0
+    
+    let previewFrame: CGRect
+    if containerSize.width / containerSize.height > aspectRatio {
+      // 세로가 기준: 높이에 맞춰서 너비 계산
+      let width = containerSize.height * aspectRatio
+      let offsetX = (containerSize.width - width) / 2
+      previewFrame = CGRect(x: offsetX, y: 0, width: width, height: containerSize.height)
+    } else {
+      // 가로가 기준: 너비에 맞춰서 높이 계산
+      let height = containerSize.width / aspectRatio
+      let offsetY = (containerSize.height - height) / 2
+      previewFrame = CGRect(x: 0, y: offsetY, width: containerSize.width, height: height)
+    }
+    
+    logDebug("16:9 비율 송출 영역: \(previewFrame)", category: .camera)
+    return previewFrame
+  }
+  
+  /// AVCaptureVideoPreviewLayer의 실제 비디오 표시 영역 계산
+  /// 
+  /// videoGravity 설정에 따라 실제로 비디오가 표시되는 영역을 정확히 계산합니다.
+  /// - resizeAspect: 비디오 비율 유지, 레이어 내부에 맞춤 (검은 여백 가능)
+  /// - resizeAspectFill: 비디오 비율 유지, 레이어 전체를 채움 (일부 잘림 가능)
+  /// - resize: 비디오를 레이어 크기에 맞춰 늘림 (비율 왜곡 가능)
+  /// 
+  /// - Parameter previewLayer: 카메라 프리뷰 레이어
+  /// - Returns: 실제 비디오가 표시되는 영역
+  private func calculateActualVideoRect(previewLayer: AVCaptureVideoPreviewLayer) -> CGRect {
+    let layerBounds = previewLayer.bounds
+    let videoGravity = previewLayer.videoGravity
+    
+    // 카메라 세션에서 비디오 입력의 실제 해상도 가져오기
+    guard let session = previewLayer.session else {
+      logWarning("세션 없음, 레이어 전체 영역 반환: \(layerBounds)", category: .camera)
+      return layerBounds
+    }
+    
+    // 현재 활성 비디오 입력의 해상도 찾기
+    var videoSize: CGSize?
+    for input in session.inputs {
+      if let deviceInput = input as? AVCaptureDeviceInput,
+         deviceInput.device.hasMediaType(.video) {
+        let format = deviceInput.device.activeFormat
+        let dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+        videoSize = CGSize(width: Int(dimensions.width), height: Int(dimensions.height))
+        break
+      }
+    }
+    
+    guard let actualVideoSize = videoSize else {
+      logWarning("비디오 크기 확인 불가, 레이어 전체 영역 반환: \(layerBounds)", category: .camera)
+      return layerBounds
+    }
+    
+    logDebug("비디오 크기: \(actualVideoSize), 레이어 크기: \(layerBounds.size), 중력: \(videoGravity)", category: .camera)
+    
+    let videoRect: CGRect
+    
+    switch videoGravity {
+    case .resizeAspectFill:
+      // Aspect Fill: 비디오 비율 유지하면서 레이어 전체를 채움 (일부 잘림 가능)
+      let videoAspectRatio = actualVideoSize.width / actualVideoSize.height
+      let layerAspectRatio = layerBounds.width / layerBounds.height
+      
+      if videoAspectRatio > layerAspectRatio {
+        // 비디오가 더 넓음: 세로를 레이어에 맞추고 가로는 넘침
+        let scaledHeight = layerBounds.height
+        let scaledWidth = scaledHeight * videoAspectRatio
+        let offsetX = (layerBounds.width - scaledWidth) / 2
+        videoRect = CGRect(x: offsetX, y: 0, width: scaledWidth, height: scaledHeight)
+      } else {
+        // 비디오가 더 높음: 가로를 레이어에 맞추고 세로는 넘침
+        let scaledWidth = layerBounds.width
+        let scaledHeight = scaledWidth / videoAspectRatio
+        let offsetY = (layerBounds.height - scaledHeight) / 2
+        videoRect = CGRect(x: 0, y: offsetY, width: scaledWidth, height: scaledHeight)
+      }
+      
+    case .resizeAspect:
+      // Aspect Fit: 비디오 비율 유지하면서 레이어 내부에 맞춤 (검은 여백 가능)
+      videoRect = AVMakeRect(aspectRatio: actualVideoSize, insideRect: layerBounds)
+      
+    case .resize:
+      // 비율 무시하고 레이어 전체를 채움
+      videoRect = layerBounds
+      
+    default:
+      videoRect = layerBounds
+    }
+    
+    logDebug("계산된 실제 비디오 영역: \(videoRect)", category: .camera)
+    return videoRect
+  }
+  
+  /// 송출용 고해상도 UI만 렌더링 (카메라 프레임 없을 때)
+  /// 
+  /// **1:1 → 16:9 비율 강제 변환 적용**
+  /// - Parameter streamingSize: 송출 목표 해상도 (1920x1080)
+  /// - Returns: 고해상도 UI 이미지 또는 nil
+  private func renderUIOnlyForStreaming(streamingSize: CGSize) -> UIImage? {
+    let currentSize = bounds.size
+    guard currentSize.width > 0 && currentSize.height > 0 else { 
+      logError("유효하지 않은 뷰 크기: \(currentSize)", category: .performance)
+      return nil 
+    }
+    
+    // 원본 UI 비율 계산
+    let originalAspectRatio = currentSize.width / currentSize.height
+    let targetAspectRatio = streamingSize.width / streamingSize.height
+    
+    logDebug("비율 분석:", category: .performance)
+    logDebug("  • 원본 UI: \(currentSize) (비율: \(String(format: "%.2f", originalAspectRatio)))", category: .performance)
+    logDebug("  • 목표 송출: \(streamingSize) (비율: \(String(format: "%.2f", targetAspectRatio)))", category: .performance)
+    
+    // **Aspect Fill 방식**: 화면을 꽉 채우기 위해 max 사용 (1:1 문제 해결)
+    let scaleX = streamingSize.width / currentSize.width
+    let scaleY = streamingSize.height / currentSize.height
+    let scale = max(scaleX, scaleY) // Aspect Fill - 화면 꽉 채우기
+    
+    logDebug("  • 스케일링: scaleX=\(String(format: "%.2f", scaleX)), scaleY=\(String(format: "%.2f", scaleY))", category: .performance)
+    logDebug("  • Aspect Fill 최종 스케일: \(String(format: "%.2f", scale))x", category: .performance)
+    
+    // 1:1 비율 문제 감지 경고 (개선된 감지)
+    if abs(originalAspectRatio - 1.0) < 0.2 { // 0.8~1.2 사이는 정사각형으로 간주
+      logWarning("1:1 문제 감지 - 원본 UI가 정사각형에 가까움 (비율: \(String(format: "%.2f", originalAspectRatio))) → Aspect Fill로 16:9 변환", category: .performance)
+    }
+    
+    let renderer = UIGraphicsImageRenderer(size: streamingSize)
+    return renderer.image { context in
+      // 배경을 검은색으로 채우기 (카메라 프레임이 없을 때)
+      context.cgContext.setFillColor(UIColor.black.cgColor)
+      context.cgContext.fill(CGRect(origin: .zero, size: streamingSize))
+      
+      // Aspect Fill 스케일링으로 UI 렌더링 (화면 꽉 채우기)
+      context.cgContext.scaleBy(x: scale, y: scale)
+      
+      // UI가 잘릴 수 있으므로 중앙 정렬
+      let scaledSize = CGSize(width: currentSize.width * scale, height: currentSize.height * scale)
+      let offsetX = (streamingSize.width - scaledSize.width) / 2.0
+      let offsetY = (streamingSize.height - scaledSize.height) / 2.0
+      context.cgContext.translateBy(x: offsetX / scale, y: offsetY / scale)
+      
+      layer.render(in: context.cgContext)
+      
+      logDebug("Aspect Fill 렌더링 완료: \(originalAspectRatio) → \(targetAspectRatio)", category: .performance)
+    }
+  }
+
+  /// 단말 표시용 카메라 프레임과 UI 합성 (기존 방식 유지)
   /// 
   /// 이 메서드는 다음 3단계로 이미지를 합성합니다:
   /// 1. CVPixelBuffer(카메라 프레임)를 UIImage로 변환
@@ -936,20 +1170,20 @@ final class CameraPreviewUIView: UIView {
   /// 3. 카메라 이미지 위에 UI 오버레이를 합성
   ///
   /// **합성 방식:**
-  /// - 카메라 이미지: aspect fit으로 배치 (비율 유지)
+  /// - 카메라 이미지: aspect fill로 배치 (비율 유지하면서 화면 전체 채움)
   /// - UI 오버레이: 전체 화면에 normal 블렌드 모드로 합성
   ///
   /// - Parameter cameraFrame: 실시간 카메라 프레임 (CVPixelBuffer)
-  /// - Parameter viewSize: 최종 출력 이미지 크기
+  /// - Parameter viewSize: 최종 출력 이미지 크기 (단말 화면 크기)
   /// - Returns: 합성된 최종 이미지 또는 nil
   private func renderCameraFrameWithUI(cameraFrame: CVPixelBuffer, viewSize: CGSize) -> UIImage? {
     
     // Step 1: 카메라 프레임을 UIImage로 변환
     guard let cameraImage = cameraFrame.toUIImage() else {
-      print("❌ [합성] 카메라 프레임 → UIImage 변환 실패")
+      logError("카메라 프레임 → UIImage 변환 실패", category: .performance)
       return nil
     }
-    print("✅ [합성] 카메라 이미지 변환 성공: \(cameraImage.size)")
+    logDebug("카메라 이미지 변환 성공: \(cameraImage.size)", category: .performance)
     
     // Step 2: UI 오버레이 생성 (카메라 프리뷰 레이어 제외)
     // 모든 서브뷰(버튼, 라벨, 워터마크 등)를 별도 이미지로 렌더링
@@ -961,24 +1195,41 @@ final class CameraPreviewUIView: UIView {
         subview.layer.render(in: context.cgContext)
       }
     }
-    print("✅ [합성] UI 오버레이 생성 완료")
+    logDebug("UI 오버레이 생성 완료", category: .performance)
     
     // Step 3: 카메라 이미지와 UI 오버레이 합성
     let finalRenderer = UIGraphicsImageRenderer(size: viewSize)
     let compositeImage = finalRenderer.image { context in
       let rect = CGRect(origin: .zero, size: viewSize)
       
-      // 3-1: 카메라 이미지를 뷰 크기에 맞게 그리기 (aspect fit 유지)
-      // AVMakeRect: 원본 비율을 유지하면서 주어진 영역에 맞춤
-      let aspectFitRect = AVMakeRect(aspectRatio: cameraImage.size, insideRect: rect)
-      cameraImage.draw(in: aspectFitRect)
+      // 3-1: 카메라 이미지를 뷰 크기에 맞게 그리기 (aspect fill 적용)
+      // Aspect Fill: 원본 비율을 유지하면서 전체 영역을 채움 (일부 잘림 가능하지만 화면 꽉 채움)
+      let cameraAspectRatio = cameraImage.size.width / cameraImage.size.height
+      let rectAspectRatio = rect.width / rect.height
+      
+      let drawRect: CGRect
+      if cameraAspectRatio > rectAspectRatio {
+        // 카메라가 더 넓음: 높이를 맞추고 가로는 넘침
+        let drawHeight = rect.height
+        let drawWidth = drawHeight * cameraAspectRatio
+        let offsetX = (rect.width - drawWidth) / 2
+        drawRect = CGRect(x: offsetX, y: 0, width: drawWidth, height: drawHeight)
+      } else {
+        // 카메라가 더 높음: 너비를 맞추고 세로는 넘침
+        let drawWidth = rect.width
+        let drawHeight = drawWidth / cameraAspectRatio
+        let offsetY = (rect.height - drawHeight) / 2
+        drawRect = CGRect(x: 0, y: offsetY, width: drawWidth, height: drawHeight)
+      }
+      
+      cameraImage.draw(in: drawRect)
       
       // 3-2: UI 오버레이를 전체 화면에 합성
       // normal 블렌드 모드: 투명 영역은 그대로 두고 불투명 영역만 덮어씀
       uiOverlay.draw(in: rect, blendMode: .normal, alpha: 1.0)
     }
     
-    print("✅ [합성] 최종 이미지 합성 완료: \(viewSize)")
+    logDebug("최종 이미지 합성 완료: \(viewSize)", category: .performance)
     return compositeImage
   }
 
@@ -993,28 +1244,113 @@ final class CameraPreviewUIView: UIView {
   ///
   /// - Parameter pixelBuffer: 전송할 프레임 데이터
   private func sendFrameToHaishinKit(_ pixelBuffer: CVPixelBuffer) {
-    let width = CVPixelBufferGetWidth(pixelBuffer)
-    let height = CVPixelBufferGetHeight(pixelBuffer)
-
-    print("📡 [전송] HaishinKit 프레임 전달: \(width)x\(height)")
+    // 성능 최적화: 프레임별 전송 로그 제거 (CPU 부하 감소)
+    // let width = CVPixelBufferGetWidth(pixelBuffer)
+    // let height = CVPixelBufferGetHeight(pixelBuffer)
+            // print("📡 [전송] HaishinKit 프레임 전달: \(width)x\(height)") // 이미 비활성화됨
 
     // HaishinKitManager를 통한 실제 프레임 전송
     if let manager = haishinKitManager {
-      manager.sendManualFrame(pixelBuffer)
+      Task {
+        await manager.sendManualFrame(pixelBuffer)
+      }
 
-      // 성능 모니터링: 5초마다 전송 통계 출력
-      if Int(Date().timeIntervalSince1970) % 5 == 0 {
+      // 성능 모니터링: 5초마다 전송 통계 출력 (25fps 기준)
+      if frameCounter % 125 == 0 { // 25fps 기준 5초마다 = 125프레임마다
         let stats = manager.getScreenCaptureStats()
-        print("""
-        📊 [화면캡처 통계] 
+        let successRate = stats.frameCount > 0 ? (Double(stats.successCount) / Double(stats.frameCount)) * 100 : 0
+        logInfo("""
+        화면캡처 통계 
         - 현재 FPS: \(String(format: "%.1f", stats.currentFPS))
         - 성공 전송: \(stats.successCount)프레임
         - 실패 전송: \(stats.failureCount)프레임
-        """)
+        - 성공률: \(String(format: "%.1f", successRate))%
+        - 총 처리: \(stats.frameCount)프레임
+        """, category: .performance)
       }
+      frameCounter += 1
     } else {
-      print("⚠️ [전송] HaishinKitManager 없음 - 프레임 전달 불가")
+      logWarning("HaishinKitManager 없음 - 프레임 전달 불가", category: .streaming)
     }
+  }
+
+  /// 송출 해상도에 따른 최적 캡처 사이즈 계산 (16:9 비율 고정)
+  /// 
+  /// **16:9 비율 강제 적용:**
+  /// - 480p(854x480) → 16:9 비율로 수정 후 2배 업스케일
+  /// - 720p(1280x720) → 2배 업스케일  
+  /// - 1080p(1920x1080) → 동일 해상도 캡처
+  /// - 모든 해상도를 16:9 비율로 강제 변환
+  /// 
+  /// - Returns: 16:9 비율이 보장된 최적 캡처 해상도
+  private func getOptimalCaptureSize() -> CGSize {
+    // HaishinKitManager에서 현재 스트리밍 설정 가져오기
+    guard let manager = haishinKitManager,
+          let settings = manager.getCurrentSettings() else {
+      // 기본값: 720p (16:9 비율)
+      return CGSize(width: 1280, height: 720)
+    }
+    
+    let streamWidth = settings.videoWidth
+    let streamHeight = settings.videoHeight
+    
+    // 16:9 비율 강제 적용 (유튜브 라이브 표준)
+    let aspectRatio: CGFloat = 16.0 / 9.0
+    
+    // 송출 해상도를 16:9 비율로 수정
+    let correctedStreamSize: CGSize
+    let currentAspectRatio = CGFloat(streamWidth) / CGFloat(streamHeight)
+    
+    if abs(currentAspectRatio - aspectRatio) > 0.1 {
+      // 비율이 16:9가 아니면 강제로 수정
+      let correctedHeight = CGFloat(streamWidth) / aspectRatio
+      correctedStreamSize = CGSize(width: streamWidth, height: Int(correctedHeight))
+      logInfo("비율수정: \(streamWidth)x\(streamHeight) (비율: \(String(format: "%.2f", currentAspectRatio))) → \(correctedStreamSize) (16:9)", category: .streaming)
+    } else {
+      correctedStreamSize = CGSize(width: streamWidth, height: streamHeight)
+      logDebug("이미 16:9 비율: \(correctedStreamSize)", category: .streaming)
+    }
+    
+    // 16:9 비율 기반 최적 캡처 해상도 계산
+    let captureSize: CGSize
+    let width = Int(correctedStreamSize.width)
+    let height = Int(correctedStreamSize.height)
+    
+    switch (width, height) {
+    case (640...854, 360...480):
+      // 480p 계열 → 2배 업스케일
+      captureSize = CGSize(width: 1280, height: 720) // 720p로 캡처
+      logDebug("16:9 캡처 - 480p계열 송출 → 720p 캡처: \(captureSize)", category: .streaming)
+      
+    case (1280, 720):
+      // 720p → 2배 업스케일
+      captureSize = CGSize(width: 2560, height: 1440)
+      logDebug("16:9 캡처 - 720p 송출 → 1440p 캡처: \(captureSize)", category: .streaming)
+      
+    case (1920, 1080):
+      // 1080p → 동일 해상도 (안정성 우선)
+      captureSize = CGSize(width: 1920, height: 1080)
+      logDebug("16:9 캡처 - 1080p 송출 → 1080p 캡처: \(captureSize)", category: .streaming)
+      
+    default:
+      // 사용자 정의 → 16:9 비율로 강제 변환 후 캡처
+      let targetWidth = max(width, 1280) // 최소 720p 너비
+      let targetHeight = Int(CGFloat(targetWidth) / aspectRatio)
+      captureSize = CGSize(width: targetWidth, height: targetHeight)
+      logDebug("16:9 캡처 - 사용자정의 → 16:9 강제변환 캡처: \(captureSize)", category: .streaming)
+    }
+    
+    // 16의 배수로 정렬 (VideoCodec 호환성)
+    let alignedWidth = ((Int(captureSize.width) + 15) / 16) * 16
+    let alignedHeight = ((Int(captureSize.height) + 15) / 16) * 16
+    let finalSize = CGSize(width: alignedWidth, height: alignedHeight)
+    
+    // 최종 16:9 비율 검증
+    let finalAspectRatio = CGFloat(alignedWidth) / CGFloat(alignedHeight)
+    logDebug("최종검증 - 16배수 정렬: \(captureSize) → \(finalSize)", category: .streaming)
+    logDebug("최종검증 - 비율 확인: \(String(format: "%.2f", finalAspectRatio)) (16:9 ≈ 1.78)", category: .streaming)
+    
+    return finalSize
   }
 
   /// 화면 캡처 상태와 통계 확인 (공개 메서드)
@@ -1026,11 +1362,11 @@ final class CameraPreviewUIView: UIView {
   /// 화면 캡처 성능 테스트
   public func testScreenCapturePerformance() {
     guard let manager = haishinKitManager else {
-      print("❌ HaishinKitManager가 없음")
+      logError("HaishinKitManager가 없음", category: .streaming)
       return
     }
 
-    print("🧪 화면 캡처 성능 테스트 시작...")
+    logInfo("화면 캡처 성능 테스트 시작...", category: .performance)
     manager.resetScreenCaptureStats()
 
     // 10프레임 연속 전송 테스트
@@ -1039,18 +1375,54 @@ final class CameraPreviewUIView: UIView {
         if let image = self?.renderToImage(),
           let pixelBuffer = image.toCVPixelBuffer()
         {
-          manager.sendManualFrame(pixelBuffer)
+          Task {
+            await manager.sendManualFrame(pixelBuffer)
+          }
 
           if i == 10 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
               let stats = manager.getScreenCaptureStats()
-              print("🧪 테스트 완료:")
-              print(stats.summary)
+              logInfo("테스트 완료:", category: .performance)
+              logInfo(stats.summary, category: .performance)
             }
           }
         }
       }
     }
+  }
+  
+  /// 단말 표시용 화면 캡처 (사용자 화면에 표시용)
+  /// 
+  /// 송출과 별도로 사용자가 iPad에서 볼 수 있는 화면 캡처 기능
+  /// - Returns: 단말 화면 크기의 이미지
+  public func captureForDisplay() -> UIImage? {
+    return renderToImageForDisplay()
+  }
+  
+  /// 송출용과 단말용 이미지 동시 생성
+  /// 
+  /// - Returns: (송출용: 1920x1080, 단말용: 986x865) 튜플
+  public func captureForBothPurposes() -> (streaming: UIImage?, display: UIImage?) {
+    let streamingImage = renderToImageForStreaming()
+    let displayImage = renderToImageForDisplay()
+    
+    logDebug("이중캡처 - 송출용: \(streamingImage?.size ?? CGSize.zero), 단말용: \(displayImage?.size ?? CGSize.zero)", category: .performance)
+    
+    return (streamingImage, displayImage)
+  }
+  
+  /// 단말 화면 캡처 저장 (사진 앱에 저장)
+  /// 
+  /// 사용자가 현재 화면을 사진으로 저장할 때 사용
+  public func saveDisplayCapture(completion: @escaping (Bool, Error?) -> Void) {
+    guard let displayImage = renderToImageForDisplay() else {
+      completion(false, NSError(domain: "CameraPreview", code: 1, userInfo: [NSLocalizedDescriptionKey: "화면 캡처 실패"]))
+      return
+    }
+    
+    UIImageWriteToSavedPhotosAlbum(displayImage, nil, nil, nil)
+    logInfo("화면 캡처 사진 앱에 저장 완료: \(displayImage.size)", category: .general)
+    completion(true, nil)
   }
 
   /// 화면 캡처 상태 확인
@@ -1090,7 +1462,7 @@ final class CameraPreviewUIView: UIView {
 extension CameraPreviewUIView: CameraControlOverlayDelegate {
   func didTapRecord() {
     // 녹화 기능은 제외
-    print("📹 Recording functionality not implemented")
+    logInfo("Recording functionality not implemented", category: .general)
   }
 }
 
@@ -1118,14 +1490,14 @@ extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
     // UI와 합성하기 위해 최신 프레임을 백그라운드에서 저장
     if isScreenCapturing {
       guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { 
-        print("⚠️ [프레임저장] CMSampleBuffer에서 pixelBuffer 추출 실패")
+        logWarning("CMSampleBuffer에서 pixelBuffer 추출 실패", category: .camera)
         return 
       }
       
       // 백그라운드 큐에서 프레임 저장 (메인 스레드 블록킹 방지)
       frameProcessingQueue.async { [weak self] in
         self?.latestCameraFrame = pixelBuffer
-        // print("✅ [프레임저장] 최신 카메라 프레임 업데이트됨") // 너무 빈번한 로그는 주석 처리
+        // print("✅ [프레임저장] 최신 카메라 프레임 업데이트됨") // 반복적인 로그 비활성화
       }
     }
     
@@ -1143,7 +1515,8 @@ extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
     _ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer,
     from connection: AVCaptureConnection
   ) {
-    print("⚠️ [CameraPreview] 비디오 프레임 드롭됨 - 성능 최적화 필요할 수 있음")
+            // 프레임 드롭은 정상적인 현상이므로 로그 비활성화
+        // print("⚠️ [CameraPreview] 비디오 프레임 드롭됨 - 성능 최적화 필요할 수 있음")
   }
 }
 
@@ -1501,3 +1874,4 @@ extension UIImage {
     return buffer
   }
 }
+

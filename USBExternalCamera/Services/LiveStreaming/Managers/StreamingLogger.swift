@@ -126,7 +126,7 @@ public class StreamingLogger: ObservableObject {
         
         // 콘솔 출력 (디버그 모드에서)
         #if DEBUG
-        print(entry.formattedMessage)
+                    print(entry.formattedMessage) // StreamingLogger에서는 직접 print 사용 (무한 루프 방지)
         #endif
     }
     

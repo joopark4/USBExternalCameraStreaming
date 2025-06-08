@@ -4,6 +4,7 @@ import SwiftUI
 struct PermissionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: PermissionViewModel
+    @State private var showingOpenSourceLicenses = false
     
     init(viewModel: PermissionViewModel) {
         self.viewModel = viewModel
@@ -42,6 +43,16 @@ struct PermissionSettingsView: View {
                             await viewModel.requestPhotoLibraryPermission()
                         }
                     }
+                    
+                    // 구분선
+                    Divider()
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                    
+                    // 오픈소스 라이선스 버튼
+                    OpenSourceButton {
+                        showingOpenSourceLicenses = true
+                    }
                 }
                 .padding(.vertical)
             }
@@ -55,6 +66,9 @@ struct PermissionSettingsView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingOpenSourceLicenses) {
+            OpenSourceLicensesView()
         }
     }
 }
@@ -87,6 +101,41 @@ struct PermissionRow: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(Color(.systemBackground))
+    }
+}
+
+/// 오픈소스 라이선스 버튼
+struct OpenSourceButton: View {
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: "doc.text")
+                    .frame(width: 24)
+                    .foregroundColor(.blue)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("오픈소스 라이선스")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text("사용된 오픈소스 라이브러리 정보")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+            .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
     }
 }
 

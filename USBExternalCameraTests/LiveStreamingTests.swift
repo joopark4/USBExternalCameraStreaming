@@ -27,7 +27,7 @@ final class LiveStreamingTests: XCTestCase {
     }
     
     override func tearDown() async throws {
-        haishinKitManager.stopStreaming()
+        await haishinKitManager.stopStreaming()
         streamingStatsManager.stopMonitoring()
         networkMonitoringManager.stopMonitoring()
         
@@ -41,7 +41,7 @@ final class LiveStreamingTests: XCTestCase {
     func testHaishinKitManager() async throws {
         // 초기 상태 확인
         let connectionStatus = haishinKitManager.connectionStatus
-        XCTAssertEqual(connectionStatus, .idle)
+        XCTAssertEqual(connectionStatus, "idle")
         
         // 스트리밍 시작 테스트
         var testSettings = USBExternalCamera.LiveStreamSettings()
@@ -53,11 +53,11 @@ final class LiveStreamingTests: XCTestCase {
         do {
             try await haishinKitManager.startScreenCaptureStreaming(with: testSettings)
             let status = haishinKitManager.connectionStatus
-            XCTAssertEqual(status, .streaming)
+            XCTAssertEqual(status, "streaming")
             
-            haishinKitManager.stopStreaming()
+            await haishinKitManager.stopStreaming()
             let finalStatus = haishinKitManager.connectionStatus
-            XCTAssertEqual(finalStatus, .idle)
+            XCTAssertEqual(finalStatus, "idle")
         } catch {
             XCTFail("스트리밍 시작 실패: \(error)")
         }
@@ -113,13 +113,13 @@ final class LiveStreamingTests: XCTestCase {
             try await Task.sleep(nanoseconds: 100_000_000) // 0.1초
             
             let connectionStatus = haishinKitManager.connectionStatus
-            XCTAssertEqual(connectionStatus, .streaming)
+            XCTAssertEqual(connectionStatus, "streaming")
             let networkQuality = networkMonitoringManager.currentNetworkQuality
             XCTAssertNotNil(networkQuality)
             
-            haishinKitManager.stopStreaming()
+            await haishinKitManager.stopStreaming()
             let finalStatus = haishinKitManager.connectionStatus
-            XCTAssertEqual(finalStatus, .idle)
+            XCTAssertEqual(finalStatus, "idle")
         } catch {
             XCTFail("통합 테스트 실패: \(error)")
         }

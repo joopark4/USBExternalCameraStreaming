@@ -18,7 +18,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     var streamTitle: String = "Live Stream"
     
     /// RTMP 서버 URL
-    var rtmpURL: String = ""
+    var rtmpURL: String = "rtmp://a.rtmp.youtube.com/live2"
     
     /// 스트림 키
     var streamKey: String = ""
@@ -84,7 +84,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     
     init(
         streamTitle: String = "Live Stream",
-        rtmpURL: String = "",
+        rtmpURL: String = "rtmp://a.rtmp.youtube.com/live2",
         streamKey: String = "",
         videoBitrate: Int = 2500,
         videoWidth: Int = 1920,
@@ -290,10 +290,10 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     func applyResolutionPreset(_ preset: ResolutionPreset) {
         switch preset {
         case .sd480p:
-            videoWidth = 854
+            videoWidth = 848  // 16의 배수 호환성 개선
             videoHeight = 480
             frameRate = 30
-            videoBitrate = 1000
+            videoBitrate = 1500
         case .hd720p:
             videoWidth = 1280
             videoHeight = 720
@@ -303,7 +303,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
             videoWidth = 1920
             videoHeight = 1080
             frameRate = 30
-            videoBitrate = 4000
+            videoBitrate = 4500
         case .uhd4k:
             videoWidth = 3840
             videoHeight = 2160
@@ -356,6 +356,44 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
             break
         }
     }
+    
+    /// 유튜브 라이브 스트리밍 표준 프리셋 적용
+    func applyYouTubeLivePreset(_ preset: YouTubeLivePreset) {
+        let settings = preset.settings
+        
+        videoWidth = settings.width
+        videoHeight = settings.height
+        frameRate = settings.frameRate
+        videoBitrate = settings.videoBitrate
+        audioBitrate = settings.audioBitrate
+        keyframeInterval = settings.keyframeInterval
+        
+        // 유튜브 최적화 기본 설정
+        videoEncoder = "H.264"
+        audioEncoder = "AAC"
+        autoReconnect = true
+        connectionTimeout = 30
+        bufferSize = 3
+    }
+    
+    /// 현재 설정이 어떤 유튜브 프리셋에 가장 가까운지 검사
+    func detectYouTubePreset() -> YouTubeLivePreset? {
+        for preset in YouTubeLivePreset.allCases {
+            if preset == .custom { continue }
+            
+            let presetSettings = preset.settings
+            let bitrateRange = preset.bitrateRange
+            
+            if videoWidth == presetSettings.width &&
+               videoHeight == presetSettings.height &&
+               frameRate == presetSettings.frameRate &&
+               videoBitrate >= bitrateRange.min &&
+               videoBitrate <= bitrateRange.max {
+                return preset
+            }
+        }
+        return .custom
+    }
 }
 
 // MARK: - Supporting Types
@@ -375,7 +413,7 @@ enum ResolutionPreset: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .sd480p: return "480p (854×480)"
+        case .sd480p: return "480p (848×480)"
         case .hd720p: return "720p (1280×720)"
         case .fhd1080p: return "1080p (1920×1080)"
         case .uhd4k: return "4K (3840×2160)"
@@ -399,6 +437,8 @@ enum QualityPreset: String, CaseIterable {
         }
     }
 }
+
+// YouTubeLivePreset enum은 StreamingModels.swift에 정의됨
 
 // StreamingPlatform은 StreamingValidation.swift에 정의됨
 

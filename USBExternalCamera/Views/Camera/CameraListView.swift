@@ -71,32 +71,32 @@ struct CameraListView: View {
                     camera: camera,
                     isSelected: selectedCameraId == camera.id,
                     onSelect: { 
-                        print("📹 CameraListView: === BUILT-IN CAMERA SELECTION ===")
-                        print("📹 CameraListView: Target camera: \(camera.name)")
-                        print("📹 CameraListView: Target ID: \(camera.id)")
-                        print("📹 CameraListView: Target type: \(camera.deviceType)")
-                        print("📹 CameraListView: Target position: \(camera.position)")
-                        print("📹 CameraListView: Current selected: \(selectedCameraName ?? "None")")
-                        print("📹 CameraListView: Current selected ID: \(selectedCameraId ?? "None")")
-                        print("📹 CameraListView: Is already selected: \(selectedCameraId == camera.id)")
-                        print("📹 CameraListView: =====================================")
+                                  logDebug("=== BUILT-IN CAMERA SELECTION ===", category: .camera)
+          logDebug("Target camera: \(camera.name)", category: .camera)
+          logDebug("Target ID: \(camera.id)", category: .camera)
+          logDebug("Target type: \(camera.deviceType)", category: .camera)
+          logDebug("Target position: \(camera.position)", category: .camera)
+          logDebug("Current selected: \(selectedCameraName ?? "None")", category: .camera)
+          logDebug("Current selected ID: \(selectedCameraId ?? "None")", category: .camera)
+          logDebug("Is already selected: \(selectedCameraId == camera.id)", category: .camera)
+          logDebug("=====================================", category: .camera)
                         
                         if selectedCameraId != camera.id {
-                            print("📹 CameraListView: Proceeding with built-in camera selection...")
+                            logDebug("Proceeding with built-in camera selection...", category: .camera)
                             viewModel.selectCamera(camera)
                             
                             // 강제 UI 갱신을 위한 추가 작업
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                                 let newSelectedId = viewModel.cameraViewModel.selectedCamera?.id
-                                print("📹 CameraListView: [Post-Selection Built-in] Selected ID: \(newSelectedId ?? "None")")
-                                print("📹 CameraListView: [Post-Selection Built-in] Target ID: \(camera.id)")
-                                print("📹 CameraListView: [Post-Selection Built-in] Match: \(newSelectedId == camera.id)")
+                                                            logDebug("[Post-Selection Built-in] Selected ID: \(newSelectedId ?? "None")", category: .camera)
+                            logDebug("[Post-Selection Built-in] Target ID: \(camera.id)", category: .camera)
+                            logDebug("[Post-Selection Built-in] Match: \(newSelectedId == camera.id)", category: .camera)
                                 
                                 // UI 강제 새로고침
                                 viewModel.objectWillChange.send()
                             }
                         } else {
-                            print("📹 CameraListView: Skipping selection - built-in camera already selected")
+                            logDebug("Skipping selection - built-in camera already selected", category: .camera)
                         }
                     }
                 )
@@ -108,32 +108,32 @@ struct CameraListView: View {
                     camera: camera,
                     isSelected: selectedCameraId == camera.id,
                     onSelect: { 
-                        print("📹 CameraListView: === EXTERNAL CAMERA SELECTION ===")
-                        print("📹 CameraListView: Target camera: \(camera.name)")
-                        print("📹 CameraListView: Target ID: \(camera.id)")
-                        print("📹 CameraListView: Target type: \(camera.deviceType)")
-                        print("📹 CameraListView: Target position: \(camera.position)")
-                        print("📹 CameraListView: Current selected: \(selectedCameraName ?? "None")")
-                        print("📹 CameraListView: Current selected ID: \(selectedCameraId ?? "None")")
-                        print("📹 CameraListView: Is already selected: \(selectedCameraId == camera.id)")
-                        print("📹 CameraListView: =====================================")
+                                  logDebug("=== EXTERNAL CAMERA SELECTION ===", category: .camera)
+          logDebug("Target camera: \(camera.name)", category: .camera)
+          logDebug("Target ID: \(camera.id)", category: .camera)
+          logDebug("Target type: \(camera.deviceType)", category: .camera)
+          logDebug("Target position: \(camera.position)", category: .camera)
+          logDebug("Current selected: \(selectedCameraName ?? "None")", category: .camera)
+          logDebug("Current selected ID: \(selectedCameraId ?? "None")", category: .camera)
+          logDebug("Is already selected: \(selectedCameraId == camera.id)", category: .camera)
+          logDebug("=====================================", category: .camera)
                         
                         if selectedCameraId != camera.id {
-                            print("📹 CameraListView: Proceeding with external camera selection...")
+                            logDebug("Proceeding with external camera selection...", category: .camera)
                             viewModel.selectCamera(camera)
                             
                             // 강제 UI 갱신을 위한 추가 작업
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                                 let newSelectedId = viewModel.cameraViewModel.selectedCamera?.id
-                                print("📹 CameraListView: [Post-Selection External] Selected ID: \(newSelectedId ?? "None")")
-                                print("📹 CameraListView: [Post-Selection External] Target ID: \(camera.id)")
-                                print("📹 CameraListView: [Post-Selection External] Match: \(newSelectedId == camera.id)")
+                                                            logDebug("[Post-Selection External] Selected ID: \(newSelectedId ?? "None")", category: .camera)
+                            logDebug("[Post-Selection External] Target ID: \(camera.id)", category: .camera)
+                            logDebug("[Post-Selection External] Match: \(newSelectedId == camera.id)", category: .camera)
                                 
                                 // UI 강제 새로고침
                                 viewModel.objectWillChange.send()
                             }
                         } else {
-                            print("📹 CameraListView: Skipping selection - external camera already selected")
+                            logDebug("Skipping selection - external camera already selected", category: .camera)
                         }
                     }
                 )
@@ -153,10 +153,10 @@ struct CameraListView: View {
             }
         }
         .onAppear {
-            print("📹 CameraListView: View appeared")
-            print("📹 CameraListView: Built-in cameras: \(builtInCount)")
-            print("📹 CameraListView: External cameras: \(externalCount)")
-            print("📹 CameraListView: Selected camera: \(selectedCameraName ?? "None") (ID: \(selectedCameraId ?? "None"))")
+                    logDebug("View appeared", category: .camera)
+        logDebug("Built-in cameras: \(builtInCount)", category: .camera)
+        logDebug("External cameras: \(externalCount)", category: .camera)
+        logDebug("Selected camera: \(selectedCameraName ?? "None") (ID: \(selectedCameraId ?? "None"))", category: .camera)
         }
     }
 }
@@ -195,13 +195,13 @@ struct CameraRowView: View {
         )
         .contentShape(Rectangle()) // 전체 영역을 터치 가능하게 만듦
         .onTapGesture {
-            print("📹 CameraRowView: === TAP GESTURE ===")
-            print("📹 CameraRowView: Camera: \(camera.name)")
-            print("📹 CameraRowView: ID: \(camera.id)")
-            print("📹 CameraRowView: Type: \(camera.deviceType)")
-            print("📹 CameraRowView: Position: \(camera.position)")
-            print("📹 CameraRowView: isSelected: \(isSelected)")
-            print("📹 CameraRowView: ===================")
+                    logDebug("=== TAP GESTURE ===", category: .camera)
+        logDebug("Camera: \(camera.name)", category: .camera)
+        logDebug("ID: \(camera.id)", category: .camera)
+        logDebug("Type: \(camera.deviceType)", category: .camera)
+        logDebug("Position: \(camera.position)", category: .camera)
+        logDebug("isSelected: \(isSelected)", category: .camera)
+        logDebug("===================", category: .camera)
             
             // 햅틱 피드백 추가
             let impactFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -209,17 +209,17 @@ struct CameraRowView: View {
             
             onSelect()
             
-            print("📹 CameraRowView: onSelect() called for \(camera.name)")
+            logDebug("onSelect() called for \(camera.name)", category: .camera)
         }
         .onAppear {
-            print("📹 CameraRowView: \(camera.name) appeared - ID: \(camera.id), isSelected: \(isSelected)")
+            logDebug("\(camera.name) appeared - ID: \(camera.id), isSelected: \(isSelected)", category: .camera)
         }
         .onChange(of: isSelected) { oldValue, newValue in
-            print("📹 CameraRowView: \(camera.name) (ID: \(camera.id)) isSelected changed from \(oldValue) to: \(newValue)")
+            logDebug("\(camera.name) (ID: \(camera.id)) isSelected changed from \(oldValue) to: \(newValue)", category: .camera)
             if newValue {
-                print("📹 CameraRowView: ✅ \(camera.name) is now SELECTED")
+                logDebug("✅ \(camera.name) is now SELECTED", category: .camera)
             } else {
-                print("📹 CameraRowView: ❌ \(camera.name) is now DESELECTED")
+                logDebug("❌ \(camera.name) is now DESELECTED", category: .camera)
             }
         }
     }

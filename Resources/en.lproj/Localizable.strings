@@ -416,6 +416,13 @@
 "help_frame_rate_example_talk" = "Talk Show: 30 fps";
 "help_frame_rate_example_fps_game" = "FPS Game: 60 fps";
 
+// MARK: - Streaming Mode
+"streaming_mode" = "Streaming Mode";
+"streaming_mode_haishinkit" = "HaishinKit (Screen Capture)";
+"streaming_mode_replaykit" = "ReplayKit (System Capture)";
+"streaming_mode_haishinkit_description" = "Screen capture streaming using HaishinKit (existing method)";
+"streaming_mode_replaykit_description" = "System-level screen capture using iOS ReplayKit (more stable)";
+
 // MARK: - Help Recommended Values
 "help_rtmp_recommended_youtube" = "YouTube: rtmp://a.rtmp.youtube.com/live2/";
 "help_rtmp_recommended_twitch" = "Twitch: rtmp://live.twitch.tv/app/";
@@ -520,6 +527,18 @@
 "streaming_preset_standard" = "Standard";
 "streaming_preset_high" = "High Quality";
 "streaming_preset_ultra" = "Ultra Quality";
+
+// MARK: - YouTube Live Presets
+"youtube_preset_480p" = "YouTube 480p (SD)";
+"youtube_preset_720p" = "YouTube 720p (HD)";
+"youtube_preset_1080p" = "YouTube 1080p (Full HD)";
+"youtube_preset_custom" = "Custom";
+"youtube_preset_section_title" = "🎬 YouTube Live Standard Presets";
+"youtube_preset_apply_title" = "Apply Preset";
+"youtube_preset_apply_message" = "Do you want to apply this setting?";
+"youtube_preset_current_status" = "Current Setting";
+"youtube_preset_custom_settings" = "Custom Settings";
+"preset_settings" = "Preset Settings";
 
 // MARK: - Streaming Platform Enum
 "streaming_platform_custom" = "Custom";
@@ -631,4 +650,11 @@
 "include_file_info" = "Include File Info";
 "output_options" = "Output Options";
 "output_options_desc" = "Select additional information to include in log messages.";
-"current_settings_status" = "Current Settings Status"; 
+"current_settings_status" = "Current Settings Status";
+
+// MARK: - YouTube Preset Section
+"youtube_preset_title" = "YouTube Recommended Streaming Settings";
+"youtube_preset_description" = "Quickly apply streaming settings optimized for YouTube Live";
+"custom_settings" = "Custom Settings";
+"custom_settings_description" = "User-defined values";
+"custom_settings_notice" = "Currently using user-defined settings"; 
