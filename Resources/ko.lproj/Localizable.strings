@@ -198,6 +198,13 @@
 "help_warnings" = "⚠️ 주의사항";
 "help_examples" = "📝 예시";
 
+// MARK: - YouTube Preset Section
+"youtube_preset_title" = "YouTube 권장 송출 설정";
+"youtube_preset_description" = "YouTube Live에 최적화된 송출 설정을 빠르게 적용할 수 있습니다";
+"custom_settings" = "사용자 설정";
+"custom_settings_description" = "사용자가 직접 설정한 값";
+"custom_settings_notice" = "현재 사용자가 직접 설정한 값을 사용 중입니다";
+
 // Common Help Phrases
 "help_see_details" = "설정에 대한 자세한 내용은 도움말을 참조하세요.";
 "help_youtube_720p" = "YouTube: rtmp://a.rtmp.youtube.com/live2/";
@@ -521,7 +528,19 @@
 "streaming_preset_high" = "고화질";
 "streaming_preset_ultra" = "최고화질";
 
-// MARK: - Streaming Platform Enum
+// YouTube Live Presets
+"youtube_preset_480p" = "YouTube 480p (SD)";
+"youtube_preset_720p" = "YouTube 720p (HD)";
+"youtube_preset_1080p" = "YouTube 1080p (Full HD)";
+"youtube_preset_custom" = "사용자 정의";
+"youtube_preset_section_title" = "🎬 YouTube Live 표준 프리셋";
+"youtube_preset_apply_title" = "프리셋 적용";
+"youtube_preset_apply_message" = "설정을 적용하시겠습니까?";
+"youtube_preset_current_status" = "현재 설정";
+"youtube_preset_custom_settings" = "사용자 정의 설정";
+"preset_settings" = "프리셋 설정";
+
+// Streaming Platform Enum
 "streaming_platform_custom" = "사용자 정의";
 
 // MARK: - Network Status Enum

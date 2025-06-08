@@ -38,14 +38,14 @@ struct SidebarView: View {
                     .disabled(viewModel.isRefreshing)
                     
                     // 로깅 설정 버튼 (디버그 모드에서만 표시)
-                    #if DEBUG
-                    Button {
-                        viewModel.showLoggingSettings()
-                    } label: {
-                        Image(systemName: "doc.text.magnifyingglass")
+                    if LoggingManager.shared.isDebugMode {
+                        Button {
+                            viewModel.showLoggingSettings()
+                        } label: {
+                            Image(systemName: "doc.text.magnifyingglass")
+                        }
+                        .foregroundColor(.orange)
                     }
-                    .foregroundColor(.orange)
-                    #endif
                     
                     // 권한 설정 버튼
                     Button {

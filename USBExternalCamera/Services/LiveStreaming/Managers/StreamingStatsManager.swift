@@ -183,12 +183,12 @@ public final class StreamingStatsManager: @preconcurrency StreamingStatsManagerP
         )
     }
     
-    /// 스트리밍 통계 로깅
+    /// 스트리밍 통계 로깅 (반복적인 로그 비활성화)
     private func logStreamingStatistics(info: StreamingInfo, settings: USBExternalCamera.LiveStreamSettings, duration: TimeInterval) {
-        logInfo("📊 [LIVE STATS] 실시간 송출 데이터:", category: .streaming)
-        logInfo("   📹 비디오: \(String(format: "%.1f", info.actualVideoBitrate)) kbps (설정: \(settings.videoBitrate) kbps)", category: .streaming)
-        logInfo("   🔊 오디오: \(String(format: "%.1f", info.actualAudioBitrate)) kbps (설정: \(settings.audioBitrate) kbps)", category: .streaming)
-        logInfo("   🌐 네트워크: \(info.networkQuality.displayName)", category: .streaming)
-        logInfo("   ⏱️ 송출 시간: \(String(format: "%.0f", duration))초", category: .streaming)
+        // 반복적인 실시간 통계 로그 비활성화 (성능 최적화)
+        // 10분(600초)마다만 요약 로그 출력
+        if Int(duration) % 600 == 0 && Int(duration) > 0 {
+            logInfo("📊 스트림 요약 (\(Int(duration/60))분): 비디오 \(String(format: "%.0f", info.actualVideoBitrate))kbps, 네트워크 \(info.networkQuality.displayName)", category: .streaming)
+        }
     }
 } 

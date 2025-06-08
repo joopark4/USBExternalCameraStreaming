@@ -11,6 +11,8 @@ import SwiftData
 import AVFoundation
 import Combine
 
+
+
 /// 라이브 스트리밍 뷰모델 (MVVM 아키텍처)
 /// Services Layer를 통해 Data와 Network Layer에 접근하여 UI 상태를 관리합니다.
 @MainActor
@@ -25,8 +27,8 @@ final class LiveStreamViewModel: ObservableObject {
         static let youtubeRTMPURL = "rtmp://a.rtmp.youtube.com/live2/"
         static let defaultVideoBitrate = 2500
         static let defaultAudioBitrate = 128
-        static let defaultVideoWidth = 1920
-        static let defaultVideoHeight = 1080
+        static let defaultVideoWidth = 1280
+        static let defaultVideoHeight = 720
         static let defaultFrameRate = 30
     }
     
@@ -79,6 +81,8 @@ final class LiveStreamViewModel: ObservableObject {
         return status == .streaming
     }
     
+
+    
     // MARK: - Computed Properties
     
     var streamingStatus: LiveStreamStatus {
@@ -90,12 +94,14 @@ final class LiveStreamViewModel: ObservableObject {
     // MARK: - Dependencies
     
     /// 라이브 스트리밍 서비스 (Services Layer)
-    private var liveStreamService: HaishinKitManagerProtocol!
+    internal var liveStreamService: HaishinKitManagerProtocol!
     
     /// 라이브 스트리밍 서비스 접근자 (카메라 연결용)
     public var streamingService: HaishinKitManagerProtocol? {
         return liveStreamService
     }
+    
+
     
     /// Combine 구독 저장소
     private var cancellables = Set<AnyCancellable>()
@@ -118,6 +124,8 @@ final class LiveStreamViewModel: ObservableObject {
     // 기존 일반 스트리밍 시작/중지 메서드들 제거 - 화면 캡처 스트리밍만 사용
     
     // 기존 일반 스트리밍 toggleStreaming 메서드 제거 - 화면 캡처 스트리밍만 사용
+    
+
     
     // MARK: - Screen Capture Streaming Methods
     
@@ -277,6 +285,38 @@ final class LiveStreamViewModel: ObservableObject {
         }
     }
     
+    /// 화면 캡처 스트리밍 버튼 텍스트
+    var streamingButtonText: String {
+        if isScreenCaptureStreaming {
+            return "화면 캡처 중지"
+        } else {
+            switch status {
+            case .idle, .error:
+                return "스트리밍 시작"
+            case .connecting:
+                return "화면 캡처 연결 중"
+            case .disconnecting:
+                return "화면 캡처 중지 중"
+            default:
+                return "스트리밍 시작"
+            }
+        }
+    }
+    
+    /// 화면 캡처 스트리밍 버튼 색상
+    var streamingButtonColor: Color {
+        if isScreenCaptureStreaming {
+            return .red
+        } else {
+            switch status {
+            case .connecting, .disconnecting:
+                return .gray
+            default:
+                return .purple
+            }
+        }
+    }
+    
     /// 화면 캡처 스트리밍 버튼 활성화 상태
     var isScreenCaptureButtonEnabled: Bool {
         switch status {
@@ -388,6 +428,9 @@ final class LiveStreamViewModel: ObservableObject {
         logDebug("🔄 [SETTINGS] Resetting to default settings...", category: .streaming)
         settings = USBExternalCamera.LiveStreamSettings()
         
+        // 기본값을 720p 프리셋으로 설정하여 프리셋과 동기화
+        settings.applyYouTubeLivePreset(.hd720p)
+        
         // 저장된 설정도 삭제
         clearSavedSettings()
         
@@ -395,6 +438,30 @@ final class LiveStreamViewModel: ObservableObject {
         autoSaveSettings()
         
         updateStreamingAvailability()
+        
+        logDebug("✅ [SETTINGS] Reset to 720p preset successfully", category: .streaming)
+    }
+    
+    /// 유튜브 라이브 스트리밍 표준 프리셋 적용
+    func applyYouTubePreset(_ preset: YouTubeLivePreset) {
+        logDebug("🎯 [PRESET] Applying YouTube preset: \(preset.displayName)", category: .streaming)
+        
+        settings.applyYouTubeLivePreset(preset)
+        
+        // 설정 즉시 저장
+        autoSaveSettings()
+        
+        // 스트리밍 가능 여부 업데이트
+        updateStreamingAvailability()
+        
+        logDebug("✅ [PRESET] YouTube preset applied successfully", category: .streaming)
+        logDebug("📊 [PRESET] Resolution: \(settings.videoWidth)×\(settings.videoHeight)", category: .streaming)
+        logDebug("📊 [PRESET] Bitrate: \(settings.videoBitrate) kbps", category: .streaming)
+    }
+    
+    /// 현재 설정에서 유튜브 프리셋 감지
+    func detectCurrentYouTubePreset() -> YouTubeLivePreset {
+        return settings.detectYouTubePreset() ?? .custom
     }
     
     /// 저장된 설정 삭제 (앱 삭제와 같은 효과)
@@ -402,7 +469,6 @@ final class LiveStreamViewModel: ObservableObject {
         let defaults = UserDefaults.standard
         let keys = [
             "LiveStream.rtmpURL",
-            "LiveStream.streamKey", 
             "LiveStream.streamTitle",
             "LiveStream.videoBitrate",
             "LiveStream.videoWidth",
@@ -421,6 +487,9 @@ final class LiveStreamViewModel: ObservableObject {
         for key in keys {
             defaults.removeObject(forKey: key)
         }
+        
+        // Keychain에서 스트림 키 삭제 (보안 향상)
+        KeychainManager.shared.deleteStreamKey()
         
         defaults.synchronize()
         logDebug("🗑️ [CLEAR] Saved settings cleared", category: .streaming)
@@ -762,17 +831,17 @@ final class LiveStreamViewModel: ObservableObject {
         case .low:
             settings.videoWidth = 1280
             settings.videoHeight = 720
-            settings.videoBitrate = 1500
+            settings.videoBitrate = 2500
             settings.frameRate = 30
         case .standard:
             settings.videoWidth = 1920
             settings.videoHeight = 1080
-            settings.videoBitrate = 2500
+            settings.videoBitrate = 4500
             settings.frameRate = 30
         case .high:
             settings.videoWidth = 1920
             settings.videoHeight = 1080
-            settings.videoBitrate = 4500
+            settings.videoBitrate = 6000
             settings.frameRate = 60
         case .ultra:
             settings.videoWidth = 3840

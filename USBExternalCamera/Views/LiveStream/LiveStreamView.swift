@@ -38,22 +38,18 @@ struct LiveStreamSectionView: View {
             /// - 스트리밍 중일 때 빨간색 Live 배지로 시각적 피드백
             /// - 버튼 비활성화는 일반 스트리밍 버튼과 연동
             Button {
-                print("🎬 [UI] Screen capture stream button tapped")
-                viewModel.toggleScreenCaptureStreaming()
+                logInfo("Streaming button tapped", category: .ui)
+                viewModel.liveStreamViewModel.toggleScreenCaptureStreaming()
             } label: {
                 HStack {
                     Label(
-                        "화면 캡처 스트리밍",
-                        systemImage: viewModel.isScreenCaptureStreaming ? "stop.circle.fill" : "camera.metering.partial"
+                        viewModel.liveStreamViewModel.streamingButtonText,
+                        systemImage: viewModel.liveStreamViewModel.isScreenCaptureStreaming ? "stop.circle.fill" : "play.circle.fill"
                     )
                     Spacer()
                     
-                    // 화면 캡처 스트리밍 상태 표시
-                    /// 
-                    /// **상태 배지:**
-                    /// 화면 캡처 스트리밍이 활성화되어 있을 때
-                    /// 빨간색 "Live" 배지를 표시하여 사용자에게 명확한 시각적 피드백 제공
-                    if viewModel.isScreenCaptureStreaming {
+                    // 스트리밍 상태 표시
+                    if viewModel.liveStreamViewModel.isScreenCaptureStreaming {
                         Text(NSLocalizedString("live_status", comment: "Live"))
                             .font(.caption2)
                             .fontWeight(.bold)
@@ -66,7 +62,7 @@ struct LiveStreamSectionView: View {
                 }
             }
             .disabled(viewModel.liveStreamViewModel.isLoading)
-            .foregroundColor(viewModel.isScreenCaptureStreaming ? .red : .primary)
+            .foregroundColor(viewModel.liveStreamViewModel.streamingButtonColor)
             
             // 라이브 스트리밍 설정 메뉴
             Button {
@@ -175,6 +171,16 @@ struct LiveStreamView: View {
                             .foregroundColor(.blue)
                     }
                     
+                    // 스트리밍 진단 버튼
+                    Button(action: { 
+                        Task {
+                            await performQuickDiagnosis()
+                        }
+                    }) {
+                        Image(systemName: "stethoscope")
+                            .foregroundColor(.orange)
+                    }
+                    
                     // 실제 RTMP 연결 테스트 버튼
                     Button(action: { 
                         Task {
@@ -192,8 +198,8 @@ struct LiveStreamView: View {
             .sheet(isPresented: $showingDiagnostics) {
                 DiagnosticsReportView(report: diagnosticsReport)
             }
-            .alert("빠른 연결 상태 확인", isPresented: $showingQuickCheck) {
-                Button("전체 진단 실행") {
+            .alert("스트리밍 진단 결과", isPresented: $showingQuickCheck) {
+                Button("종합 진단 실행") {
                     Task {
                         await performFullDiagnostics()
                     }
@@ -252,7 +258,7 @@ struct LiveStreamView: View {
                         .foregroundColor(statusColor)
                 }
                 
-                if viewModel.isStreaming {
+                if viewModel.isScreenCaptureStreaming {
                     HStack {
                         Text(NSLocalizedString("duration_label", comment: "지속 시간:"))
                             .foregroundColor(.secondary)
@@ -274,8 +280,8 @@ struct LiveStreamView: View {
             Circle()
                 .fill(statusColor)
                 .frame(width: 12, height: 12)
-                .scaleEffect(viewModel.isStreaming ? 1.2 : 1.0)
-                .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: viewModel.isStreaming)
+                .scaleEffect(viewModel.isScreenCaptureStreaming ? 1.2 : 1.0)
+                .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: viewModel.isScreenCaptureStreaming)
             
             Text(statusText)
                 .font(.caption)
@@ -357,7 +363,7 @@ struct LiveStreamView: View {
                             .scaleEffect(0.8)
                             .foregroundColor(.white)
                     } else {
-                        Image(systemName: viewModel.isStreaming ? "stop.circle.fill" : "play.circle.fill")
+                        Image(systemName: viewModel.isScreenCaptureStreaming ? "stop.circle.fill" : "play.circle.fill")
                             .font(.title2)
                     }
                     
@@ -387,7 +393,7 @@ struct LiveStreamView: View {
                     .cornerRadius(22)
                     .font(.system(size: 14, weight: .medium))
                 }
-                .disabled(viewModel.isLoading || viewModel.isStreaming)
+                .disabled(viewModel.isLoading || viewModel.isScreenCaptureStreaming)
                 
                 // 빠른 진단 버튼
                 Button(action: performQuickCheck) {
@@ -486,11 +492,191 @@ struct LiveStreamView: View {
                 )
             }
             
+
+            
             // 실시간 송출 데이터 섹션 (스트리밍 중일 때만 표시)
-            if viewModel.isStreaming {
+            if viewModel.isScreenCaptureStreaming {
                 realTimeTransmissionSection
             }
         }
+    }
+    
+    // MARK: - RTMP Debugging Section
+    
+    private var rtmpDebuggingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "network.badge.shield.half.filled")
+                    .foregroundColor(.orange)
+                Text("RTMP 연결 디버깅")
+                    .font(.headline)
+                    .foregroundColor(.orange)
+                
+                Spacer()
+                
+                // RTMP 연결 테스트 버튼
+                Button(action: {
+                    Task {
+                        await testRTMPConnection()
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                        Text("연결 테스트")
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.orange)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+            }
+            
+            VStack(spacing: 8) {
+                // 기본 설정 정보
+                rtmpSettingsCard
+                
+                // 실시간 연결 상태 (스트리밍 중일 때만)
+                if viewModel.isScreenCaptureStreaming {
+                    rtmpStatusCard
+                }
+                
+                // 상세 디버그 정보 (스트리밍 중일 때만)
+                if viewModel.isScreenCaptureStreaming {
+                    rtmpDebugCard
+                }
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.05))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+        )
+    }
+    
+    private var rtmpSettingsCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: "gear")
+                    .foregroundColor(.blue)
+                Text("RTMP 설정")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            
+            Group {
+                HStack {
+                    Text("URL:")
+                        .fontWeight(.medium)
+                        .frame(width: 60, alignment: .leading)
+                    Text(viewModel.settings.rtmpURL.isEmpty ? "설정되지 않음" : viewModel.settings.rtmpURL)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(viewModel.settings.rtmpURL.isEmpty ? .red : .primary)
+                }
+                
+                HStack {
+                    Text("스트림 키:")
+                        .fontWeight(.medium)
+                        .frame(width: 60, alignment: .leading)
+                    Text(viewModel.settings.streamKey.isEmpty ? "설정되지 않음" : "\(viewModel.settings.streamKey.count)자 (\(String(viewModel.settings.streamKey.prefix(8)))...)")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(viewModel.settings.streamKey.isEmpty ? .red : .primary)
+                }
+                
+                HStack {
+                    Text("유효성:")
+                        .fontWeight(.medium)
+                        .frame(width: 60, alignment: .leading)
+                    
+                    if viewModel.validateRTMPURL(viewModel.settings.rtmpURL) && viewModel.validateStreamKey(viewModel.settings.streamKey) {
+                        Label("설정 완료", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    } else {
+                        Label("설정 필요", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.blue.opacity(0.05))
+        .cornerRadius(8)
+    }
+    
+    private var rtmpStatusCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: "network")
+                    .foregroundColor(.green)
+                Text("연결 상태")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            
+            // HaishinKitManager에서 연결 상태 가져오기
+            if let haishinKitManager = viewModel.liveStreamService as? HaishinKitManager {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("상태:")
+                            .fontWeight(.medium)
+                            .frame(width: 60, alignment: .leading)
+                        Text(haishinKitManager.connectionStatus)
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                    }
+                    
+                    HStack {
+                        Text("송출:")
+                            .fontWeight(.medium)
+                            .frame(width: 60, alignment: .leading)
+                        Text("화면 캡처 스트리밍 중")
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                    }
+                }
+            } else {
+                Text("스트리밍 매니저가 초기화되지 않음")
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+        }
+        .padding(12)
+        .background(Color.green.opacity(0.05))
+        .cornerRadius(8)
+    }
+    
+    private var rtmpDebugCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: "ladybug")
+                    .foregroundColor(.purple)
+                Text("디버그 정보")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            
+            // HaishinKitManager에서 디버그 정보 가져오기
+            if viewModel.liveStreamService is HaishinKitManager {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    Text("화면 캡처 스트리밍 활성화됨")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 4)
+                }
+            } else {
+                Text("디버그 정보를 사용할 수 없음")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(12)
+        .background(Color.purple.opacity(0.05))
+        .cornerRadius(8)
     }
     
     // MARK: - Real-time Transmission Section
@@ -708,12 +894,8 @@ struct LiveStreamView: View {
     
     private func toggleStreaming() {
         Task {
-            if viewModel.isStreaming {
-                await viewModel.stopScreenCaptureStreaming()
-            } else {
-                // 화면 캡처 스트리밍 시작 (카메라 스트리밍 아님)
-                await viewModel.startScreenCaptureStreaming()
-            }
+            // 화면 캡처 스트리밍 토글
+            viewModel.toggleScreenCaptureStreaming()
         }
     }
     
@@ -728,16 +910,16 @@ struct LiveStreamView: View {
     
     private var streamingButtonText: String {
         if viewModel.isLoading {
-            return viewModel.isStreaming ? "중지 중..." : "시작 중..."
+            return "처리 중..."
         }
-        return viewModel.isStreaming ? "스트리밍 중지" : "스트리밍 시작"
+        return viewModel.streamingButtonText
     }
     
     private var streamingButtonColor: Color {
         if viewModel.isLoading {
             return .gray
         }
-        return viewModel.isStreaming ? .red : .green
+        return viewModel.streamingButtonColor
     }
     
     private var resolutionText: String {
@@ -774,7 +956,7 @@ struct LiveStreamView: View {
         // 설정 정보 로그
         logger.info("🔧 테스트 설정:", category: .connection)
         logger.info("📍 RTMP URL: \(settings.rtmpURL)", category: .connection)
-        logger.info("🔑 Stream Key: \(settings.streamKey.prefix(8))...", category: .connection)
+        logger.info("🔑 Stream Key: [보안상 로그에 출력하지 않음]", category: .connection)
         logger.info("🎥 Video: \(settings.videoWidth)x\(settings.videoHeight) @ \(settings.videoBitrate)kbps", category: .connection)
         logger.info("🎵 Audio: \(settings.audioBitrate)kbps", category: .connection)
         
@@ -811,24 +993,171 @@ struct LiveStreamView: View {
         logger.info("⚡ 빠른 진단 완료", category: .connection)
     }
     
-    /// 전체 진단 수행
-    private func performFullDiagnostics() async {
-        logger.info("🔍 전체 진단 시작", category: .connection)
+    /// RTMP 연결 테스트 (HaishinKit 매니저 사용)
+    private func testRTMPConnection() async {
+        logger.info("🧪 [RTMP] HaishinKit RTMP 연결 테스트 시작", category: .connection)
         
-        // 현재 viewModel 사용해서 전체 진단 수행
-        let report = await viewModel.diagnoseLiveStreamConnection()
-        
-        await MainActor.run {
-            diagnosticsReport = report
-            showingDiagnostics = true
+        guard let haishinKitManager = viewModel.liveStreamService as? HaishinKitManager else {
+            connectionTestResult = "❌ HaishinKit 매니저가 초기화되지 않았습니다."
+            await MainActor.run {
+                showingConnectionTest = true
+            }
+            logger.error("❌ [RTMP] HaishinKit 매니저 없음", category: .connection)
+            return
         }
         
-        logger.info("🔍 전체 진단 완료", category: .connection)
+        // HaishinKit 매니저의 연결 테스트 실행
+        await viewModel.testConnection()
+        let result = viewModel.connectionTestResult
+        
+        logger.info("🧪 [RTMP] 테스트 결과: \(result)", category: .connection)
+        
+        await MainActor.run {
+            connectionTestResult = result
+            showingConnectionTest = true
+        }
+    }
+    
+
+    
+    /// 🩺 빠른 스트리밍 진단 (새로운 메서드)
+    private func performQuickDiagnosis() async {
+        logger.info("🩺 빠른 스트리밍 진단 시작", category: .connection)
+        
+        // HaishinKitManager의 진단 기능 사용
+        if let haishinKitManager = viewModel.liveStreamService as? HaishinKitManager {
+            let (score, status, issues) = haishinKitManager.quickHealthCheck()
+            
+            var result = "🩺 빠른 진단 결과\n\n"
+            result += "📊 종합 점수: \(score)점 (상태: \(status))\n\n"
+            
+            if issues.isEmpty {
+                result += "✅ 발견된 문제 없음\n"
+                result += "스트리밍 환경이 정상입니다."
+            } else {
+                result += "⚠️ 발견된 문제들:\n"
+                for issue in issues {
+                    result += "• \(issue)\n"
+                }
+                
+                result += "\n💡 권장사항:\n"
+                if issues.contains(where: { $0.contains("스트리밍이 시작되지 않음") }) {
+                    result += "• YouTube Studio에서 라이브 스트리밍을 시작하세요\n"
+                }
+                if issues.contains(where: { $0.contains("RTMP 연결") }) {
+                    result += "• 스트림 키와 RTMP URL을 확인하세요\n"
+                }
+                if issues.contains(where: { $0.contains("화면 캡처") }) {
+                    result += "• 화면 캡처 모드가 활성화되었는지 확인하세요\n"
+                }
+                if issues.contains(where: { $0.contains("재연결") }) {
+                    result += "• 잠시 후 다시 시도하거나 수동으로 재시작하세요\n"
+                }
+            }
+            
+            await MainActor.run {
+                quickCheckResult = result
+                showingQuickCheck = true
+            }
+        } else {
+            await MainActor.run {
+                quickCheckResult = "❌ HaishinKitManager를 찾을 수 없습니다."
+                showingQuickCheck = true
+            }
+        }
+        
+        logger.info("🩺 빠른 스트리밍 진단 완료", category: .connection)
+    }
+    
+    /// 🔍 종합 스트리밍 진단 (새로운 메서드)
+    private func performFullDiagnostics() async {
+        logger.info("🔍 종합 스트리밍 진단 시작", category: .connection)
+        
+        // HaishinKitManager의 종합 진단 기능 사용
+        if let haishinKitManager = viewModel.liveStreamService as? HaishinKitManager {
+            // 종합 진단 실행
+            let report = await haishinKitManager.performComprehensiveStreamingDiagnosis()
+            
+            // 사용자 친화적인 보고서 생성
+            var userFriendlyReport = """
+            🔍 HaishinKit 스트리밍 종합 진단 결과
+            
+            📊 종합 점수: \(report.overallScore)점/100점 (등급: \(report.overallGrade))
+            
+            💡 평가: \(report.getRecommendation())
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            📋 세부 진단 결과:
+            
+            1️⃣ 설정 검증: \(report.configValidation.isValid ? "✅ 통과" : "❌ 실패")
+            \(report.configValidation.summary)
+            
+            2️⃣ MediaMixer: \(report.mediaMixerStatus.isValid ? "✅ 통과" : "❌ 실패")
+            \(report.mediaMixerStatus.summary)
+            
+            3️⃣ RTMPStream: \(report.rtmpStreamStatus.isValid ? "✅ 통과" : "❌ 실패")
+            \(report.rtmpStreamStatus.summary)
+            
+            4️⃣ 화면 캡처: \(report.screenCaptureStatus.isValid ? "✅ 통과" : "❌ 실패")
+            \(report.screenCaptureStatus.summary)
+            
+            5️⃣ 네트워크: \(report.networkStatus.isValid ? "✅ 통과" : "❌ 실패")
+            \(report.networkStatus.summary)
+            
+            6️⃣ 디바이스: \(report.deviceStatus.isValid ? "✅ 통과" : "❌ 실패")
+            \(report.deviceStatus.summary)
+            
+            7️⃣ 데이터 흐름: \(report.dataFlowStatus.isValid ? "✅ 통과" : "❌ 실패")
+            \(report.dataFlowStatus.summary)
+            
+            """
+            
+            // 문제가 있는 항목들의 상세 정보 추가
+            let allIssues = [
+                report.configValidation.issues,
+                report.mediaMixerStatus.issues,
+                report.rtmpStreamStatus.issues,
+                report.screenCaptureStatus.issues,
+                report.networkStatus.issues,
+                report.deviceStatus.issues,
+                report.dataFlowStatus.issues
+            ].flatMap { $0 }
+            
+            if !allIssues.isEmpty {
+                userFriendlyReport += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                userFriendlyReport += "\n⚠️ 발견된 문제점들:\n"
+                for issue in allIssues {
+                    userFriendlyReport += "• \(issue)\n"
+                }
+            }
+            
+            // 해결 가이드 추가
+            let troubleshootingGuide = await haishinKitManager.generateTroubleshootingGuide()
+            userFriendlyReport += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            userFriendlyReport += "\n\(troubleshootingGuide)"
+            
+            await MainActor.run {
+                diagnosticsReport = userFriendlyReport
+                showingDiagnostics = true
+            }
+        } else {
+            await MainActor.run {
+                diagnosticsReport = "❌ HaishinKitManager를 찾을 수 없습니다."
+                showingDiagnostics = true
+            }
+        }
+        
+        logger.info("🔍 종합 스트리밍 진단 완료", category: .connection)
     }
     
     // MARK: - Helper Properties
     
     private var statusColor: Color {
+        if viewModel.isScreenCaptureStreaming {
+            return .green
+        }
+        
         switch viewModel.status {
         case .idle:
             return .gray
@@ -846,20 +1175,15 @@ struct LiveStreamView: View {
     }
     
     private var statusText: String {
-        switch viewModel.status {
-        case .idle:
-            return "대기"
-        case .connecting:
-            return "연결 중"
-        case .connected:
-            return "연결됨"
-        case .streaming:
-            return "스트리밍"
-        case .disconnecting:
-            return "해제 중"
-        case .error:
-            return "오류"
+        if viewModel.isScreenCaptureStreaming {
+            return "화면 캡처 스트리밍 중"
         }
+        
+        // HaishinKitManager의 연결 상태 메시지 표시
+        if let haishinKitManager = viewModel.liveStreamService as? HaishinKitManager {
+            return viewModel.statusMessage.isEmpty ? haishinKitManager.connectionStatus : viewModel.statusMessage
+        }
+        return viewModel.statusMessage.isEmpty ? "준비됨" : viewModel.statusMessage
     }
 }
 
@@ -961,17 +1285,15 @@ struct TransmissionInfoCard: View {
 
 // MARK: - Preview
 
-struct LiveStreamView_Previews: PreviewProvider {
-    static var previews: some View {
-        // Preview를 위한 더미 ViewModel
-        let _ = LiveStreamViewModelStub()
-        return AnyView(Text("LiveStreamView Preview"))
-    }
+#Preview {
+    // Preview는 실제 ModelContext를 생성하기 어려우므로 주석 처리
+    ContentView()
+        .preferredColorScheme(.light)
 }
 
 // MARK: - Diagnostics Report View
 
-/// 진단 보고서를 표시하는 뷰
+/// 진단 보고서를 표시하는 시트 뷰
 struct DiagnosticsReportView: View {
     let report: String
     @Environment(\.dismiss) private var dismiss
@@ -983,13 +1305,13 @@ struct DiagnosticsReportView: View {
                     Text(report)
                         .font(.system(.body, design: .monospaced))
                         .padding()
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(12)
+                        .background(Color(UIColor.systemBackground))
+                        .cornerRadius(8)
                 }
                 .padding()
             }
-            .navigationTitle("송출 상태 진단")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("진단 보고서")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("완료") {
@@ -998,8 +1320,8 @@ struct DiagnosticsReportView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: shareReport) {
-                        Image(systemName: "square.and.arrow.up")
+                    Button("공유") {
+                        shareReport()
                     }
                 }
             }
@@ -1007,14 +1329,14 @@ struct DiagnosticsReportView: View {
     }
     
     private func shareReport() {
-        let activityVC = UIActivityViewController(
+        let activityController = UIActivityViewController(
             activityItems: [report],
             applicationActivities: nil
         )
         
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first {
-            window.rootViewController?.present(activityVC, animated: true)
+            window.rootViewController?.present(activityController, animated: true)
         }
     }
 } 

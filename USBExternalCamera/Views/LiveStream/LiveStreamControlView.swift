@@ -28,6 +28,8 @@ struct LiveStreamControlView: View {
     
     var body: some View {
         VStack(spacing: 16) {
+
+            
             // 현재 상태 표시 섹션
             CurrentStatusSection(viewModel: viewModel)
             
@@ -79,6 +81,8 @@ struct LiveStreamControlView: View {
 }
 
 // MARK: - Supporting Views
+
+
 
 /// 현재 상태 표시 섹션
 struct CurrentStatusSection: View {
@@ -173,8 +177,8 @@ struct AdvancedSettingsSection: View {
                 Button(action: {
                     Task {
                         let diagnosis = await viewModel.diagnoseYouTubeStreaming()
-                        print("🔍 [UI] YouTube 진단 결과:")
-                        diagnosis.forEach { print("   \($0)") }
+                                        logInfo("YouTube 진단 결과:", category: .performance)
+                diagnosis.forEach { logInfo("   \($0)", category: .performance) }
                     }
                 }) {
                     HStack {
@@ -230,7 +234,7 @@ struct AdvancedSettingsSection: View {
                 
                 // 설정 내보내기
                 Button(action: {
-                    print("📤 [UI] Settings export requested - feature not implemented")
+                    logInfo("Settings export requested - feature not implemented", category: .general)
                 }) {
                     HStack {
                         Image(systemName: "square.and.arrow.up")
