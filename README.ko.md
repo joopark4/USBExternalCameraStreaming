@@ -1,4 +1,4 @@
-# 📱 USB 외부 카메라 for iOS
+# 📱 USB 외부 카메라 스트리밍 for iOS
 
 <div align="center">
 
