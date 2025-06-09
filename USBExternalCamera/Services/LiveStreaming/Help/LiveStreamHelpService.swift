@@ -23,12 +23,12 @@ public final class LiveStreamHelpService {
         
         public var title: String {
             switch self {
-            case .rtmpURL: return "RTMP 서버 URL"
-            case .streamKey: return "스트림 키"
-            case .videoBitrate: return "비디오 비트레이트"
-            case .audioBitrate: return "오디오 비트레이트"
-            case .videoResolution: return "비디오 해상도"
-            case .frameRate: return "프레임 레이트"
+            case .rtmpURL: return NSLocalizedString("help_rtmp_server_url", comment: "RTMP 서버 URL")
+            case .streamKey: return NSLocalizedString("help_stream_key", comment: "스트림 키")
+            case .videoBitrate: return NSLocalizedString("help_video_bitrate", comment: "비디오 비트레이트")
+            case .audioBitrate: return NSLocalizedString("help_audio_bitrate", comment: "오디오 비트레이트")
+            case .videoResolution: return NSLocalizedString("help_video_resolution", comment: "비디오 해상도")
+            case .frameRate: return NSLocalizedString("help_frame_rate", comment: "프레임 레이트")
             }
         }
     }
@@ -53,44 +53,44 @@ public final class LiveStreamHelpService {
         switch topic {
         case .rtmpURL:
             return HelpContent(
-                title: "RTMP 서버 URL",
-                description: "라이브 스트리밍을 송출할 RTMP 서버의 주소입니다.",
+                title: NSLocalizedString("help_rtmp_url_title", comment: ""),
+                description: NSLocalizedString("help_rtmp_url_desc", comment: ""),
                 recommendedValues: [
-                    "YouTube: rtmp://a.rtmp.youtube.com/live2/",
-                    "Twitch: rtmp://live.twitch.tv/app/"
+                    NSLocalizedString("help_rtmp_recommended_youtube", comment: ""),
+                    NSLocalizedString("help_rtmp_recommended_twitch", comment: "")
                 ],
                 tips: [
-                    "가장 가까운 지역의 서버를 선택하면 지연시간이 줄어듭니다",
-                    "rtmp:// 프로토콜로 시작해야 합니다"
+                    NSLocalizedString("help_rtmp_tip_server_location", comment: ""),
+                    NSLocalizedString("help_rtmp_tip_protocol", comment: "")
                 ],
                 warnings: [
-                    "잘못된 URL을 입력하면 연결에 실패합니다"
+                    NSLocalizedString("help_rtmp_warning_invalid_url", comment: "")
                 ],
                 examples: [
-                    "rtmp://a.rtmp.youtube.com/live2/"
+                    NSLocalizedString("help_rtmp_example_youtube", comment: "")
                 ]
             )
         case .streamKey:
             return HelpContent(
-                title: "스트림 키",
-                description: "각 스트리밍 플랫폼에서 제공하는 고유한 인증 키입니다.",
+                title: NSLocalizedString("help_stream_key_title", comment: ""),
+                description: NSLocalizedString("help_stream_key_desc", comment: ""),
                 recommendedValues: [
-                    "플랫폼 대시보드에서 생성된 키 사용"
+                    NSLocalizedString("help_stream_key_recommended_dashboard", comment: "")
                 ],
                 tips: [
-                    "스트림 키는 절대 공개하지 마세요"
+                    NSLocalizedString("help_stream_key_tip_security", comment: "")
                 ],
                 warnings: [
-                    "스트림 키가 노출되면 다른 사람이 당신의 채널로 스트리밍할 수 있습니다"
+                    NSLocalizedString("help_stream_key_warning_exposure", comment: "")
                 ],
                 examples: [
-                    "xxxx-xxxx-xxxx-xxxx-xxxx"
+                    NSLocalizedString("help_stream_key_example_format1", comment: "")
                 ]
             )
         default:
             return HelpContent(
                 title: topic.title,
-                description: "도움말 내용을 준비 중입니다.",
+                description: NSLocalizedString("help_content_in_progress", comment: ""),
                 recommendedValues: [],
                 tips: [],
                 warnings: [],

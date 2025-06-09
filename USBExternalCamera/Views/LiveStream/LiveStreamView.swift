@@ -208,7 +208,7 @@ struct LiveStreamView: View {
             } message: {
                 Text(quickCheckResult)
             }
-            .alert("연결 테스트 결과", isPresented: $showingConnectionTest) {
+            .alert(NSLocalizedString("connection_test_result", comment: "연결 테스트 결과"), isPresented: $showingConnectionTest) {
                 Button("확인") { }
             } message: {
                 Text(connectionTestResult)
@@ -508,7 +508,7 @@ struct LiveStreamView: View {
             HStack {
                 Image(systemName: "network.badge.shield.half.filled")
                     .foregroundColor(.orange)
-                Text("RTMP 연결 디버깅")
+                Text(NSLocalizedString("rtmp_connection_debug", comment: "RTMP 연결 디버깅"))
                     .font(.headline)
                     .foregroundColor(.orange)
                 
@@ -522,7 +522,7 @@ struct LiveStreamView: View {
                 }) {
                     HStack {
                         Image(systemName: "antenna.radiowaves.left.and.right")
-                        Text("연결 테스트")
+                        Text(NSLocalizedString("test_connection", comment: "연결 테스트"))
                     }
                     .font(.caption)
                     .padding(.horizontal, 8)
@@ -613,7 +613,7 @@ struct LiveStreamView: View {
             HStack {
                 Image(systemName: "network")
                     .foregroundColor(.green)
-                Text("연결 상태")
+                Text(NSLocalizedString("connection_status", comment: "연결 상태"))
                     .font(.subheadline)
                     .fontWeight(.medium)
             }

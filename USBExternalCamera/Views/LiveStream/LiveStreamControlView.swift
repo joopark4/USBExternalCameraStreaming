@@ -377,7 +377,7 @@ struct AdvancedStreamingSettingsView: View {
                     )
                     
                     HStack {
-                        Text("연결 타임아웃")
+                        Text(NSLocalizedString("connection_timeout", comment: "연결 타임아웃"))
                         Spacer()
                         Text("\(viewModel.settings.connectionTimeout)초")
                     }
@@ -393,7 +393,7 @@ struct AdvancedStreamingSettingsView: View {
                 
                 // 자동화 설정
                 Section(header: Text(NSLocalizedString("automation", comment: "자동화"))) {
-                    Toggle("자동 재연결", isOn: $viewModel.settings.autoReconnect)
+                    Toggle(NSLocalizedString("auto_reconnect", comment: "자동 재연결"), isOn: $viewModel.settings.autoReconnect)
                     Toggle("스트리밍 활성화", isOn: $viewModel.settings.isEnabled)
                 }
             }
@@ -510,7 +510,7 @@ struct YouTubeLiveSetupGuide: View {
                             .foregroundColor(.blue)
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("연결이 안 되는 경우:")
+                            Text(NSLocalizedString("connection_troubleshooting", comment: "연결이 안 되는 경우:"))
                                 .fontWeight(.semibold)
                             Text("• 새로운 스트림 키를 생성해보세요")
                             Text("• WiFi/모바일 데이터를 전환해보세요")

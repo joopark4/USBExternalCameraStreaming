@@ -26,8 +26,8 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
     
     /// 스트리밍 상태
     @Published var isStreaming = false
-    @Published var codecStatus = "대기 중"
-    @Published var workaroundStatus = "비활성"
+    @Published var codecStatus = NSLocalizedString("waiting", comment: "대기 중")
+    @Published var workaroundStatus = NSLocalizedString("inactive", comment: "비활성")
     @Published var successfulFrames: Int64 = 0
     @Published var failedFrames: Int64 = 0
     
@@ -51,8 +51,8 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
         
         // 3. 워크어라운드 활성화
         isStreaming = true
-        codecStatus = "초기화 완료"
-        workaroundStatus = "활성"
+        codecStatus = NSLocalizedString("initialization_complete", comment: "초기화 완료")
+        workaroundStatus = NSLocalizedString("active", comment: "활성")
         
         logger.info("✅ VideoCodec 워크어라운드 활성화 완료")
     }
@@ -126,7 +126,7 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
         
         logger.info("✅ VideoCodec 사전 초기화 완료: \(safeWidth)x\(safeHeight)")
         isVideoCodecPreinitialized = true
-        codecStatus = "사전 초기화 완료"
+        codecStatus = NSLocalizedString("pre_initialization_complete", comment: "사전 초기화 완료")
     }
     
     /// 더미 프레임으로 VideoCodec 워밍업
@@ -162,7 +162,7 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
         }
         
         logger.info("✅ VideoCodec 워밍업 완료")
-        codecStatus = "워밍업 완료"
+        codecStatus = NSLocalizedString("warmup_complete", comment: "워밍업 완료")
     }
     
     // MARK: - Frame Optimization
@@ -239,7 +239,7 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
             throw WorkaroundError.settingsNotAvailable
         }
         
-        codecStatus = "재설정 중"
+        codecStatus = NSLocalizedString("resetting", comment: "재설정 중")
         
         // 잠시 대기 후 재초기화
         try await Task.sleep(nanoseconds: 500_000_000) // 500ms
@@ -251,7 +251,7 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
         successfulFrames = 0
         failedFrames = 0
         
-        codecStatus = "재설정 완료"
+        codecStatus = NSLocalizedString("reset_complete", comment: "재설정 완료")
         logger.info("✅ VideoCodec 재설정 완료")
     }
     
@@ -259,7 +259,7 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
     private func handleVideoCodec12902Error() async {
         logger.warning("🚨 VideoCodec -12902 에러 복구 시작")
         
-        codecStatus = "-12902 복구 중"
+        codecStatus = NSLocalizedString("error_12902_recovery", comment: "-12902 복구 중")
         
         // 1. 짧은 대기
         try? await Task.sleep(nanoseconds: 200_000_000) // 200ms
@@ -269,7 +269,7 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
             try? await warmupVideoCodecWithDummyFrames(settings: settings)
         }
         
-        codecStatus = "복구 완료"
+        codecStatus = NSLocalizedString("recovery_complete", comment: "복구 완료")
         logger.info("✅ VideoCodec -12902 복구 완료")
     }
     
@@ -385,11 +385,11 @@ enum WorkaroundError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .streamNotAvailable:
-            return "스트림을 사용할 수 없습니다"
+            return NSLocalizedString("stream_unavailable", comment: "스트림을 사용할 수 없습니다")
         case .settingsNotAvailable:
-            return "스트리밍 설정을 사용할 수 없습니다"
+            return NSLocalizedString("streaming_settings_unavailable", comment: "스트리밍 설정을 사용할 수 없습니다")
         case .codecInitializationFailed(let message):
-            return "코덱 초기화 실패: \(message)"
+            return String(format: NSLocalizedString("codec_initialization_failed", comment: "코덱 초기화 실패: %@"), message)
         }
     }
 } 

@@ -76,10 +76,10 @@ public enum StreamingQuality: CaseIterable {
     
     public var displayName: String {
         switch self {
-        case .low: return "저화질 (480p)"
-        case .medium: return "중화질 (720p)" 
-        case .high: return "고화질 (1080p)"
-        case .ultra: return "최고화질 (1080p+)"
+        case .low: return NSLocalizedString("low_quality_480p", comment: "저화질 (480p)")
+        case .medium: return NSLocalizedString("medium_quality_720p", comment: "중화질 (720p)") 
+        case .high: return NSLocalizedString("high_quality_1080p", comment: "고화질 (1080p)")
+        case .ultra: return NSLocalizedString("ultra_quality_1080p_plus", comment: "최고화질 (1080p+)")
         }
     }
     

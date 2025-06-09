@@ -194,9 +194,9 @@ public enum NetworkConnectionType {
     public var displayName: String {
         switch self {
         case .wifi: return "Wi-Fi"
-        case .cellular: return "셀룰러"
-        case .ethernet: return "이더넷"
-        case .unknown: return "알 수 없음"
+        case .cellular: return NSLocalizedString("cellular", comment: "셀룰러")
+        case .ethernet: return NSLocalizedString("ethernet", comment: "이더넷")
+        case .unknown: return NSLocalizedString("unknown", comment: "알 수 없음")
         }
     }
 }

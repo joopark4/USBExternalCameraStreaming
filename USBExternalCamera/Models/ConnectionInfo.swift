@@ -246,11 +246,11 @@ enum ConnectionStatus: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .disconnected: return "연결 해제"
-        case .connecting: return "연결 중"
-        case .connected: return "연결됨"
-        case .reconnecting: return "재연결 중"
-        case .failed: return "연결 실패"
+        case .disconnected: return NSLocalizedString("disconnected", comment: "연결 해제")
+        case .connecting: return NSLocalizedString("connecting", comment: "연결 중")
+        case .connected: return NSLocalizedString("connected", comment: "연결됨")
+        case .reconnecting: return NSLocalizedString("reconnecting_attempt", comment: "재연결 중")
+        case .failed: return NSLocalizedString("connection_failed", comment: "연결 실패")
         }
     }
     
