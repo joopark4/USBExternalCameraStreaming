@@ -27,7 +27,7 @@ public final class StreamingValidation {
             case .invalidSettings(let message):
                 return "설정 오류: \(message)"
             case .connectionFailed(let message):
-                return "연결 실패: \(message)"
+                return String(format: NSLocalizedString("connection_failed_detailed", comment: "연결 실패: %@"), message)
             case .streamingFailed(let message):
                 return "스트리밍 실패: \(message)"
             }

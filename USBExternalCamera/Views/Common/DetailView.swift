@@ -114,19 +114,84 @@ struct CameraDetailContentView: View {
 }
 
 /// 카메라 프리뷰 컨테이너 View 컴포넌트
-/// 실제 카메라 화면을 표시하는 컴포넌트입니다.
+/// 실제 카메라 화면과 YouTube Studio를 한 화면에 표시하는 컴포넌트입니다.
 /// 16:9 비율로 제한하여 실제 송출되는 영역만 표시합니다.
+/// 키보드가 올라와도 레이아웃이 변경되지 않습니다.
 struct CameraPreviewContainerView: View {
     @ObservedObject var viewModel: MainViewModel
     
     var body: some View {
         GeometryReader { geometry in
             let containerSize = geometry.size
+            let isWideScreen = containerSize.width > containerSize.height * 1.3 // 가로가 긴 화면 판단
             
+            if isWideScreen {
+                // 가로로 긴 화면 (iPad, Mac): 수평 분할
+                horizontalLayout(containerSize: containerSize)
+            } else {
+                // 세로로 긴 화면 (iPhone): 수직 분할
+                verticalLayout(containerSize: containerSize)
+            }
+        }
+        .padding(20)
+        .background(Color.black.opacity(0.1))
+        .ignoresSafeArea(.keyboard) // 키보드로 인한 레이아웃 변경 방지
+        .onTapGesture {
+            // 뷰를 탭하면 키보드 숨김
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+    }
+    
+    // MARK: - Layout Methods
+    
+    @ViewBuilder
+    private func horizontalLayout(containerSize: CGSize) -> some View {
+        HStack(spacing: 20) {
+            // 왼쪽: 카메라 프리뷰 영역
+            VStack(spacing: 12) {
+                cameraPreviewSection(
+                    availableSize: CGSize(
+                        width: containerSize.width * 0.6 - 30,
+                        height: containerSize.height - 40
+                    )
+                )
+                
+                Spacer()
+            }
+            .frame(maxWidth: containerSize.width * 0.6)
+            
+            // 오른쪽: YouTube Studio 영역 (고정)
+            VStack(spacing: 0) {
+                YouTubeStudioAccessView(viewModel: viewModel)
+                    .frame(maxHeight: .infinity)
+            }
+            .frame(maxWidth: containerSize.width * 0.4)
+        }
+    }
+    
+    @ViewBuilder
+    private func verticalLayout(containerSize: CGSize) -> some View {
+        VStack(spacing: 16) {
+            // 위쪽: 카메라 프리뷰 영역
+            cameraPreviewSection(
+                availableSize: CGSize(
+                    width: containerSize.width - 40,
+                    height: containerSize.height * 0.5
+                )
+            )
+            
+            // 아래쪽: YouTube Studio 영역 (고정)
+            YouTubeStudioAccessView(viewModel: viewModel)
+                .frame(maxHeight: containerSize.height * 0.45)
+        }
+    }
+    
+    @ViewBuilder
+    private func cameraPreviewSection(availableSize: CGSize) -> some View {
             // 16:9 비율 계산 (유튜브 라이브 표준)
             let aspectRatio: CGFloat = 16.0 / 9.0
-            let maxWidth = containerSize.width - 60 // padding 고려
-            let maxHeight = containerSize.height - 60 // padding 고려
+        let maxWidth = availableSize.width
+        let maxHeight = availableSize.height - 60 // 텍스트 영역 고려
             
             // Aspect Fit 방식으로 16:9 프레임 계산
             let previewSize: CGSize = {
@@ -141,36 +206,45 @@ struct CameraPreviewContainerView: View {
                 }
             }()
             
-            VStack {
-                // 16:9 비율 카메라 프리뷰
+        VStack(spacing: 8) {
+            // 16:9 프리뷰 영역
+            ZStack {
+                // 카메라 프리뷰
                 CameraPreviewView(
                     session: viewModel.cameraViewModel.captureSession,
                     streamViewModel: viewModel.liveStreamViewModel,
                     haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager
                 )
+                .aspectRatio(aspectRatio, contentMode: .fit)
                 .frame(width: previewSize.width, height: previewSize.height)
                 .background(Color.black)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 )
                 
-                // 송출 영역 안내 텍스트
-                Text("📺 실제 송출 영역 (16:9)")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(.top, 8)
-                
-                // 프리뷰 크기 정보
-                Text("\(Int(previewSize.width)) × \(Int(previewSize.height))")
-                    .font(.caption2)
-                    .foregroundColor(.gray.opacity(0.7))
+                // 16:9 경계선 표시 (선택적으로 표시)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.clear)
+                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                    .frame(width: previewSize.width, height: previewSize.height)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // 프리뷰 정보
+            HStack {
+                Text(NSLocalizedString("live_preview_16_9", comment: "🎥 라이브 프리뷰 (16:9)"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Text("\(Int(previewSize.width))×\(Int(previewSize.height))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .monospaced()
+            }
         }
-        .padding(30)
-        .background(Color.black.opacity(0.1))
     }
 }
 
@@ -242,5 +316,8 @@ struct LoadingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+// YouTube Studio 접근 뷰는 별도 파일로 모듈화됨:
+// - YouTubeStudioAccessView.swift 참조
 
  

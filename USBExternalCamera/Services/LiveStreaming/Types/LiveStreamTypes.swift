@@ -27,40 +27,40 @@ public enum LiveStreamError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .initializationFailed(let message):
-            return "초기화 실패: \(message)"
+            return String(format: NSLocalizedString("initialization_failed_detailed", comment: "초기화 실패: %@"), message)
         case .deviceNotFound(let device):
-            return "\(device)을(를) 찾을 수 없습니다"
+            return String(format: NSLocalizedString("device_not_found_detailed", comment: "%@을(를) 찾을 수 없습니다"), device)
         case .networkError(let message):
-            return "네트워크 오류: \(message)"
+            return String(format: NSLocalizedString("network_error_detailed", comment: "네트워크 오류: %@"), message)
         case .authenticationFailed(let message):
-            return "인증 실패: \(message)"
+            return String(format: NSLocalizedString("authentication_failed_detailed", comment: "인증 실패: %@"), message)
         case .streamingFailed(let message):
-            return "스트리밍 오류: \(message)"
+            return String(format: NSLocalizedString("streaming_error_detailed", comment: "스트리밍 오류: %@"), message)
         case .configurationError(let message):
-            return "설정 오류: \(message)"
+            return String(format: NSLocalizedString("initialization_failed_detailed", comment: "초기화 실패: %@"), message)
         case .permissionDenied(let permission):
-            return "\(permission) 권한이 필요합니다"
+            return String(format: NSLocalizedString("device_not_found_detailed", comment: "%@을(를) 찾을 수 없습니다"), permission)
         case .incompatibleSettings(let message):
-            return "호환되지 않는 설정: \(message)"
+            return String(format: NSLocalizedString("initialization_failed_detailed", comment: "초기화 실패: %@"), message)
         case .connectionTimeout:
-            return "연결 시간이 초과되었습니다"
+            return NSLocalizedString("timeout_message", comment: "연결 시간이 초과되었습니다")
         case .serverError(let code, let message):
-            return "서버 오류 (\(code)): \(message)"
+            return String(format: NSLocalizedString("server_error_message", comment: "서버 오류가 발생했습니다. (코드: %d)"), code) + ": \(message)"
         case .unknown(let message):
-            return "알 수 없는 오류: \(message)"
+            return String(format: NSLocalizedString("unknown_error_message", comment: "알 수 없는 오류가 발생했습니다"), message)
         }
     }
     
     public var failureReason: String? {
         switch self {
         case .networkError:
-            return "인터넷 연결을 확인해주세요"
+            return NSLocalizedString("check_internet_connection", comment: "인터넷 연결을 확인해주세요")
         case .permissionDenied:
-            return "설정에서 권한을 허용해주세요"
+            return NSLocalizedString("allow_permission_in_settings", comment: "설정에서 권한을 허용해주세요")
         case .connectionTimeout:
-            return "네트워크 상태를 확인하고 다시 시도해주세요"
+            return NSLocalizedString("check_network_and_retry", comment: "네트워크 상태를 확인하고 다시 시도해주세요")
         case .serverError:
-            return "잠시 후 다시 시도해주세요"
+            return NSLocalizedString("try_again_later", comment: "잠시 후 다시 시도해주세요")
         default:
             return nil
         }
@@ -69,17 +69,17 @@ public enum LiveStreamError: Error, LocalizedError, Equatable {
     public var recoverySuggestion: String? {
         switch self {
         case .deviceNotFound:
-            return "카메라나 마이크가 연결되어 있는지 확인해주세요"
+            return NSLocalizedString("check_camera_microphone_connection", comment: "카메라나 마이크가 연결되어 있는지 확인해주세요")
         case .networkError, .connectionTimeout:
-            return "WiFi 또는 셀룰러 데이터 연결을 확인해주세요"
+            return NSLocalizedString("check_wifi_cellular_connection", comment: "WiFi 또는 셀룰러 데이터 연결을 확인해주세요")
         case .permissionDenied:
-            return "설정 > 개인정보 보호에서 권한을 허용해주세요"
+            return NSLocalizedString("allow_permission_privacy_settings", comment: "설정 > 개인정보 보호에서 권한을 허용해주세요")
         case .authenticationFailed:
-            return "RTMP URL과 스트림 키를 다시 확인해주세요"
+            return NSLocalizedString("recheck_rtmp_stream_key", comment: "RTMP URL과 스트림 키를 다시 확인해주세요")
         case .incompatibleSettings:
-            return "스트리밍 설정을 조정해보세요"
+            return NSLocalizedString("adjust_streaming_settings", comment: "스트리밍 설정을 조정해보세요")
         default:
-            return "문제가 지속되면 앱을 재시작해보세요"
+            return NSLocalizedString("restart_app_if_problem_persists", comment: "문제가 지속되면 앱을 재시작해보세요")
         }
     }
 }
@@ -198,11 +198,11 @@ public enum NetworkQuality: CaseIterable, Equatable {
     
     public var displayName: String {
         switch self {
-        case .excellent: return "최고"
-        case .good: return "양호"
-        case .fair: return "보통"
-        case .poor: return "불량"
-        case .unknown: return "알 수 없음"
+        case .excellent: return NSLocalizedString("excellent", comment: "우수")
+        case .good: return NSLocalizedString("good", comment: "양호")
+        case .fair: return NSLocalizedString("fair", comment: "보통")
+        case .poor: return NSLocalizedString("poor", comment: "불량")
+        case .unknown: return NSLocalizedString("unknown", comment: "알 수 없음")
         }
     }
     

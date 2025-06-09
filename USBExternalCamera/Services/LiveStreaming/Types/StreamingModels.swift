@@ -20,10 +20,10 @@ public enum YouTubeLivePreset: String, CaseIterable, Identifiable {
     
     public var displayName: String {
         switch self {
-        case .sd480p: return "YouTube 480p (SD)"
-        case .hd720p: return "YouTube 720p (HD)"
-        case .fhd1080p: return "YouTube 1080p (Full HD)"
-        case .custom: return "사용자 정의"
+        case .sd480p: return NSLocalizedString("youtube_preset_480p", comment: "YouTube 480p (SD)")
+        case .hd720p: return NSLocalizedString("youtube_preset_720p", comment: "YouTube 720p (HD)")
+        case .fhd1080p: return NSLocalizedString("youtube_preset_1080p", comment: "YouTube 1080p (Full HD)")
+        case .custom: return NSLocalizedString("custom_user_defined", comment: "사용자 정의")
         }
     }
     
@@ -32,7 +32,7 @@ public enum YouTubeLivePreset: String, CaseIterable, Identifiable {
         case .sd480p: return "848×480 • 30fps • 1,500 kbps (1,000-2,000)"
         case .hd720p: return "1280×720 • 30fps • 2,500 kbps (2,500-5,000)"
         case .fhd1080p: return "1920×1080 • 30fps • 4,500 kbps (4,500-9,000)"
-        case .custom: return "사용자가 직접 설정"
+        case .custom: return NSLocalizedString("user_custom_settings", comment: "사용자가 직접 설정")
         }
     }
     
@@ -241,11 +241,11 @@ public enum NetworkTransmissionQuality {
     
     public var description: String {
         switch self {
-        case .excellent: return "우수"
-        case .good: return "양호"
-        case .fair: return "보통"
-        case .poor: return "불량"
-        case .unknown: return "확인 중"
+        case .excellent: return NSLocalizedString("excellent", comment: "우수")
+        case .good: return NSLocalizedString("good", comment: "양호")
+        case .fair: return NSLocalizedString("fair", comment: "보통")
+        case .poor: return NSLocalizedString("poor", comment: "불량")
+        case .unknown: return NSLocalizedString("checking", comment: "확인 중")
         }
     }
 }

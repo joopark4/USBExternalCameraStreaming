@@ -34,7 +34,7 @@ public class AVAssetWriterStreamingManager: NSObject, ObservableObject {
     
     /// 스트리밍 상태
     @Published var isStreaming = false
-    @Published var connectionStatus = "대기 중"
+    @Published var connectionStatus = NSLocalizedString("waiting", comment: "대기 중")
     @Published var segmentCount = 0
     @Published var totalDataWritten: Int64 = 0
     
@@ -57,7 +57,7 @@ public class AVAssetWriterStreamingManager: NSObject, ObservableObject {
         try await startNewSegment()
         
         isStreaming = true
-        connectionStatus = "HLS 세그먼트 생성 중"
+        connectionStatus = NSLocalizedString("hls_segment_creating", comment: "HLS 세그먼트 생성 중")
         
         // 3. 세그먼트 로테이션 타이머 시작
         startSegmentRotationTimer()
@@ -74,7 +74,7 @@ public class AVAssetWriterStreamingManager: NSObject, ObservableObject {
         
         // 2. 상태 업데이트
         isStreaming = false
-        connectionStatus = "중지됨"
+        connectionStatus = NSLocalizedString("stopped", comment: "중지됨")
         
         logger.info("✅ HLS 스트리밍 중지 완료")
     }
@@ -125,7 +125,7 @@ public class AVAssetWriterStreamingManager: NSObject, ObservableObject {
     private func startNewSegment() async throws {
         guard let settings = currentSettings,
               let outputDir = outputDirectory else {
-            throw AVAssetWriterStreamingError.setupFailed("설정 또는 출력 디렉토리가 준비되지 않음")
+            throw AVAssetWriterStreamingError.setupFailed(NSLocalizedString("streaming_settings_unavailable", comment: "스트리밍 설정을 사용할 수 없습니다"))
         }
         
         // 현재 세그먼트 파일 경로
@@ -145,7 +145,7 @@ public class AVAssetWriterStreamingManager: NSObject, ObservableObject {
         assetWriter = try AVAssetWriter(outputURL: segmentURL, fileType: .mp4)
         
         guard let writer = assetWriter else {
-            throw AVAssetWriterStreamingError.setupFailed("AVAssetWriter 생성 실패")
+            throw AVAssetWriterStreamingError.setupFailed(NSLocalizedString("initialization_failed_detailed", comment: "초기화 실패: %@"))
         }
         
         // 비디오 입력 설정
@@ -189,7 +189,7 @@ public class AVAssetWriterStreamingManager: NSObject, ObservableObject {
             segmentCount += 1
             logger.info("✅ 세그먼트 \(self.segmentIndex) 쓰기 시작")
         } else {
-            throw AVAssetWriterStreamingError.setupFailed("AVAssetWriter 시작 실패: \(writer.error?.localizedDescription ?? "Unknown")")
+            throw AVAssetWriterStreamingError.setupFailed(String(format: NSLocalizedString("initialization_failed_detailed", comment: "초기화 실패: %@"), writer.error?.localizedDescription ?? "Unknown"))
         }
     }
     
@@ -272,9 +272,9 @@ enum AVAssetWriterStreamingError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .setupFailed(let message):
-            return "스트리밍 설정 실패: \(message)"
+            return String(format: NSLocalizedString("streaming_setup_failed_detailed", comment: "스트리밍 설정 실패: %@"), message)
         case .uploadFailed(let message):
-            return "업로드 실패: \(message)"
+            return String(format: NSLocalizedString("upload_failed_detailed", comment: "업로드 실패: %@"), message)
         }
     }
 } 

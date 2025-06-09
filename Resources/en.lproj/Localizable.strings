@@ -657,4 +657,104 @@
 "youtube_preset_description" = "Quickly apply streaming settings optimized for YouTube Live";
 "custom_settings" = "Custom Settings";
 "custom_settings_description" = "User-defined values";
-"custom_settings_notice" = "Currently using user-defined settings"; 
+"custom_settings_notice" = "Currently using user-defined settings";
+
+// MARK: - Hard-coded Strings That Need Localization
+"stream_unavailable" = "Stream is not available";
+"streaming_settings_unavailable" = "Streaming settings are not available";
+"codec_initialization_failed" = "Codec initialization failed: %@";
+"waiting" = "Waiting";
+"inactive" = "Inactive";
+"initialization_complete" = "Initialization Complete";
+"active" = "Active";
+"pre_initialization_complete" = "Pre-initialization Complete";
+"warmup_complete" = "Warmup Complete";
+"resetting" = "Resetting";
+"reset_complete" = "Reset Complete";
+"error_12902_recovery" = "-12902 Recovery";
+"recovery_complete" = "Recovery Complete";
+"hls_segment_creating" = "Creating HLS Segments";
+"stopped" = "Stopped";
+
+// MARK: - Additional UI Strings
+"live_status" = "🔴 LIVE";
+"waiting_status" = "⚪ Waiting";
+"live_preview_16_9" = "🎥 Live Preview (16:9)";
+"refreshing" = "Refreshing...";
+"menu" = "Menu";
+"camera_section" = "Camera Section";
+"camera" = "Camera";
+"selected_camera" = "Selected: ";
+"camera_count_status" = "Built-in: %d, External: %d";
+"no_camera_found" = "No camera found";
+"select_menu_from_sidebar" = "Select a menu from the sidebar";
+"select_camera" = "Select Camera";
+"permission_settings_needed" = "Permission Settings Required";
+"go_to_permission_settings" = "Go to Permission Settings";
+"loading" = "Loading...";
+
+// MARK: - Connection Related Strings
+"connection_timeout" = "Connection Timeout";
+"auto_reconnect" = "Auto Reconnect";
+"connection_test_result" = "Connection Test Result";
+"rtmp_connection_debug" = "RTMP Connection Debug";
+"connection_status" = "Connection Status";
+"reconnecting_attempt" = "🔄 Reconnecting";
+"connection_failed" = "❌ Connection Failed";
+"attempt_retry_format" = "Attempt: %d/%d\n%d seconds to retry";
+"test_connection" = "Test Connection";
+"testing_connection" = "Testing connection...";
+"ready_to_test" = "Ready to test connection";
+"connection_test" = "Connection Test";
+"connecting_to_server" = "Connecting...";
+"connected" = "Connected";
+"disconnected" = "Disconnected";
+"connecting" = "Connecting";
+"disconnecting" = "Disconnecting";
+"connection_troubleshooting" = "If connection fails:";
+"connection_failed_detailed" = "Connection failed: %@";
+
+// MARK: - Error Messages and Recovery Suggestions
+"check_internet_connection" = "Please check your internet connection";
+"allow_permission_in_settings" = "Please allow permission in settings";
+"check_network_and_retry" = "Please check network status and try again";
+"try_again_later" = "Please try again later";
+"check_camera_microphone_connection" = "Please check if camera or microphone is connected";
+"check_wifi_cellular_connection" = "Please check WiFi or cellular data connection";
+"allow_permission_privacy_settings" = "Please allow permission in Settings > Privacy";
+"recheck_rtmp_stream_key" = "Please recheck RTMP URL and stream key";
+"adjust_streaming_settings" = "Please adjust streaming settings";
+"restart_app_if_problem_persists" = "Please restart the app if the problem persists";
+"streaming_setup_failed_detailed" = "Streaming setup failed: %@";
+"upload_failed_detailed" = "Upload failed: %@";
+"initialization_failed_detailed" = "Initialization failed: %@";
+"device_not_found_detailed" = "Device not found: %@";
+"network_error_detailed" = "Network error: %@";
+"authentication_failed_detailed" = "Authentication failed: %@";
+"streaming_error_detailed" = "Streaming error: %@";
+"low_quality_480p" = "Low Quality (480p)";
+"medium_quality_720p" = "Medium Quality (720p)";
+"high_quality_1080p" = "High Quality (1080p)";
+"ultra_quality_1080p_plus" = "Ultra Quality (1080p+)";
+"custom_user_defined" = "User Defined";
+"user_custom_settings" = "User custom settings";
+"excellent" = "Excellent";
+"good" = "Good";
+"fair" = "Fair";
+"poor" = "Poor";
+"checking" = "Checking";
+"cellular" = "Cellular";
+"ethernet" = "Ethernet";
+"unknown" = "Unknown";
+"reconnecting_attempt" = "🔄 Reconnecting";
+"attempt_retry_format" = "Attempt: %d/%d\nRetry in %d seconds";
+"connection_failed" = "❌ Connection Failed";
+
+// MARK: - Help Service Titles
+"help_rtmp_server_url" = "RTMP Server URL";
+"help_stream_key" = "Stream Key";
+"help_video_bitrate" = "Video Bitrate";
+"help_audio_bitrate" = "Audio Bitrate";
+"help_video_resolution" = "Video Resolution";
+"help_frame_rate" = "Frame Rate";
+"help_content_in_progress" = "Help content is being prepared."; 
