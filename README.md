@@ -28,6 +28,8 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - 📡 **Real-time RTMP** - Professional streaming with HaishinKit 2.0.8
 - 🎛️ **Advanced Controls** - Video/audio quality, resolution, bitrate settings
 - 📊 **Live Statistics** - Real-time monitoring of streaming performance
+- 🎬 **Integrated YouTube Studio** - Built-in YouTube Studio WebView for direct stream management
+- ⌨️ **Smart Keyboard Handling** - Optimized keyboard input for WebView interactions
 - 🌍 **Multi-language** - Korean and English support
 
 ## 🚀 Features
@@ -52,6 +54,9 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - 🎯 Network quality monitoring and bitrate adjustment
 - 📱 iOS device orientation support
 - ⚡ Performance optimization for iPad devices
+- 🎬 **YouTube Studio Integration** - Native WebView with desktop browser compatibility
+- ⌨️ **Enhanced Keyboard Support** - Custom keyboard accessory for better WebView interaction
+- 📱 **Adaptive Layout** - Responsive layout for different screen sizes and orientations
 
 ## 📋 Requirements
 
@@ -146,6 +151,27 @@ All dependencies are managed automatically by Xcode.
 3. Copy your **Stream Key** from the Stream tab
 4. Use `rtmp://a.rtmp.youtube.com/live2/` as RTMP URL
 
+### 🎬 YouTube Studio Integration
+
+The app features a built-in **YouTube Studio WebView** that allows you to manage your streams directly without switching apps:
+
+**Key Features:**
+- **Desktop Browser Compatibility** - Uses Safari 17.1 User-Agent for full feature access
+- **Full YouTube Studio Access** - All features available including stream management, analytics, chat
+- **Optimized Layout** - Maximized WebView space for better usability
+- **Smart Keyboard Handling** - Custom keyboard accessory prevents layout issues
+- **Persistent Login** - Login state is maintained across app sessions
+
+**Layout Options:**
+- **Wide Screens (iPad/Mac)**: Camera preview (45%) + YouTube Studio (55%) side-by-side
+- **Narrow Screens (iPhone)**: Camera preview (35%) + YouTube Studio (60%) stacked vertically
+
+**WebView Enhancements:**
+- Modern User-Agent string for compatibility with latest YouTube Studio features
+- Enhanced JavaScript capabilities for full functionality
+- Automatic data persistence for login sessions
+- Improved keyboard input handling with custom accessory view
+
 ## 🏗 Architecture
 
 The app follows MVVM architecture with SwiftUI:
@@ -200,6 +226,13 @@ USBExternalCamera/
 - Verify RTMP URL and stream key
 - Check network connectivity
 - Ensure firewall allows RTMP traffic
+
+**YouTube Studio WebView Issues**
+- **"Outdated browser" message**: Fixed with Safari 17.1 User-Agent (automatic)
+- **Login not working**: Clear WebView data in iOS Settings > Safari > Advanced > Website Data
+- **Keyboard covering content**: Custom keyboard accessory automatically handles this
+- **Layout freezing**: Adaptive layout prevents UI disruption during keyboard events
+- **Features not working**: All desktop YouTube Studio features are supported with enhanced WebView
 
 **Frame drops during streaming**
 - Lower bitrate settings (use 480p for better stability)

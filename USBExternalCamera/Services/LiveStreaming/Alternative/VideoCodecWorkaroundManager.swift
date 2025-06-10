@@ -119,14 +119,19 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
         // 2. 보수적인 비트레이트 설정
         videoSettings.bitRate = min(settings.videoBitrate * 1000, 4_000_000) // 최대 4Mbps
         
-        // 3. H.264 프로파일을 Baseline으로 강제 설정
-        // (HaishinKit VideoCodec가 가장 안정적으로 처리하는 프로파일)
+        // 3. VideoToolbox 하드웨어 인코딩 최적화 설정 (HaishinKit 2.0.8 API 호환)
+        videoSettings.profileLevel = kVTProfileLevel_H264_Baseline_AutoLevel as String // 안정성 우선
+        videoSettings.allowFrameReordering = false // 실시간 스트리밍 최적화
+        videoSettings.maxKeyFrameIntervalDuration = 2 // 키프레임 간격
+        
+        // 하드웨어 가속 활성화
+        videoSettings.isHardwareEncoderEnabled = true
         
         await stream.setVideoSettings(videoSettings)
         
-        logger.info("✅ VideoCodec 사전 초기화 완료: \(safeWidth)x\(safeHeight)")
+        logger.info("✅ VideoCodec 사전 초기화 완료: \(safeWidth)x\(safeHeight) (VideoToolbox 하드웨어 가속)")
         isVideoCodecPreinitialized = true
-        codecStatus = NSLocalizedString("pre_initialization_complete", comment: "사전 초기화 완료")
+        codecStatus = NSLocalizedString("pre_initialization_complete", comment: "사전 초기화 완료") + " - VideoToolbox"
     }
     
     /// 더미 프레임으로 VideoCodec 워밍업

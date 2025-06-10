@@ -114,6 +114,12 @@ public enum USBExternalCamera {
         /// 오디오 인코더
         public var audioEncoder: String
         
+        /// 하드웨어 가속 사용 여부 (VideoToolbox)
+        public var useHardwareAcceleration: Bool
+        
+        /// H.264 프로파일 레벨
+        public var h264ProfileLevel: String
+        
         /// 버퍼 크기 (MB)
         public var bufferSize: Int
         
@@ -134,6 +140,8 @@ public enum USBExternalCamera {
             self.isEnabled = true
             self.videoEncoder = "H.264"
             self.audioEncoder = "AAC"
+            self.useHardwareAcceleration = true
+            self.h264ProfileLevel = "High"
             self.bufferSize = 3
             self.connectionTimeout = 30
         }
