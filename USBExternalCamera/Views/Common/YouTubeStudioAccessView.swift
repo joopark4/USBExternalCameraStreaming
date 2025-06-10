@@ -10,32 +10,39 @@ import WebKit
 
 // MARK: - YouTube Studio Access Components
 
-/// YouTube Studio 접근 View 컴포넌트
-/// 프리뷰 아래에 YouTube Studio 내장 웹뷰를 제공합니다.
+/// YouTube Studio 접근 및 관리를 위한 통합 뷰 컴포넌트
 /// 
 /// **주요 기능:**
-/// - YouTube Studio 내장 WebView
-/// - 스트리밍 상태 실시간 모니터링
-/// - 직접적인 스트림 관리 접근
-/// - 네이티브 텍스트 입력 오버레이로 키보드 문제 해결
+/// - **내장 YouTube Studio WebView** - Safari 17.1 User-Agent로 완전한 브라우저 호환성
+/// - **실시간 스트리밍 상태 모니터링** - 라이브 상태 및 스트림 키 상태 표시
+/// - **직접적인 스트림 관리 접근** - 앱 전환 없이 YouTube Studio 조작
+/// - **커스텀 키보드 액세서리** - 키보드 입력 시 레이아웃 문제 해결
+/// - **최적화된 레이아웃** - 웹뷰 공간 최대화 (500px 최소 높이)
+/// 
+/// **WebView 개선사항:**
+/// - 데스크톱 브라우저 User-Agent (구버전 브라우저 메시지 해결)
+/// - JavaScript 및 팝업 창 완전 지원
+/// - 웹사이트 데이터 지속성 (로그인 상태 유지)
+/// - iOS 버전별 최신 웹 기능 활성화
 struct YouTubeStudioAccessView: View {
     @ObservedObject var viewModel: MainViewModel
     @StateObject private var keyboardAccessoryManager = KeyboardAccessoryManager()
     
     var body: some View {
         ZStack {
-            // 메인 컨텐츠
-            VStack(spacing: 12) {
-                // 헤더
+            // 메인 컨텐츠 - 웹뷰 공간을 최대화하기 위해 여백 최소화
+            VStack(spacing: 8) {
+                // 헤더 (컴팩트하게)
                 headerSection
                 
-                // 스트리밍 상태 정보
+                // 스트리밍 상태 정보 (컴팩트하게)
                 streamingStatusCard
                 
-                // YouTube Studio WebView
+                // YouTube Studio WebView (최대한 확장)
                 youtubeStudioWebView
             }
-            .padding(16)
+            .padding(.horizontal, 12) // 좌우 패딩 줄임
+            .padding(.vertical, 8)   // 상하 패딩 줄임
             .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
@@ -70,12 +77,13 @@ struct YouTubeStudioAccessView: View {
         HStack {
             Image(systemName: "play.rectangle.fill")
                 .foregroundColor(.red)
-                .font(.title3)
+                .font(.body) // 더 작은 크기로
             Text("YouTube Studio")
-                .font(.headline)
+                .font(.subheadline) // 더 작은 크기로
                 .fontWeight(.semibold)
             Spacer()
         }
+        .padding(.vertical, 4) // 상하 패딩 최소화
     }
     
     @ViewBuilder
@@ -108,7 +116,8 @@ struct YouTubeStudioAccessView: View {
             // 스트림 키 상태 표시
             streamKeyStatusIndicator
         }
-        .padding(8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6) // 상하 패딩 줄임
         .background(Color(UIColor.tertiarySystemBackground))
         .cornerRadius(6)
     }
@@ -126,7 +135,7 @@ struct YouTubeStudioAccessView: View {
     @ViewBuilder
     private var youtubeStudioWebView: some View {
         YouTubeStudioWebView(keyboardAccessoryManager: keyboardAccessoryManager)
-            .frame(minHeight: 300, maxHeight: .infinity)
+            .frame(minHeight: 500, maxHeight: .infinity) // 최소 높이를 500으로 대폭 증가
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -140,7 +149,13 @@ struct YouTubeStudioAccessView: View {
 // MARK: - YouTube Studio WebView Component
 
 /// YouTube Studio 내장 WebView 컴포넌트
-/// 앱 내에서 직접 YouTube Studio에 접근할 수 있는 웹뷰를 제공합니다.
+/// 
+/// **기술적 특징:**
+/// - **Safari 17.1 User-Agent** - 최신 브라우저로 인식하여 모든 기능 사용 가능
+/// - **고급 JavaScript 지원** - 팝업 창, 웹 앱 기능 완전 지원
+/// - **데이터 지속성** - 로그인 상태 및 설정 자동 저장
+/// - **키보드 최적화** - 커스텀 액세서리로 입력 경험 개선
+/// - **iOS 버전별 기능** - 14.0+, 15.0+, 17.0+ 각각의 최신 기능 활용
 struct YouTubeStudioWebView: UIViewRepresentable {
     private let youtubeStudioURL = "https://studio.youtube.com"
     let keyboardAccessoryManager: KeyboardAccessoryManager
@@ -149,31 +164,61 @@ struct YouTubeStudioWebView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
+        
+        // 기본 미디어 재생 설정
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
-        // 강화된 메시지 핸들러 설정
-        let messageHandler = InputTrackingMessageHandler(accessoryManager: keyboardAccessoryManager)
+        // 데이터 지속성 설정 (로그인 상태 유지)
+        configuration.websiteDataStore = .default()
         
-        // 기본 핸들러들
+        // JavaScript 및 웹 기능 활성화
+        configuration.preferences.javaScriptEnabled = true
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        
+        // iOS 14.0+: 앱 바운드 도메인 제한 해제
+        if #available(iOS 14.0, *) {
+            configuration.limitsNavigationsToAppBoundDomains = false
+        }
+        
+        // iOS 15.0+: HTTPS 자동 업그레이드 비활성화 (혼합 콘텐츠 허용)
+        if #available(iOS 15.0, *) {
+            configuration.upgradeKnownHostsToHTTPS = false
+        }
+        
+        // 키보드 입력 추적을 위한 메시지 핸들러 설정
+        let messageHandler = InputTrackingMessageHandler(accessoryManager: keyboardAccessoryManager)
         configuration.userContentController.add(messageHandler, name: "inputChanged")
         configuration.userContentController.add(messageHandler, name: "inputFocused") 
         configuration.userContentController.add(messageHandler, name: "inputBlurred")
         
-
-        
+        // WebView 인스턴스 생성
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
         
-        // 키보드 관련 설정: 웹뷰 크기 변경 방지
+        // 데스크톱 Safari User-Agent 설정 (YouTube Studio 완전 호환성)
+        let customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15"
+        webView.customUserAgent = customUserAgent
+        
+        // iOS 17.0+: 웹 인스펙터 활성화 (개발/디버깅용)
+        if #available(iOS 17.0, *) {
+            webView.isInspectable = true
+        }
+        
+        // 키보드 상호작용 최적화 설정
         webView.scrollView.keyboardDismissMode = .interactive
-        webView.scrollView.contentInsetAdjustmentBehavior = .never // 자동 크기 조정 완전 비활성화
-        webView.scrollView.automaticallyAdjustsScrollIndicatorInsets = false // 스크롤 인디케이터 자동 조정 비활성화
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
         
         // YouTube Studio URL 로드
         if let url = URL(string: youtubeStudioURL) {
-            let request = URLRequest(url: url)
+            var request = URLRequest(url: url)
+            // 추가 헤더 설정으로 최신 브라우저 지원 명시
+            request.setValue("max-age=0", forHTTPHeaderField: "Cache-Control")
+            request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", forHTTPHeaderField: "Accept")
+            request.setValue("ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4", forHTTPHeaderField: "Accept-Language")
+            request.setValue("gzip, deflate, br", forHTTPHeaderField: "Accept-Encoding")
             webView.load(request)
         }
         
@@ -196,23 +241,42 @@ struct YouTubeStudioWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            // WebView 로딩 시작
+            // 네비게이션 시작 (로딩 시작)
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // WebView 로딩 완료 - 모듈화된 JavaScript 주입
+            // 페이지 로딩 완료 - 키보드 입력 추적 스크립트 주입
             webView.evaluateJavaScript(WebViewInputTrackingScript.defaultScript) { result, error in
-                // JavaScript 주입 결과 처리
+                if let error = error {
+                    print("⚠️ JavaScript 주입 실패: \(error.localizedDescription)")
+                }
             }
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            // WebView 로딩 실패 처리
+            print("❌ WebView 로딩 실패: \(error.localizedDescription)")
         }
     }
 }
 
-// YouTube Studio 버튼 컴포넌트는 제거됨 - 항상 표시되는 WebView로 대체
+// MARK: - Implementation Notes
 
-// YouTube Studio 접근 뷰 - 진단 및 설정 가이드 기능 제거됨
-// 내장 WebView를 통한 직접적인 YouTube Studio 접근에 집중 
+/*
+ YouTube Studio WebView 구현 특징:
+ 
+ 1. 브라우저 호환성:
+    - Safari 17.1 User-Agent로 "구버전 브라우저" 메시지 해결
+    - 모든 YouTube Studio 기능 완전 지원
+ 
+ 2. 키보드 처리:
+    - 커스텀 키보드 액세서리로 입력 최적화
+    - 레이아웃 고정으로 키보드로 인한 UI 깨짐 방지
+ 
+ 3. 레이아웃 최적화:
+    - 최소 높이 500px로 충분한 작업 공간 제공
+    - 적응형 레이아웃으로 다양한 화면 크기 대응
+ 
+ 4. 성능 최적화:
+    - 데이터 지속성으로 로그인 상태 유지
+    - iOS 버전별 최신 웹 기능 활용
+ */ 

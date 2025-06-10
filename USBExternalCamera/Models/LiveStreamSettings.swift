@@ -43,6 +43,12 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     /// 비디오 인코더
     var videoEncoder: String = "H.264"
     
+    /// 하드웨어 가속 사용 여부 (VideoToolbox)
+    var useHardwareAcceleration: Bool = true
+    
+    /// H.264 프로파일 레벨
+    var h264ProfileLevel: String = "High"
+    
     // MARK: - Audio Settings
     
     /// 오디오 비트레이트 (kbps)

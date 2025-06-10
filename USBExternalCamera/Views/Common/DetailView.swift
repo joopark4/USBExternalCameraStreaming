@@ -133,7 +133,7 @@ struct CameraPreviewContainerView: View {
                 verticalLayout(containerSize: containerSize)
             }
         }
-        .padding(20)
+        .padding(12) // 패딩 줄임
         .background(Color.black.opacity(0.1))
         .ignoresSafeArea(.keyboard) // 키보드로 인한 레이아웃 변경 방지
         .onTapGesture {
@@ -146,43 +146,43 @@ struct CameraPreviewContainerView: View {
     
     @ViewBuilder
     private func horizontalLayout(containerSize: CGSize) -> some View {
-        HStack(spacing: 20) {
-            // 왼쪽: 카메라 프리뷰 영역
+        HStack(spacing: 16) { // 간격 줄임
+            // 왼쪽: 카메라 프리뷰 영역 (더 작게)
             VStack(spacing: 12) {
                 cameraPreviewSection(
                     availableSize: CGSize(
-                        width: containerSize.width * 0.6 - 30,
+                        width: containerSize.width * 0.45 - 24, // 45%로 줄임
                         height: containerSize.height - 40
                     )
                 )
                 
                 Spacer()
             }
-            .frame(maxWidth: containerSize.width * 0.6)
+            .frame(maxWidth: containerSize.width * 0.45)
             
-            // 오른쪽: YouTube Studio 영역 (고정)
+            // 오른쪽: YouTube Studio 영역 (더 크게)
             VStack(spacing: 0) {
                 YouTubeStudioAccessView(viewModel: viewModel)
                     .frame(maxHeight: .infinity)
             }
-            .frame(maxWidth: containerSize.width * 0.4)
+            .frame(maxWidth: containerSize.width * 0.55) // 55%로 증가
         }
     }
     
     @ViewBuilder
     private func verticalLayout(containerSize: CGSize) -> some View {
-        VStack(spacing: 16) {
-            // 위쪽: 카메라 프리뷰 영역
+        VStack(spacing: 12) { // 간격 줄임
+            // 위쪽: 카메라 프리뷰 영역 (더 작게)
             cameraPreviewSection(
                 availableSize: CGSize(
                     width: containerSize.width - 40,
-                    height: containerSize.height * 0.5
+                    height: containerSize.height * 0.35 // 35%로 줄임
                 )
             )
             
-            // 아래쪽: YouTube Studio 영역 (고정)
+            // 아래쪽: YouTube Studio 영역 (더 크게)
             YouTubeStudioAccessView(viewModel: viewModel)
-                .frame(maxHeight: containerSize.height * 0.45)
+                .frame(maxHeight: containerSize.height * 0.6) // 60%로 증가
         }
     }
     

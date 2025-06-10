@@ -1442,15 +1442,20 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         var videoSettings = await stream.videoSettings
         videoSettings.videoSize = CGSize(width: safeSettings.videoWidth, height: safeSettings.videoHeight)
         
-        // 성능 최적화: 1080p는 비활성화되어 있으므로 비트레이트 제한 로직 단순화
+        // VideoToolbox 하드웨어 인코딩 최적화 설정
         let finalBitrate = safeSettings.videoBitrate
-        
         videoSettings.bitRate = finalBitrate * 1000 // kbps를 bps로 변환
         
-        // 성능 최적화: 1080p 특별 처리 제거 (기본 설정 사용)
+        // 💡 VideoToolbox 하드웨어 인코딩 최적화 (HaishinKit 2.0.8 API 호환)
+        videoSettings.profileLevel = kVTProfileLevel_H264_High_AutoLevel as String // 고품질 프로파일
+        videoSettings.allowFrameReordering = true // B-프레임 활용 (압축 효율 향상)
+        videoSettings.maxKeyFrameIntervalDuration = 2 // 2초 간격 키프레임
+        
+        // 하드웨어 가속 활성화 (iOS는 기본적으로 하드웨어 사용)
+        videoSettings.isHardwareEncoderEnabled = true
         
         await stream.setVideoSettings(videoSettings)
-        logger.info("✅ RTMPStream 비디오 설정 적용: \(safeSettings.videoWidth)x\(safeSettings.videoHeight) @ \(safeSettings.videoBitrate)kbps", category: .system)
+        logger.info("✅ RTMPStream 비디오 설정 적용 (VideoToolbox 하드웨어 최적화): \(safeSettings.videoWidth)x\(safeSettings.videoHeight) @ \(safeSettings.videoBitrate)kbps", category: .system)
         
         // 오디오 설정 적용 (개선)
         var audioSettings = await stream.audioSettings
@@ -1467,6 +1472,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         logger.info("🔍 설정 적용 검증:", category: .system)
         logger.info("  📺 적용된 비디오 비트레이트: \(appliedVideoSettings.bitRate / 1000) kbps", category: .system)
         logger.info("  🎵 적용된 오디오 비트레이트: \(appliedAudioSettings.bitRate / 1000) kbps", category: .system)
+        logger.info("  🔧 VideoToolbox 하드웨어 가속: 활성화됨", category: .system)
         
         logger.info("🎉 RTMPStream 모든 설정 적용 완료", category: .system)
     }
@@ -1609,9 +1615,9 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
             return pixelBuffer // 설정이 없으면 원본 반환
         }
         
-        // 1단계: 포맷 변환 (HaishinKit 호환성 보장)
-        guard let formatCompatibleBuffer = convertPixelBufferFormat(pixelBuffer) else {
-            logger.error("❌ 포맷 변환 실패 - 원본 프레임 사용")
+        // 1단계: VideoToolbox 최적화 포맷 변환 (YUV420 우선)
+        guard let formatCompatibleBuffer = convertPixelBufferForVideoToolbox(pixelBuffer) else {
+            logger.error("❌ VideoToolbox 포맷 변환 실패 - 원본 프레임 사용")
             return pixelBuffer
         }
         
@@ -2279,6 +2285,76 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         context.render(scaledImage, to: outputBuffer, bounds: targetRect, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
         
         return outputBuffer
+    }
+    
+    /// VideoToolbox 하드웨어 최적화를 위한 픽셀 버퍼 포맷 변환
+    private func convertPixelBufferForVideoToolbox(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
+        let currentFormat = CVPixelBufferGetPixelFormatType(pixelBuffer)
+        
+        // VideoToolbox 하드웨어 인코더가 가장 효율적으로 처리하는 포맷 우선순위:
+        // 1. YUV420 (하드웨어 가속 최적화)
+        // 2. BGRA (폴백용)
+        let preferredFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+        
+        if currentFormat == preferredFormat {
+            logger.debug("✅ 이미 VideoToolbox 최적화 포맷(YUV420)")
+            return pixelBuffer
+        }
+        
+        // YUV420 변환 시도 (하드웨어 가속 최대화)
+        if let yuvBuffer = convertToYUV420Format(pixelBuffer) {
+            logger.debug("🚀 VideoToolbox YUV420 변환 성공 - 하드웨어 가속 최적화")
+            return yuvBuffer
+        }
+        
+        // 폴백: BGRA 포맷 변환
+        logger.debug("⚠️ YUV420 변환 실패 - BGRA 폴백")
+        return convertToSupportedFormat(pixelBuffer)
+    }
+    
+    /// YUV420 포맷으로 변환 (VideoToolbox 하드웨어 가속 최적화)
+    private func convertToYUV420Format(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        
+        // YUV420 픽셀 버퍼 생성
+        let attributes: [String: Any] = [
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:],
+            kCVPixelBufferBytesPerRowAlignmentKey as String: 16,
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+            kCVPixelBufferWidthKey as String: width,
+            kCVPixelBufferHeightKey as String: height,
+            kCVPixelBufferPlaneAlignmentKey as String: 16
+        ]
+        
+        var yuvBuffer: CVPixelBuffer?
+        let createStatus = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width,
+            height,
+            kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+            attributes as CFDictionary,
+            &yuvBuffer
+        )
+        
+        guard createStatus == kCVReturnSuccess, let outputBuffer = yuvBuffer else {
+            logger.warning("⚠️ YUV420 픽셀버퍼 생성 실패: \(createStatus)")
+            return nil
+        }
+        
+        // vImage를 사용한 고성능 BGRA → YUV420 변환
+        let conversionSuccess = convertBGRAToYUV420UsingvImage(
+            sourceBuffer: pixelBuffer,
+            destinationBuffer: outputBuffer
+        )
+        
+        if conversionSuccess {
+            logger.debug("✅ VideoToolbox YUV420 변환 성공")
+            return outputBuffer
+        } else {
+            logger.warning("⚠️ YUV420 변환 실패")
+            return nil
+        }
     }
     
     /// CVPixelBuffer를 HaishinKit 호환 포맷으로 변환 (convertToSupportedFormat 대체용)
