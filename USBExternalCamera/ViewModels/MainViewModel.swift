@@ -9,7 +9,6 @@ import Foundation
 import SwiftUI
 import SwiftData
 import Combine
-import AVFoundation
 
 /// 메인 화면의 ViewModel
 /// MVVM 패턴에서 View와 Model 사이의 중간층 역할을 담당합니다.
@@ -24,48 +23,44 @@ final class MainViewModel: ObservableObject {
     @Published var selectedSidebarItem: SidebarItem? = .cameras
     
     /// 권한 설정 시트 표시 여부
-    /// 카메라/마이크 권한 설정 UI 제어
     @Published var showingPermissionAlert = false
     
     /// 라이브 스트리밍 설정 시트 표시 여부
-    /// 라이브 스트리밍 설정 UI 제어
     @Published var showingLiveStreamSettings = false
     
     /// 로깅 설정 시트 표시 여부 (개발용)
-    /// 로깅 설정 UI 제어 - 디버그 모드에서만 사용
     @Published var showingLoggingSettings = false
     
     /// 새로고침 진행 상태
-    /// 카메라 목록 새로고침 시 로딩 UI 표시
     @Published var isRefreshing = false
     
     /// 현재 권한 상태에 따른 UI 상태
-    /// 권한이 있으면 카메라 화면, 없으면 권한 요청 화면 표시
     @Published var currentUIState: UIState = .loading
     
     /// 화면 캡처 스트리밍 상태
-    /// 
-    /// **상태 관리:**
-    /// - true: 화면 캡처 스트리밍이 활성화됨 (30fps로 화면 캡처 중)
-    /// - false: 화면 캡처 스트리밍이 비활성화됨 (일반 모드)
-    ///
-    /// **UI 바인딩:**
-    /// 사이드바의 "화면 캡처 스트리밍" 버튼 상태와 연동됩니다.
-    /// 상태 변화 시 자동으로 버튼 아이콘과 Live 배지가 업데이트됩니다.
-    ///
-    /// **업데이트 조건:**
-    /// LiveStreamViewModel의 status가 변경될 때 자동으로 동기화됩니다.
     @Published var isScreenCaptureStreaming: Bool = false
     
-    // MARK: - Dependencies (Models)
+    // MARK: - Text Overlay Properties
     
-    /// 카메라 관련 비즈니스 로직을 담당하는 ViewModel
+    /// 텍스트 오버레이 표시 여부
+    @Published var showTextOverlay: Bool = false
+    
+    /// 텍스트 오버레이 설정 팝업 표시 여부
+    @Published var showingTextSettings: Bool = false
+    
+    /// 현재 텍스트 오버레이 설정
+    @Published var textOverlaySettings: TextOverlaySettings = TextOverlaySettings()
+    
+    /// 텍스트 히스토리 목록
+    @Published var textHistory: [TextHistoryItem] = []
+    
+    /// 현재 편집 중인 텍스트 설정 (임시)
+    @Published var editingTextSettings: TextOverlaySettings = TextOverlaySettings()
+    
+    // MARK: - Dependencies
+    
     let cameraViewModel: CameraViewModel
-    
-    /// 권한 관련 비즈니스 로직을 담당하는 ViewModel
     let permissionViewModel: PermissionViewModel
-    
-    /// 라이브 스트리밍 관련 비즈니스 로직을 담당하는 ViewModel
     let liveStreamViewModel: LiveStreamViewModel
     
     // MARK: - Private Properties
@@ -75,12 +70,6 @@ final class MainViewModel: ObservableObject {
     
     // MARK: - Initialization
     
-    /// MainViewModel 초기화
-    /// 의존성 주입을 통해 각 ViewModel을 받아 초기화합니다.
-    /// - Parameters:
-    ///   - cameraViewModel: 카메라 기능 관리 ViewModel
-    ///   - permissionViewModel: 권한 관리 ViewModel
-    ///   - liveStreamViewModel: 라이브 스트리밍 관리 ViewModel
     init(cameraViewModel: CameraViewModel, permissionViewModel: PermissionViewModel, liveStreamViewModel: LiveStreamViewModel) {
         self.cameraViewModel = cameraViewModel
         self.permissionViewModel = permissionViewModel
@@ -158,33 +147,77 @@ final class MainViewModel: ObservableObject {
         }
     }
     
-    /// 화면 캡처 스트리밍 토글 (UI용 공개 메서드)
-    /// 
-    /// **사용처:**
-    /// - 사이드바의 "스트리밍 시작 - 캡처" 버튼에서 호출
-    /// - SwiftUI View에서 직접 접근 가능한 인터페이스
-    ///
-    /// **동작 원리:**
-    /// 1. 사용자가 버튼을 탭하면 이 메서드가 호출됨
-    /// 2. LiveStreamViewModel의 toggleScreenCaptureStreaming() 호출
-    /// 3. LiveStreamViewModel이 실제 스트리밍 상태 관리 수행
-    /// 4. setupBindings()에서 상태 변화를 감지하여 isScreenCaptureStreaming 업데이트
-    ///
-    /// **상태 동기화:**
-    /// - MainViewModel은 UI 상태만 관리
-    /// - LiveStreamViewModel이 실제 스트리밍 로직 담당
-    /// - 두 ViewModel 간 상태는 Combine을 통해 자동 동기화
-    ///
-    /// **Thread Safety:**
-    /// 메인 스레드에서 호출되며, 내부적으로 비동기 처리됩니다.
+    /// 화면 캡처 스트리밍 토글
     func toggleScreenCaptureStreaming() {
         logDebug("🎮 [MainViewModel] 화면 캡처 스트리밍 토글 요청", category: .ui)
-        
-        // LiveStreamViewModel에 실제 스트리밍 제어 위임
-        // 상태 변화는 setupBindings()의 Combine을 통해 자동 반영
         liveStreamViewModel.toggleScreenCaptureStreaming()
-        
         logDebug("✅ [MainViewModel] 화면 캡처 스트리밍 토글 요청 완료", category: .ui)
+    }
+    
+    // MARK: - Text Overlay Methods
+    
+    /// 텍스트 오버레이 표시/숨김 토글
+    func toggleTextOverlay() {
+        showTextOverlay.toggle()
+        logDebug("📝 [MainViewModel] 텍스트 오버레이 토글: \(showTextOverlay)", category: .ui)
+    }
+    
+    /// 텍스트 설정 팝업 표시
+    func showTextSettings() {
+        editingTextSettings = textOverlaySettings
+        showingTextSettings = true
+        logDebug("⚙️ [MainViewModel] 텍스트 설정 팝업 표시", category: .ui)
+    }
+    
+    /// 텍스트 설정 적용
+    func applyTextSettings() {
+        // 텍스트가 비어있지 않은 경우 히스토리에 추가
+        if !editingTextSettings.text.isEmpty {
+            addToTextHistory(editingTextSettings.text)
+        }
+        
+        textOverlaySettings = editingTextSettings
+        showingTextSettings = false
+        
+        // 텍스트가 있으면 오버레이 표시
+        if !textOverlaySettings.text.isEmpty {
+            showTextOverlay = true
+        }
+        
+        logDebug("✅ [MainViewModel] 텍스트 설정 적용: '\(textOverlaySettings.text)'", category: .ui)
+    }
+    
+    /// 텍스트 설정 취소
+    func cancelTextSettings() {
+        showingTextSettings = false
+        logDebug("❌ [MainViewModel] 텍스트 설정 취소", category: .ui)
+    }
+    
+    /// 텍스트 히스토리에 추가
+    private func addToTextHistory(_ text: String) {
+        // 중복 제거
+        textHistory.removeAll { $0.text == text }
+        
+        // 새 항목 추가
+        textHistory.insert(TextHistoryItem(text: text), at: 0)
+        
+        // 최대 10개 유지
+        if textHistory.count > 10 {
+            textHistory = Array(textHistory.prefix(10))
+        }
+        
+        logDebug("📚 [MainViewModel] 텍스트 히스토리 추가: '\(text)'", category: .ui)
+    }
+    
+    /// 히스토리에서 텍스트 선택
+    func selectTextFromHistory(_ historyItem: TextHistoryItem) {
+        editingTextSettings.text = historyItem.text
+        logDebug("📖 [MainViewModel] 히스토리에서 텍스트 선택: '\(historyItem.text)'", category: .ui)
+    }
+    
+    /// 현재 사용 중인 텍스트 (HaishinKitManager에서 사용)
+    var currentOverlayText: String {
+        return textOverlaySettings.text
     }
     
     /// 카메라 선택 처리

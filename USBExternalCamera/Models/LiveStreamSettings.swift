@@ -223,61 +223,61 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     /// RTMP URL 유효성 검사
     func validateRTMPURL() -> ValidationResult {
         guard !rtmpURL.isEmpty else {
-            return ValidationResult(isValid: false, message: "RTMP URL이 비어있습니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_rtmp_url_empty", comment: "RTMP URL이 비어있습니다"))
         }
         
         guard rtmpURL.hasPrefix("rtmp://") else {
-            return ValidationResult(isValid: false, message: "RTMP URL은 rtmp://로 시작해야 합니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_rtmp_url_invalid_prefix", comment: "RTMP URL은 rtmp://로 시작해야 합니다"))
         }
         
         guard rtmpURL.count > 10 else {
-            return ValidationResult(isValid: false, message: "올바르지 않은 RTMP URL 형식입니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_rtmp_url_invalid_format", comment: "올바르지 않은 RTMP URL 형식입니다"))
         }
         
-        return ValidationResult(isValid: true, message: "유효한 RTMP URL입니다")
+        return ValidationResult(isValid: true, message: NSLocalizedString("validation_rtmp_url_valid", comment: "유효한 RTMP URL입니다"))
     }
     
     /// 스트림 키 유효성 검사
     func validateStreamKey() -> ValidationResult {
         guard !streamKey.isEmpty else {
-            return ValidationResult(isValid: false, message: "스트림 키가 비어있습니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_stream_key_empty", comment: "스트림 키가 비어있습니다"))
         }
         
         guard streamKey.count >= 8 else {
-            return ValidationResult(isValid: false, message: "스트림 키가 너무 짧습니다 (최소 8자)")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_stream_key_too_short", comment: "스트림 키가 너무 짧습니다 (최소 8자)"))
         }
         
-        return ValidationResult(isValid: true, message: "유효한 스트림 키입니다")
+        return ValidationResult(isValid: true, message: NSLocalizedString("validation_stream_key_valid", comment: "유효한 스트림 키입니다"))
     }
     
     /// 비디오 설정 유효성 검사
     func validateVideoSettings() -> ValidationResult {
         guard videoBitrate >= 500 && videoBitrate <= 50000 else {
-            return ValidationResult(isValid: false, message: "비디오 비트레이트는 500-50000 kbps 범위여야 합니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_video_bitrate_range", comment: "비디오 비트레이트는 500-50000 kbps 범위여야 합니다"))
         }
         
         guard videoWidth >= 640 && videoWidth <= 3840 else {
-            return ValidationResult(isValid: false, message: "비디오 너비는 640-3840 픽셀 범위여야 합니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_video_width_range", comment: "비디오 너비는 640-3840 픽셀 범위여야 합니다"))
         }
         
         guard videoHeight >= 480 && videoHeight <= 2160 else {
-            return ValidationResult(isValid: false, message: "비디오 높이는 480-2160 픽셀 범위여야 합니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_video_height_range", comment: "비디오 높이는 480-2160 픽셀 범위여야 합니다"))
         }
         
         guard frameRate >= 15 && frameRate <= 120 else {
-            return ValidationResult(isValid: false, message: "프레임 레이트는 15-120 fps 범위여야 합니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_frame_rate_range", comment: "프레임 레이트는 15-120 fps 범위여야 합니다"))
         }
         
-        return ValidationResult(isValid: true, message: "유효한 비디오 설정입니다")
+        return ValidationResult(isValid: true, message: NSLocalizedString("validation_video_settings_valid", comment: "유효한 비디오 설정입니다"))
     }
     
     /// 오디오 설정 유효성 검사
     func validateAudioSettings() -> ValidationResult {
         guard audioBitrate >= 32 && audioBitrate <= 320 else {
-            return ValidationResult(isValid: false, message: "오디오 비트레이트는 32-320 kbps 범위여야 합니다")
+            return ValidationResult(isValid: false, message: NSLocalizedString("validation_audio_bitrate_range", comment: "오디오 비트레이트는 32-320 kbps 범위여야 합니다"))
         }
         
-        return ValidationResult(isValid: true, message: "유효한 오디오 설정입니다")
+        return ValidationResult(isValid: true, message: NSLocalizedString("validation_audio_settings_valid", comment: "유효한 오디오 설정입니다"))
     }
     
     /// 전체 설정 유효성 검사
@@ -436,10 +436,10 @@ enum QualityPreset: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .low: return "낮음"
-        case .medium: return "보통"
-        case .high: return "높음"
-        case .ultra: return "최고"
+        case .low: return NSLocalizedString("quality_preset_low", comment: "낮음")
+        case .medium: return NSLocalizedString("quality_preset_medium", comment: "보통")
+        case .high: return NSLocalizedString("quality_preset_high", comment: "높음")
+        case .ultra: return NSLocalizedString("quality_preset_ultra", comment: "최고")
         }
     }
 }

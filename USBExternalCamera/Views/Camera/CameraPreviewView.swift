@@ -16,14 +16,23 @@ struct CameraPreviewView: UIViewRepresentable {
   let session: AVCaptureSession
   var streamViewModel: LiveStreamViewModel?
   var haishinKitManager: HaishinKitManager?
+  
+  // 텍스트 오버레이 관련 프로퍼티
+  var showTextOverlay: Bool = false
+  var overlayText: String = ""
 
   init(
-    session: AVCaptureSession, streamViewModel: LiveStreamViewModel? = nil,
-    haishinKitManager: HaishinKitManager? = nil
+    session: AVCaptureSession, 
+    streamViewModel: LiveStreamViewModel? = nil,
+    haishinKitManager: HaishinKitManager? = nil,
+    showTextOverlay: Bool = false,
+    overlayText: String = ""
   ) {
     self.session = session
     self.streamViewModel = streamViewModel
     self.haishinKitManager = haishinKitManager
+    self.showTextOverlay = showTextOverlay
+    self.overlayText = overlayText
   }
 
   func makeUIView(context: Context) -> UIView {
@@ -32,6 +41,8 @@ struct CameraPreviewView: UIViewRepresentable {
     let view = CameraPreviewUIView()
     view.captureSession = session
     view.haishinKitManager = haishinKitManager
+    view.showTextOverlay = showTextOverlay
+    view.overlayText = overlayText
     return view
   }
 
@@ -40,6 +51,7 @@ struct CameraPreviewView: UIViewRepresentable {
       // 세션이나 매니저가 변경된 경우에만 업데이트
       let sessionChanged = previewView.captureSession !== session
       let managerChanged = previewView.haishinKitManager !== haishinKitManager
+      let textOverlayChanged = previewView.showTextOverlay != showTextOverlay || previewView.overlayText != overlayText
 
       if sessionChanged {
         logInfo("캡처 세션 변경 감지 - 업데이트", category: .camera)
@@ -49,6 +61,17 @@ struct CameraPreviewView: UIViewRepresentable {
       if managerChanged {
         logInfo("HaishinKit 매니저 변경 감지 - 업데이트", category: .camera)
         previewView.haishinKitManager = haishinKitManager
+      }
+      
+      if textOverlayChanged {
+        logInfo("텍스트 오버레이 변경 감지 - 업데이트", category: .camera)
+        previewView.showTextOverlay = showTextOverlay
+        previewView.overlayText = overlayText
+        
+        // HaishinKitManager에 텍스트 오버레이 정보 전달
+        if let haishinKitManager = haishinKitManager {
+          haishinKitManager.updateTextOverlay(show: showTextOverlay, text: overlayText)
+        }
       }
 
       // 프리뷰 새로고침은 하지 않음 (안정성 향상)

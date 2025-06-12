@@ -95,6 +95,14 @@
 "streaming_stopped" = "Streaming has been stopped.";
 "streaming_live" = "Live streaming...";
 
+// MARK: - Text Overlay
+"text_overlay_show" = "Show Text";
+"text_overlay_hide" = "Hide Text";
+"text_overlay_add" = "Add Text"; 
+"text_overlay_placeholder" = "Enter text to display";
+"text_overlay_complete" = "Done";
+"text_overlay_cancel" = "Cancel";
+
 // Error Messages
 "stream_setup_failed" = "Failed to set up stream.";
 "server_connection_failed" = "Server connection failed.";
@@ -757,4 +765,56 @@
 "help_audio_bitrate" = "Audio Bitrate";
 "help_video_resolution" = "Video Resolution";
 "help_frame_rate" = "Frame Rate";
-"help_content_in_progress" = "Help content is being prepared."; 
+"help_content_in_progress" = "Help content is being prepared.";
+
+// MARK: - Aspect Ratio and Frame Rate Warnings
+"aspect_ratio_warning" = "⚠️ Uncommon aspect ratio: %@";
+"aspect_ratio_recommendation" = "⚠️ Recommended ratios: 16:9 (1.78), 4:3 (1.33), 21:9 (2.33)";
+"frame_rate_warning" = "⚠️ Uncommon frame rate: %dfps";
+"frame_rate_recommendation" = "⚠️ Recommended frame rates: %@fps";
+
+// MARK: - Platform-specific Streaming Recommendations
+"youtube_max_bitrate_exceeded" = "Exceeds YouTube maximum bitrate (%dkbps)";
+"youtube_bitrate_recommendation" = "Set bitrate to %dkbps or lower";
+"youtube_min_bitrate_recommendation" = "For this resolution (%dx%d), minimum %dkbps is recommended";
+"youtube_max_bitrate_recommendation" = "For this resolution (%dx%d), maximum %dkbps is recommended";
+
+"twitch_max_bitrate_exceeded" = "Exceeds Twitch maximum bitrate (%dkbps)";
+"twitch_bitrate_recommendation" = "Set bitrate to %dkbps or lower";
+"twitch_resolution_warning" = "Twitch does not recommend resolutions exceeding 1080p";
+"twitch_resolution_recommendation" = "Use resolution of 1920x1080 or lower";
+
+"facebook_max_bitrate_exceeded" = "Exceeds Facebook Live recommended maximum bitrate (%dkbps)";
+"facebook_bitrate_recommendation" = "Set to %dkbps or lower for stable streaming";
+
+"custom_rtmp_recommendation" = "Check the limitations of your custom RTMP server";
+
+// MARK: - HaishinKit Streaming Messages
+"stream_settings_missing" = "Stream settings are missing";
+"rtmp_connection_attempt" = "RTMP connection attempt: %@";
+"rtmp_connection_success" = "RTMP connection successful";
+"streaming_publish_attempt" = "Streaming publish attempt:";
+"streaming_publish_success" = "Streaming publish successful";
+"publish_verification_failed" = "Post-publish connection verification failed - not actually connected";
+"rtmp_server_rejected" = "RTMP server rejected connection. Please check if YouTube Live stream is started.";
+"final_connection_verified" = "Final connection verification complete - actual streaming started";
+"streaming_failed_error" = "Streaming failed: %@";
+
+// MARK: - Connection Error Messages
+"connection_timeout_check_network" = "Connection timeout - please check network status";
+"connection_timeout_rtmp_server" = "Connection timeout - no response from RTMP server. Please check network status and URL.";
+"stream_key_auth_failed" = "Stream key authentication failed - please check if 'Start Live Streaming' button is clicked in YouTube Studio";
+"rtmp_server_connection_failed" = "RTMP server connection failed - please check network status or RTMP URL";
+"rtmp_streaming_error" = "RTMP streaming error - %@";
+"network_error" = "Network error - %@";
+"streaming_connection_failed" = "Streaming connection failed: %@";
+
+// MARK: - Connection Status Messages
+"connection_status_ready" = "Ready";
+"connection_status_streaming_stopped" = "Streaming stopped";
+"rtmp_connection_closed" = "RTMP connection closed";
+"connection_close_error" = "Error during connection close: %@";
+"rtmp_disconnected_reconnecting" = "RTMP connection lost (attempting reconnection)";
+"connection_disconnected_waiting" = "Connection lost - waiting for reconnection";
+"youtube_live_check_needed" = "YouTube Live check needed - manual restart required";
+"youtube_live_connection_failed" = "YouTube Live connection failed. Please check if streaming is started in YouTube Studio and retry manually."; 

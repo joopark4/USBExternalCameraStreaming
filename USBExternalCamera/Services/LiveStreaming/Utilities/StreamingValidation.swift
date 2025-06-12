@@ -23,13 +23,13 @@ public final class StreamingValidation {
         public var errorDescription: String? {
             switch self {
             case .alreadyStreaming:
-                return "이미 스트리밍이 진행 중입니다"
+                return NSLocalizedString("validation_already_streaming", comment: "이미 스트리밍이 진행 중입니다")
             case .invalidSettings(let message):
-                return "설정 오류: \(message)"
+                return String(format: NSLocalizedString("validation_settings_error", comment: "설정 오류: %@"), message)
             case .connectionFailed(let message):
                 return String(format: NSLocalizedString("connection_failed_detailed", comment: "연결 실패: %@"), message)
             case .streamingFailed(let message):
-                return "스트리밍 실패: \(message)"
+                return String(format: NSLocalizedString("validation_streaming_failed", comment: "스트리밍 실패: %@"), message)
             }
         }
     }
@@ -63,16 +63,16 @@ public final class StreamingValidation {
     /// - Throws: 유효하지 않은 URL일 경우 ValidationError
     public static func validateRTMPURL(_ rtmpURL: String) throws {
         guard !rtmpURL.isEmpty else {
-            throw ValidationError.invalidSettings("RTMP URL이 설정되지 않았습니다")
+            throw ValidationError.invalidSettings(NSLocalizedString("validation_rtmp_not_set", comment: "RTMP URL이 설정되지 않았습니다"))
         }
         
         guard rtmpURL.hasPrefix("rtmp://") || rtmpURL.hasPrefix("rtmps://") else {
-            throw ValidationError.invalidSettings("유효하지 않은 RTMP URL 형식입니다")
+            throw ValidationError.invalidSettings(NSLocalizedString("validation_rtmp_invalid_format", comment: "유효하지 않은 RTMP URL 형식입니다"))
         }
         
         // URL 파싱 가능 여부 확인
         guard URL(string: rtmpURL) != nil else {
-            throw ValidationError.invalidSettings("RTMP URL을 파싱할 수 없습니다")
+            throw ValidationError.invalidSettings(NSLocalizedString("validation_rtmp_parse_failed", comment: "RTMP URL을 파싱할 수 없습니다"))
         }
         
         logDebug("✅ RTMP URL validation passed: \(rtmpURL)", category: .streaming)
@@ -85,7 +85,7 @@ public final class StreamingValidation {
     /// - Throws: 유효하지 않은 스트림 키일 경우 ValidationError
     public static func validateStreamKey(_ streamKey: String, rtmpURL: String) throws {
         guard !streamKey.isEmpty else {
-            throw ValidationError.invalidSettings("스트림 키가 설정되지 않았습니다")
+            throw ValidationError.invalidSettings(NSLocalizedString("validation_stream_key_not_set", comment: "스트림 키가 설정되지 않았습니다"))
         }
         
         // YouTube 스트림 키 특별 검증
@@ -103,25 +103,26 @@ public final class StreamingValidation {
     
     /// YouTube 스트림 키 특별 검증
     private static func validateYouTubeStreamKey(_ streamKey: String) throws {
-        logInfo("📋 YouTube Live 진단 정보:", category: .streaming)
-        logInfo("   🔑 스트림 키: \(String(streamKey.prefix(8)))***", category: .streaming)
+        logInfo(NSLocalizedString("youtube_diagnosis_title", comment: "YouTube Live 진단 정보"), category: .streaming)
+        let keyPrefix = String(streamKey.prefix(8))
+        logInfo(String(format: NSLocalizedString("youtube_stream_key_prefix", comment: "스트림 키 표시"), keyPrefix), category: .streaming)
         logInfo("", category: .streaming)
-        logInfo("📋 YouTube Live 체크리스트:", category: .streaming)
-        logInfo("   1. YouTube Studio > 라이브 스트리밍 > '스트림' 탭에서 스트림 키 확인", category: .streaming)
-        logInfo("   2. 채널에서 라이브 스트리밍 기능이 활성화되어 있는지 확인", category: .streaming)
-        logInfo("   3. 스트림 키가 최신이고 만료되지 않았는지 확인", category: .streaming)
-        logInfo("   4. 네트워크가 RTMP 포트(1935)를 차단하지 않는지 확인", category: .streaming)
+        logInfo(NSLocalizedString("youtube_checklist_title", comment: "YouTube Live 체크리스트"), category: .streaming)
+        logInfo(NSLocalizedString("youtube_checklist_1", comment: "체크리스트 1"), category: .streaming)
+        logInfo(NSLocalizedString("youtube_checklist_2", comment: "체크리스트 2"), category: .streaming)
+        logInfo(NSLocalizedString("youtube_checklist_3", comment: "체크리스트 3"), category: .streaming)
+        logInfo(NSLocalizedString("youtube_checklist_4", comment: "체크리스트 4"), category: .streaming)
         logInfo("", category: .streaming)
         
         // 스트림 키 형식 검사 (더 유연하게)
         if streamKey.count < 16 {
-            logWarning("⚠️ 스트림 키가 너무 짧습니다 (\(streamKey.count)자)", category: .streaming)
-            logWarning("⚠️ YouTube 스트림 키는 일반적으로 20자 이상입니다", category: .streaming)
+            logWarning(String(format: NSLocalizedString("youtube_stream_key_short_warning", comment: "스트림 키가 너무 짧습니다"), streamKey.count), category: .streaming)
+            logWarning(NSLocalizedString("youtube_stream_key_length_warning", comment: "YouTube 스트림 키는 일반적으로 20자 이상입니다"), category: .streaming)
         }
         
         if !streamKey.contains("-") {
-            logWarning("⚠️ 스트림 키 형식이 일반적이지 않습니다", category: .streaming)
-            logWarning("⚠️ YouTube 스트림 키는 보통 '-'로 구분된 형식입니다", category: .streaming)
+            logWarning(NSLocalizedString("youtube_stream_key_format_warning", comment: "스트림 키 형식이 일반적이지 않습니다"), category: .streaming)
+            logWarning(NSLocalizedString("youtube_stream_key_separator_warning", comment: "YouTube 스트림 키는 보통 '-'로 구분된 형식입니다"), category: .streaming)
         }
     }
     
@@ -129,7 +130,7 @@ public final class StreamingValidation {
     private static func validateTwitchStreamKey(_ streamKey: String) throws {
         // Twitch 스트림 키는 보통 live_로 시작
         if !streamKey.hasPrefix("live_") && streamKey.count < 20 {
-            logWarning("⚠️ Twitch 스트림 키 형식이 일반적이지 않습니다", category: .streaming)
+            logWarning(NSLocalizedString("twitch_stream_key_format_warning", comment: "Twitch 스트림 키 형식이 일반적이지 않습니다"), category: .streaming)
         }
     }
     
@@ -140,19 +141,21 @@ public final class StreamingValidation {
     /// - Throws: 유효하지 않은 비트레이트일 경우 ValidationError
     public static func validateBitrates(videoBitrate: Int, audioBitrate: Int) throws {
         guard videoBitrate > 0 && audioBitrate > 0 else {
-            throw ValidationError.invalidSettings("비트레이트는 0보다 커야 합니다")
+            throw ValidationError.invalidSettings(NSLocalizedString("validation_bitrate_positive", comment: "비트레이트는 0보다 커야 합니다"))
         }
         
         // 비디오 비트레이트 범위 검사
         let videoRange = 100...50000 // 100kbps ~ 50Mbps
         guard videoRange.contains(videoBitrate) else {
-            throw ValidationError.invalidSettings("비디오 비트레이트는 \(videoRange.lowerBound)-\(videoRange.upperBound) kbps 범위여야 합니다")
+            let message = String(format: NSLocalizedString("validation_video_bitrate_range_format", comment: "비디오 비트레이트 범위"), videoRange.lowerBound, videoRange.upperBound)
+            throw ValidationError.invalidSettings(message)
         }
         
         // 오디오 비트레이트 범위 검사
         let audioRange = 32...320 // 32kbps ~ 320kbps
         guard audioRange.contains(audioBitrate) else {
-            throw ValidationError.invalidSettings("오디오 비트레이트는 \(audioRange.lowerBound)-\(audioRange.upperBound) kbps 범위여야 합니다")
+            let message = String(format: NSLocalizedString("validation_audio_bitrate_range_format", comment: "오디오 비트레이트 범위"), audioRange.lowerBound, audioRange.upperBound)
+            throw ValidationError.invalidSettings(message)
         }
         
         logDebug("✅ Bitrate validation passed: Video \(videoBitrate)kbps, Audio \(audioBitrate)kbps", category: .streaming)
@@ -165,21 +168,23 @@ public final class StreamingValidation {
     /// - Throws: 유효하지 않은 해상도일 경우 ValidationError
     public static func validateResolution(width: Int, height: Int) throws {
         guard width > 0 && height > 0 else {
-            throw ValidationError.invalidSettings("해상도는 0보다 커야 합니다")
+            throw ValidationError.invalidSettings(NSLocalizedString("validation_resolution_positive", comment: "해상도는 0보다 커야 합니다"))
         }
         
         // 최소 해상도 검사
         let minWidth = 320
         let minHeight = 240
         guard width >= minWidth && height >= minHeight else {
-            throw ValidationError.invalidSettings("최소 해상도는 \(minWidth)x\(minHeight)입니다")
+            let message = String(format: NSLocalizedString("validation_min_resolution_format", comment: "최소 해상도"), minWidth, minHeight)
+            throw ValidationError.invalidSettings(message)
         }
         
         // 최대 해상도 검사
         let maxWidth = 7680 // 8K
         let maxHeight = 4320
         guard width <= maxWidth && height <= maxHeight else {
-            throw ValidationError.invalidSettings("최대 해상도는 \(maxWidth)x\(maxHeight)입니다")
+            let message = String(format: NSLocalizedString("validation_max_resolution_format", comment: "최대 해상도"), maxWidth, maxHeight)
+            throw ValidationError.invalidSettings(message)
         }
         
         // 일반적인 종횡비 검사 (경고만)
@@ -189,8 +194,9 @@ public final class StreamingValidation {
         
         let isCommonRatio = commonRatios.contains { abs(aspectRatio - $0) < tolerance }
         if !isCommonRatio {
-            logWarning("⚠️ 일반적이지 않은 종횡비입니다: \(String(format: "%.2f", aspectRatio))", category: .streaming)
-            logWarning("⚠️ 권장 비율: 16:9 (1.78), 4:3 (1.33), 21:9 (2.33)", category: .streaming)
+            let aspectRatioString = String(format: "%.2f", aspectRatio)
+            logWarning(String(format: NSLocalizedString("aspect_ratio_warning", comment: "일반적이지 않은 종횡비"), aspectRatioString), category: .streaming)
+            logWarning(NSLocalizedString("aspect_ratio_recommendation", comment: "권장 비율"), category: .streaming)
         }
         
         logDebug("✅ Resolution validation passed: \(width)x\(height)", category: .streaming)
@@ -201,20 +207,22 @@ public final class StreamingValidation {
     /// - Throws: 유효하지 않은 프레임률일 경우 ValidationError
     public static func validateFrameRate(_ frameRate: Int) throws {
         guard frameRate > 0 else {
-            throw ValidationError.invalidSettings("프레임률은 0보다 커야 합니다")
+            throw ValidationError.invalidSettings(NSLocalizedString("validation_frame_rate_positive", comment: "프레임률은 0보다 커야 합니다"))
         }
         
         // 프레임률 범위 검사
         let frameRateRange = 1...120
         guard frameRateRange.contains(frameRate) else {
-            throw ValidationError.invalidSettings("프레임률은 \(frameRateRange.lowerBound)-\(frameRateRange.upperBound) fps 범위여야 합니다")
+            let message = String(format: NSLocalizedString("validation_frame_rate_range_format", comment: "프레임률 범위"), frameRateRange.lowerBound, frameRateRange.upperBound)
+            throw ValidationError.invalidSettings(message)
         }
         
         // 일반적인 프레임률 검사 (경고만)
         let commonFrameRates = [24, 25, 30, 50, 60, 120]
         if !commonFrameRates.contains(frameRate) {
-            logWarning("⚠️ 일반적이지 않은 프레임률입니다: \(frameRate)fps", category: .streaming)
-            logWarning("⚠️ 권장 프레임률: \(commonFrameRates.map(String.init).joined(separator: ", "))fps", category: .streaming)
+            logWarning(String(format: NSLocalizedString("frame_rate_warning", comment: "일반적이지 않은 프레임률"), frameRate), category: .streaming)
+            let frameRateList = commonFrameRates.map(String.init).joined(separator: ", ")
+            logWarning(String(format: NSLocalizedString("frame_rate_recommendation", comment: "권장 프레임률"), frameRateList), category: .streaming)
         }
         
         logDebug("✅ Frame rate validation passed: \(frameRate)fps", category: .streaming)
@@ -247,17 +255,17 @@ public final class StreamingValidation {
         // YouTube 권장 설정 검사
         let maxBitrate = 51000 // 51 Mbps
         if settings.videoBitrate > maxBitrate {
-            warnings.append("YouTube 최대 비트레이트(\(maxBitrate)kbps)를 초과합니다")
-            recommendations.append("비트레이트를 \(maxBitrate)kbps 이하로 설정하세요")
+            warnings.append(String(format: NSLocalizedString("youtube_max_bitrate_exceeded", comment: "YouTube 최대 비트레이트 초과"), maxBitrate))
+            recommendations.append(String(format: NSLocalizedString("youtube_bitrate_recommendation", comment: "비트레이트 권장사항"), maxBitrate))
         }
         
         // 해상도별 권장 비트레이트
         let (recommendedMin, recommendedMax) = getYouTubeRecommendedBitrate(width: settings.videoWidth, height: settings.videoHeight, frameRate: settings.frameRate)
         
         if settings.videoBitrate < recommendedMin {
-            recommendations.append("이 해상도(\(settings.videoWidth)x\(settings.videoHeight))에는 최소 \(recommendedMin)kbps를 권장합니다")
+            recommendations.append(String(format: NSLocalizedString("youtube_min_bitrate_recommendation", comment: "최소 비트레이트 권장"), settings.videoWidth, settings.videoHeight, recommendedMin))
         } else if settings.videoBitrate > recommendedMax {
-            recommendations.append("이 해상도(\(settings.videoWidth)x\(settings.videoHeight))에는 최대 \(recommendedMax)kbps를 권장합니다")
+            recommendations.append(String(format: NSLocalizedString("youtube_max_bitrate_recommendation", comment: "최대 비트레이트 권장"), settings.videoWidth, settings.videoHeight, recommendedMax))
         }
         
         return PlatformValidationResult(
@@ -275,14 +283,14 @@ public final class StreamingValidation {
         // Twitch 제한사항
         let maxBitrate = 6000 // 6 Mbps
         if settings.videoBitrate > maxBitrate {
-            warnings.append("Twitch 최대 비트레이트(\(maxBitrate)kbps)를 초과합니다")
-            recommendations.append("비트레이트를 \(maxBitrate)kbps 이하로 설정하세요")
+            warnings.append(String(format: NSLocalizedString("twitch_max_bitrate_exceeded", comment: "Twitch 최대 비트레이트 초과"), maxBitrate))
+            recommendations.append(String(format: NSLocalizedString("twitch_bitrate_recommendation", comment: "Twitch 비트레이트 권장사항"), maxBitrate))
         }
         
         // 해상도 제한
         if settings.videoWidth > 1920 || settings.videoHeight > 1080 {
-            warnings.append("Twitch는 1080p를 초과하는 해상도를 권장하지 않습니다")
-            recommendations.append("1920x1080 이하의 해상도를 사용하세요")
+            warnings.append(NSLocalizedString("twitch_resolution_warning", comment: "Twitch 해상도 경고"))
+            recommendations.append(NSLocalizedString("twitch_resolution_recommendation", comment: "Twitch 해상도 권장사항"))
         }
         
         return PlatformValidationResult(
@@ -300,8 +308,8 @@ public final class StreamingValidation {
         // Facebook Live 제한사항
         let maxBitrate = 4000 // 4 Mbps
         if settings.videoBitrate > maxBitrate {
-            warnings.append("Facebook Live 권장 최대 비트레이트(\(maxBitrate)kbps)를 초과합니다")
-            recommendations.append("안정적인 스트리밍을 위해 \(maxBitrate)kbps 이하로 설정하세요")
+            warnings.append(String(format: NSLocalizedString("facebook_max_bitrate_exceeded", comment: "Facebook Live 최대 비트레이트 초과"), maxBitrate))
+            recommendations.append(String(format: NSLocalizedString("facebook_bitrate_recommendation", comment: "Facebook Live 비트레이트 권장사항"), maxBitrate))
         }
         
         return PlatformValidationResult(
@@ -316,7 +324,7 @@ public final class StreamingValidation {
         return PlatformValidationResult(
             isValid: true,
             warnings: [],
-            recommendations: ["커스텀 RTMP 서버의 제한사항을 확인하세요"],
+            recommendations: [NSLocalizedString("custom_rtmp_recommendation", comment: "커스텀 RTMP 서버의 제한사항을 확인하세요")],
             platform: .custom
         )
     }

@@ -95,6 +95,14 @@
 "streaming_stopped" = "스트리밍이 중지되었습니다.";
 "streaming_live" = "라이브 스트리밍 중...";
 
+// MARK: - Text Overlay
+"text_overlay_show" = "텍스트 표시";
+"text_overlay_hide" = "텍스트 숨김";
+"text_overlay_add" = "텍스트 추가"; 
+"text_overlay_placeholder" = "송출할 텍스트를 입력하세요";
+"text_overlay_complete" = "완료";
+"text_overlay_cancel" = "취소";
+
 // Error Messages
 "stream_setup_failed" = "스트림 설정에 실패했습니다.";
 "server_connection_failed" = "서버 연결에 실패했습니다.";
@@ -750,4 +758,56 @@
 "help_audio_bitrate" = "오디오 비트레이트";
 "help_video_resolution" = "비디오 해상도";
 "help_frame_rate" = "프레임 레이트";
-"help_content_in_progress" = "도움말 내용을 준비 중입니다."; 
+"help_content_in_progress" = "도움말 내용을 준비 중입니다.";
+
+// MARK: - 종횡비 및 프레임률 경고
+"aspect_ratio_warning" = "⚠️ 일반적이지 않은 종횡비입니다: %@";
+"aspect_ratio_recommendation" = "⚠️ 권장 비율: 16:9 (1.78), 4:3 (1.33), 21:9 (2.33)";
+"frame_rate_warning" = "⚠️ 일반적이지 않은 프레임률입니다: %dfps";
+"frame_rate_recommendation" = "⚠️ 권장 프레임률: %@fps";
+
+// MARK: - 플랫폼별 스트리밍 권장사항
+"youtube_max_bitrate_exceeded" = "YouTube 최대 비트레이트(%dkbps)를 초과합니다";
+"youtube_bitrate_recommendation" = "비트레이트를 %dkbps 이하로 설정하세요";
+"youtube_min_bitrate_recommendation" = "이 해상도(%dx%d)에는 최소 %dkbps를 권장합니다";
+"youtube_max_bitrate_recommendation" = "이 해상도(%dx%d)에는 최대 %dkbps를 권장합니다";
+
+"twitch_max_bitrate_exceeded" = "Twitch 최대 비트레이트(%dkbps)를 초과합니다";
+"twitch_bitrate_recommendation" = "비트레이트를 %dkbps 이하로 설정하세요";
+"twitch_resolution_warning" = "Twitch는 1080p를 초과하는 해상도를 권장하지 않습니다";
+"twitch_resolution_recommendation" = "1920x1080 이하의 해상도를 사용하세요";
+
+"facebook_max_bitrate_exceeded" = "Facebook Live 권장 최대 비트레이트(%dkbps)를 초과합니다";
+"facebook_bitrate_recommendation" = "안정적인 스트리밍을 위해 %dkbps 이하로 설정하세요";
+
+"custom_rtmp_recommendation" = "커스텀 RTMP 서버의 제한사항을 확인하세요";
+
+// MARK: - HaishinKit 스트리밍 메시지
+"stream_settings_missing" = "스트림 설정이 없습니다";
+"rtmp_connection_attempt" = "RTMP 연결 시도: %@";
+"rtmp_connection_success" = "RTMP 연결 성공";
+"streaming_publish_attempt" = "스트리밍 퍼블리시 시도:";
+"streaming_publish_success" = "스트리밍 퍼블리시 성공";
+"publish_verification_failed" = "퍼블리시 후 연결 상태 확인 실패 - 실제로는 연결되지 않음";
+"rtmp_server_rejected" = "RTMP 서버에서 연결을 거부했습니다. YouTube Live 스트림을 시작했는지 확인해주세요.";
+"final_connection_verified" = "최종 연결 상태 확인 완료 - 실제 스트리밍 시작됨";
+"streaming_failed_error" = "스트리밍 실패: %@";
+
+// MARK: - 연결 오류 메시지
+"connection_timeout_check_network" = "연결 타임아웃 - 네트워크 상태를 확인해주세요";
+"connection_timeout_rtmp_server" = "연결 시간 초과 - RTMP 서버 응답이 없습니다. 네트워크 상태와 URL을 확인해주세요.";
+"stream_key_auth_failed" = "스트림 키 인증 실패 - YouTube Studio에서 '라이브 스트리밍 시작' 버튼을 클릭했는지 확인하세요";
+"rtmp_server_connection_failed" = "RTMP 서버 연결 실패 - 네트워크 상태 또는 RTMP URL을 확인하세요";
+"rtmp_streaming_error" = "RTMP 스트리밍 오류 - %@";
+"network_error" = "네트워크 오류 - %@";
+"streaming_connection_failed" = "스트리밍 연결 실패: %@";
+
+// MARK: - 연결 상태 메시지
+"connection_status_ready" = "준비됨";
+"connection_status_streaming_stopped" = "스트리밍 중지됨";
+"rtmp_connection_closed" = "RTMP 연결 종료됨";
+"connection_close_error" = "연결 종료 중 오류: %@";
+"rtmp_disconnected_reconnecting" = "RTMP 연결이 끊어졌습니다 (재연결 시도 중)";
+"connection_disconnected_waiting" = "연결 끊어짐 - 재연결 대기 중";
+"youtube_live_check_needed" = "YouTube Live 확인 필요 - 수동 재시작 하세요";
+"youtube_live_connection_failed" = "YouTube Live 연결에 실패했습니다. YouTube Studio에서 스트리밍을 시작했는지 확인 후 수동으로 재시도하세요."; 

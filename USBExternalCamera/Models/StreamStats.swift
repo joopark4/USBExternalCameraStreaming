@@ -237,10 +237,10 @@ enum QualityStatus: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .excellent: return "우수"
-        case .good: return "양호"
-        case .fair: return "보통"
-        case .poor: return "불량"
+        case .excellent: return NSLocalizedString("quality_status_excellent", comment: "우수")
+        case .good: return NSLocalizedString("quality_status_good", comment: "양호")
+        case .fair: return NSLocalizedString("quality_status_fair", comment: "보통")
+        case .poor: return NSLocalizedString("quality_status_poor", comment: "불량")
         }
     }
     
