@@ -997,7 +997,7 @@ struct LiveStreamView: View {
     private func testRTMPConnection() async {
         logger.info("🧪 [RTMP] HaishinKit RTMP 연결 테스트 시작", category: .connection)
         
-        guard let haishinKitManager = viewModel.liveStreamService as? HaishinKitManager else {
+        guard viewModel.liveStreamService is HaishinKitManager else {
             connectionTestResult = "❌ HaishinKit 매니저가 초기화되지 않았습니다."
             await MainActor.run {
                 showingConnectionTest = true

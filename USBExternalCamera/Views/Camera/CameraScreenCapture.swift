@@ -262,37 +262,8 @@ extension CameraPreviewUIView {
     return (isScreenCapturing, stats?.summary)
   }
 
-  /// 화면 캡처 성능 테스트
-  public func testScreenCapturePerformance() {
-    guard let manager = haishinKitManager else {
-      logError("HaishinKitManager가 없음", category: .streaming)
-      return
-    }
-
-    logInfo("화면 캡처 성능 테스트 시작...", category: .performance)
-    manager.resetScreenCaptureStats()
-
-    // 10프레임 연속 전송 테스트
-    for i in 1...10 {
-      DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.1) { [weak self] in
-        if let image = self?.renderToImage(),
-          let pixelBuffer = image.toCVPixelBuffer()
-        {
-          Task {
-            await manager.sendManualFrame(pixelBuffer)
-          }
-
-          if i == 10 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-              let stats = manager.getScreenCaptureStats()
-              logInfo("테스트 완료:", category: .performance)
-              logInfo(stats.summary, category: .performance)
-            }
-          }
-        }
-      }
-    }
-  }
+  // 화면 캡처 성능 테스트 메서드가 제거되었습니다.
+  // 프로덕션 환경에서 불필요한 테스트 기능을 정리했습니다.
   
   /// 단말 표시용 화면 캡처 (사용자 화면에 표시용)
   /// 

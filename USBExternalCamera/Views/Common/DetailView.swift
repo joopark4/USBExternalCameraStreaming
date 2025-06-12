@@ -21,9 +21,8 @@ extension NSNotification.Name {
 struct DetailView: View {
     @ObservedObject var viewModel: MainViewModel
     
-    // 화면 캡처 테스트 관련 상태
+    // 화면 캡처 관련 상태
     @State private var screenCaptureEnabled = false
-    @State private var testMessage: String?
     @State private var screenCaptureStats: String?
     @State private var statsTimer: Timer?
     
@@ -147,16 +146,22 @@ struct CameraPreviewContainerView: View {
     @ViewBuilder
     private func horizontalLayout(containerSize: CGSize) -> some View {
         HStack(spacing: 16) { // 간격 줄임
-            // 왼쪽: 카메라 프리뷰 영역 (더 작게)
-            VStack(spacing: 12) {
+            // 왼쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역
+            HStack(spacing: 12) {
+                // 카메라 프리뷰
                 cameraPreviewSection(
                     availableSize: CGSize(
-                        width: containerSize.width * 0.45 - 24, // 45%로 줄임
+                        width: containerSize.width * 0.35, // 35%로 줄임 (텍스트 컨트롤 공간 확보)
                         height: containerSize.height - 40
                     )
                 )
                 
-                Spacer()
+                // 텍스트 컨트롤 영역 (프리뷰 오른쪽에 세로 배치)
+                VStack(spacing: 0) {
+                    TextOverlayControlView(viewModel: viewModel)
+                    Spacer()
+                }
+                .frame(width: 120) // 고정 너비
             }
             .frame(maxWidth: containerSize.width * 0.45)
             
@@ -172,13 +177,23 @@ struct CameraPreviewContainerView: View {
     @ViewBuilder
     private func verticalLayout(containerSize: CGSize) -> some View {
         VStack(spacing: 12) { // 간격 줄임
-            // 위쪽: 카메라 프리뷰 영역 (더 작게)
-            cameraPreviewSection(
-                availableSize: CGSize(
-                    width: containerSize.width - 40,
-                    height: containerSize.height * 0.35 // 35%로 줄임
+            // 위쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역
+            HStack(spacing: 12) {
+                // 카메라 프리뷰
+                cameraPreviewSection(
+                    availableSize: CGSize(
+                        width: containerSize.width - 140, // 텍스트 컨트롤 공간 확보
+                        height: containerSize.height * 0.35 // 35%로 증가
+                    )
                 )
-            )
+                
+                // 텍스트 컨트롤 영역 (프리뷰 오른쪽에 세로 배치)
+                VStack(spacing: 0) {
+                    TextOverlayControlView(viewModel: viewModel)
+                    Spacer()
+                }
+                .frame(width: 120) // 고정 너비
+            }
             
             // 아래쪽: YouTube Studio 영역 (더 크게)
             YouTubeStudioAccessView(viewModel: viewModel)
@@ -213,7 +228,9 @@ struct CameraPreviewContainerView: View {
                 CameraPreviewView(
                     session: viewModel.cameraViewModel.captureSession,
                     streamViewModel: viewModel.liveStreamViewModel,
-                    haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager
+                    haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
+                    showTextOverlay: viewModel.showTextOverlay,
+                    overlayText: viewModel.currentOverlayText
                 )
                 .aspectRatio(aspectRatio, contentMode: .fit)
                 .frame(width: previewSize.width, height: previewSize.height)
@@ -223,6 +240,32 @@ struct CameraPreviewContainerView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 )
+                .onAppear {
+                    // HaishinKitManager에 텍스트 오버레이 정보 전달
+                    if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
+                        haishinKitManager.updateTextOverlay(show: viewModel.showTextOverlay, settings: viewModel.textOverlaySettings)
+                    }
+                }
+                .onChange(of: viewModel.textOverlaySettings) { _, newSettings in
+                    // 텍스트 설정 변경 시 HaishinKitManager 업데이트
+                    if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
+                        haishinKitManager.updateTextOverlay(show: viewModel.showTextOverlay, settings: newSettings)
+                    }
+                }
+                .onChange(of: viewModel.showTextOverlay) { _, newValue in
+                    // 텍스트 표시 상태 변경 시 HaishinKitManager 업데이트
+                    if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
+                        haishinKitManager.updateTextOverlay(show: newValue, settings: viewModel.textOverlaySettings)
+                    }
+                }
+                
+                // 텍스트 오버레이
+                if viewModel.showTextOverlay {
+                    TextOverlayDisplayView(
+                        settings: viewModel.textOverlaySettings,
+                        previewSize: previewSize
+                    )
+                }
                 
                 // 16:9 경계선 표시 (선택적으로 표시)
                 RoundedRectangle(cornerRadius: 8)
@@ -246,6 +289,8 @@ struct CameraPreviewContainerView: View {
             }
         }
     }
+    
+
 }
 
 /// 카메라 플레이스홀더 View 컴포넌트

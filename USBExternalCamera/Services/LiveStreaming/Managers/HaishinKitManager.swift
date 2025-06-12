@@ -11,9 +11,17 @@ import Accelerate
 
 /// 오디오 품질 레벨
 private enum AudioQualityLevel: String {
-    case low = "저품질"
-    case standard = "표준"
-    case high = "고품질"
+    case low = "low"
+    case standard = "standard"
+    case high = "high"
+    
+    var displayName: String {
+        switch self {
+        case .low: return NSLocalizedString("haishinkit_quality_low", comment: "저품질")
+        case .standard: return NSLocalizedString("haishinkit_quality_standard", comment: "표준")
+        case .high: return NSLocalizedString("haishinkit_quality_high", comment: "고품질")
+        }
+    }
 }
 
 // MARK: - 스트리밍 진단 보고서 구조체들
@@ -57,25 +65,17 @@ public struct StreamingDiagnosisReport {
     func getRecommendation() -> String {
         switch overallGrade {
         case "A":
-            return "🎉 스트리밍 환경이 완벽합니다! 안정적인 라이브 스트리밍이 가능합니다."
+            return NSLocalizedString("diagnosis_recommendation_a", comment: "스트리밍 환경이 완벽합니다")
         case "B":
-            return "👍 스트리밍 환경이 양호합니다. 몇 가지 사소한 개선사항만 해결하면 완벽해집니다."
+            return NSLocalizedString("diagnosis_recommendation_b", comment: "스트리밍 환경이 양호합니다")
         case "C":
-            return "⚠️ 스트리밍이 가능하지만 안정성에 문제가 있을 수 있습니다. 문제점들을 해결해주세요."
+            return NSLocalizedString("diagnosis_recommendation_c", comment: "스트리밍이 가능하지만 안정성에 문제가 있을 수 있습니다")
         case "D":
-            return "🔧 스트리밍에 심각한 문제가 있습니다. 주요 문제점들을 먼저 해결해야 합니다."
+            return NSLocalizedString("diagnosis_recommendation_d", comment: "스트리밍에 심각한 문제가 있습니다")
         default:
-            return "🚨 스트리밍이 불가능한 상태입니다. 전체적인 설정과 환경을 점검해주세요."
+            return NSLocalizedString("diagnosis_recommendation_f", comment: "스트리밍이 불가능한 상태입니다")
         }
     }
-}
-
-/// 공통 검증 결과 베이스
-public struct ValidationResultBase {
-    var isValid: Bool = true
-    var validItems: [String] = []
-    var issues: [String] = []
-    var summary: String = ""
 }
 
 /// 설정 검증 결과
@@ -193,7 +193,7 @@ final actor StreamSwitcher {
         guard let preference = preference,
               let connection = connection,
               let stream = stream else {
-            throw LiveStreamError.configurationError("스트림 설정이 없습니다")
+            throw LiveStreamError.configurationError(NSLocalizedString("stream_settings_missing", comment: "스트림 설정이 없습니다"))
         }
         
         do {
@@ -251,7 +251,7 @@ final actor StreamSwitcher {
             let isActuallyConnected = await connection.connected
             if !isActuallyConnected {
                 logError("퍼블리시 후 연결 상태 확인 실패 - 실제로는 연결되지 않음", category: .streaming)
-                throw LiveStreamError.streamingFailed("RTMP 서버에서 연결을 거부했습니다. YouTube Live 스트림을 시작했는지 확인해주세요.")
+                throw LiveStreamError.streamingFailed(NSLocalizedString("rtmp_server_rejected", comment: "RTMP 서버에서 연결을 거부했습니다"))
             }
             
             logInfo("최종 연결 상태 확인 완료 - 실제 스트리밍 시작됨", category: .streaming)
@@ -262,11 +262,11 @@ final actor StreamSwitcher {
             // 더 구체적인 오류 메시지 제공
             let errorMessage: String
             if error is CancellationError {
-                errorMessage = "연결 타임아웃 - 네트워크 상태를 확인해주세요"
+                errorMessage = NSLocalizedString("connection_timeout_check_network", comment: "연결 타임아웃 - 네트워크 상태를 확인해주세요")
             } else if let liveStreamError = error as? LiveStreamError {
                 switch liveStreamError {
                 case .connectionTimeout:
-                    errorMessage = "연결 시간 초과 - RTMP 서버 응답이 없습니다. 네트워크 상태와 URL을 확인해주세요."
+                    errorMessage = NSLocalizedString("connection_timeout_rtmp_server", comment: "연결 시간 초과 - RTMP 서버 응답이 없습니다")
                 default:
                     errorMessage = liveStreamError.localizedDescription
                 }
@@ -274,17 +274,17 @@ final actor StreamSwitcher {
                 // HaishinKit RTMP 스트림 오류 구체적 처리
                 let errorDescription = rtmpError.localizedDescription
                 if errorDescription.contains("2") || errorDescription.contains("publish") {
-                    errorMessage = "스트림 키 인증 실패 - YouTube Studio에서 '라이브 스트리밍 시작' 버튼을 클릭했는지 확인하세요"
+                    errorMessage = NSLocalizedString("stream_key_auth_failed", comment: "스트림 키 인증 실패")
                 } else if errorDescription.contains("1") || errorDescription.contains("connect") {
-                    errorMessage = "RTMP 서버 연결 실패 - 네트워크 상태 또는 RTMP URL을 확인하세요"
+                    errorMessage = NSLocalizedString("rtmp_server_connection_failed", comment: "RTMP 서버 연결 실패")
                 } else {
-                    errorMessage = "RTMP 스트리밍 오류 - \(errorDescription)"
+                    errorMessage = String(format: NSLocalizedString("rtmp_streaming_error", comment: "RTMP 스트리밍 오류"), errorDescription)
                 }
             } else {
-                errorMessage = "네트워크 오류 - \(error.localizedDescription)"
+                errorMessage = String(format: NSLocalizedString("network_error", comment: "네트워크 오류"), error.localizedDescription)
             }
             
-            throw LiveStreamError.streamingFailed("스트리밍 연결 실패: \(errorMessage)")
+            throw LiveStreamError.streamingFailed(String(format: NSLocalizedString("streaming_connection_failed", comment: "스트리밍 연결 실패"), errorMessage))
         }
     }
     
@@ -337,6 +337,12 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
     /// VideoCodec 워크어라운드 매니저 (VideoCodec -12902 에러 해결)
     private lazy var videoCodecWorkaround = VideoCodecWorkaroundManager()
     
+    /// 성능 최적화 매니저
+    private lazy var performanceOptimizer = PerformanceOptimizationManager()
+    
+    /// 사용자가 원래 설정한 값들 (덮어쓰기 방지용)
+    private var originalUserSettings: USBExternalCamera.LiveStreamSettings?
+    
     /// 현재 스트리밍 중 여부
     @MainActor public private(set) var isStreaming = false
     
@@ -347,7 +353,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
     @Published public private(set) var currentStatus: LiveStreamStatus = .idle
     
     /// 연결 상태 메시지
-    @Published public private(set) var connectionStatus: String = "준비됨"
+    @Published public private(set) var connectionStatus: String = NSLocalizedString("connection_status_ready", comment: "준비됨")
     
     /// 실시간 데이터 송출 통계
     @Published public private(set) var transmissionStats: DataTransmissionStats = DataTransmissionStats()
@@ -476,7 +482,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         isStreaming = false
         isScreenCaptureMode = false  // 화면 캡처 모드 해제
         currentStatus = .idle
-        connectionStatus = "스트리밍 중지됨"
+                    connectionStatus = NSLocalizedString("connection_status_streaming_stopped", comment: "스트리밍 중지됨")
         currentRTMPStream = nil  // 스트림 참조 해제
         
         logger.info("✅ **Examples 패턴** 스트리밍 중지 완료")
@@ -719,6 +725,32 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         if let settings = currentSettings {
             transmissionStats.currentVideoBitrate = Double(settings.videoBitrate)
             transmissionStats.currentAudioBitrate = Double(settings.audioBitrate)
+            
+            // 사용자 설정을 존중하는 적응형 품질 조정 적용
+            if let originalSettings = originalUserSettings {
+                let optimizedSettings = performanceOptimizer.adaptQualityRespectingUserSettings(
+                    currentSettings: settings,
+                    userDefinedSettings: originalSettings
+                )
+                
+                if !isSettingsEqual(settings, optimizedSettings) {
+                    logger.info("🎯 사용자 설정 보존형 품질 자동 조정 적용")
+                    logger.info("  • 원본 설정 범위 내에서만 조정")
+                    logger.info("  • 비트레이트: \(settings.videoBitrate) → \(optimizedSettings.videoBitrate) kbps")
+                    logger.info("  • 프레임율: \(settings.frameRate) → \(optimizedSettings.frameRate) fps")
+                    
+                    currentSettings = optimizedSettings
+                    
+                    // 비동기로 설정 적용
+                    Task {
+                        do {
+                            try await self.applyStreamSettings()
+                        } catch {
+                            self.logger.warning("⚠️ 적응형 품질 조정 적용 실패: \(error)")
+                        }
+                    }
+                }
+            }
         }
         
         // 네트워크 지연 시간 업데이트 (실제 구현 시 RTMP 서버 응답 시간 측정)
@@ -775,8 +807,8 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         analyzeConnectionFailure()
         
         isStreaming = false
-        currentStatus = .error(LiveStreamError.networkError("RTMP 연결이 끊어졌습니다 (재연결 시도 중)"))
-        connectionStatus = "연결 끊어짐 - 재연결 대기 중"
+                    currentStatus = .error(LiveStreamError.networkError(NSLocalizedString("rtmp_disconnected_reconnecting", comment: "RTMP 연결이 끊어졌습니다")))
+            connectionStatus = NSLocalizedString("connection_disconnected_waiting", comment: "연결 끊어짐 - 재연결 대기 중")
         stopDataMonitoring()
         
         logger.error("🛑 스트리밍 상태가 중지로 변경됨", category: .connection)
@@ -784,8 +816,8 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         // 재연결 한도 체크
         if reconnectAttempts >= maxReconnectAttempts {
             logger.error("❌ 최대 재연결 시도 횟수 초과 (\(maxReconnectAttempts)회) - 자동 재연결 중단", category: .connection)
-            currentStatus = .error(LiveStreamError.networkError("YouTube Live 연결에 실패했습니다. YouTube Studio에서 스트리밍을 시작했는지 확인 후 수동으로 재시도하세요."))
-            connectionStatus = "YouTube Live 확인 필요 - 수동 재시작 하세요"
+            currentStatus = .error(LiveStreamError.networkError(NSLocalizedString("youtube_live_connection_failed", comment: "YouTube Live 연결에 실패했습니다")))
+            connectionStatus = NSLocalizedString("youtube_live_check_needed", comment: "YouTube Live 확인 필요 - 수동 재시작 하세요")
             return
         }
         
@@ -1378,7 +1410,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         try await startScreenCaptureStreaming(with: settings)
     }
     
-    /// AVCaptureSession에서 받은 비디오 프레임 통계 업데이트 (향후 직접 전달 기능 추가 예정)
+    /// AVCaptureSession에서 받은 비디오 프레임 통계 업데이트 (통계 전용)
     public func processVideoFrame(_ sampleBuffer: CMSampleBuffer) async {
         guard isStreaming else { return }
         
@@ -1390,7 +1422,172 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         let estimatedFrameSize: Int64 = 50000 // 50KB 추정
         transmissionStats.totalBytesTransmitted += estimatedFrameSize
         bytesSentCounter += estimatedFrameSize
+        
+        // 참고: 실제 프레임 송출은 sendManualFrame()에서 처리됩니다.
+        // 텍스트 오버레이 병합도 sendManualFrame()에서 수행됩니다.
     }
+    
+    /// 픽셀 버퍼에 텍스트 오버레이 추가
+    private func addTextOverlayToPixelBuffer(_ pixelBuffer: CVPixelBuffer) async -> CVPixelBuffer? {
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        
+        // 픽셀 버퍼를 UIImage로 변환
+        guard let sourceImage = pixelBufferToUIImage(pixelBuffer) else {
+            logger.error("❌ 픽셀버퍼 → UIImage 변환 실패", category: .streaming)
+            return nil
+        }
+        
+        // 텍스트 오버레이가 추가된 이미지 생성
+        guard let overlaidImage = addTextOverlayToImage(sourceImage) else {
+            logger.error("❌ 이미지에 텍스트 오버레이 추가 실패", category: .streaming)
+            return nil
+        }
+        
+        // UIImage를 다시 픽셀 버퍼로 변환
+        return uiImageToPixelBuffer(overlaidImage, width: width, height: height)
+    }
+    
+    /// UIImage에 텍스트 오버레이 추가
+    private func addTextOverlayToImage(_ image: UIImage) -> UIImage? {
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        
+        return renderer.image { context in
+            // 원본 이미지 그리기
+            image.draw(at: .zero)
+            
+            // 스트림 해상도와 프리뷰 해상도 비율 계산하여 폰트 크기 조정
+            // 기준 해상도 720p (1280x720)와 현재 이미지 크기 비교
+            let baseWidth: CGFloat = 1280
+            let baseHeight: CGFloat = 720
+            let scaleFactor = min(image.size.width / baseWidth, image.size.height / baseHeight)
+            let adjustedFontSize = textOverlaySettings.fontSize * scaleFactor
+            
+            // 조정된 폰트 생성
+            var adjustedFont: UIFont
+            switch textOverlaySettings.fontName {
+            case "System":
+                adjustedFont = UIFont.systemFont(ofSize: adjustedFontSize, weight: .medium)
+            case "System Bold":
+                adjustedFont = UIFont.systemFont(ofSize: adjustedFontSize, weight: .bold)
+            case "Helvetica":
+                adjustedFont = UIFont(name: "Helvetica", size: adjustedFontSize) ?? UIFont.systemFont(ofSize: adjustedFontSize)
+            case "Helvetica Bold":
+                adjustedFont = UIFont(name: "Helvetica-Bold", size: adjustedFontSize) ?? UIFont.systemFont(ofSize: adjustedFontSize, weight: .bold)
+            case "Arial":
+                adjustedFont = UIFont(name: "Arial", size: adjustedFontSize) ?? UIFont.systemFont(ofSize: adjustedFontSize)
+            case "Arial Bold":
+                adjustedFont = UIFont(name: "Arial-BoldMT", size: adjustedFontSize) ?? UIFont.systemFont(ofSize: adjustedFontSize, weight: .bold)
+            default:
+                adjustedFont = UIFont.systemFont(ofSize: adjustedFontSize, weight: .medium)
+            }
+            
+            // 사용자 설정에 따른 텍스트 스타일 설정 (조정된 폰트 사용)
+            let textAttributes: [NSAttributedString.Key: Any] = [
+                .font: adjustedFont,
+                .foregroundColor: textOverlaySettings.uiColor,
+                .strokeColor: UIColor.black,
+                .strokeWidth: -2.0 // 외곽선 두께 (가독성 향상)
+            ]
+            
+            let attributedText = NSAttributedString(string: textOverlaySettings.text, attributes: textAttributes)
+            let textSize = attributedText.size()
+            
+            // 텍스트 위치 계산 (하단 중앙)
+            let textRect = CGRect(
+                x: (image.size.width - textSize.width) / 2,
+                y: image.size.height - textSize.height - 60, // 하단에서 60px 위
+                width: textSize.width,
+                height: textSize.height
+            )
+            
+            // 배경 그리기 (반투명 검은색 둥근 사각형 - 프리뷰와 일치)
+            let scaledPaddingX = 16 * scaleFactor
+            let scaledPaddingY = 8 * scaleFactor
+            let scaledCornerRadius = 8 * scaleFactor
+            let backgroundRect = textRect.insetBy(dx: -scaledPaddingX, dy: -scaledPaddingY)
+            context.cgContext.setFillColor(UIColor.black.withAlphaComponent(0.7).cgColor)
+            
+            // 둥근 사각형 그리기 (스케일에 맞는 cornerRadius)
+            let path = UIBezierPath(roundedRect: backgroundRect, cornerRadius: scaledCornerRadius)
+            context.cgContext.addPath(path.cgPath)
+            context.cgContext.fillPath()
+            
+            // 텍스트 그리기
+            attributedText.draw(in: textRect)
+        }
+    }
+    
+    /// 픽셀 버퍼를 UIImage로 변환 (색상 공간 최적화)
+    private func pixelBufferToUIImage(_ pixelBuffer: CVPixelBuffer) -> UIImage? {
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        
+        // 색상 공간을 명시적으로 sRGB로 설정하여 일관성 확보
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CIContext(options: [
+            .workingColorSpace: colorSpace,
+            .outputColorSpace: colorSpace
+        ])
+        
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+            logger.error("❌ CIImage → CGImage 변환 실패", category: .streaming)
+            return nil
+        }
+        
+        return UIImage(cgImage: cgImage)
+    }
+    
+    /// UIImage를 픽셀 버퍼로 변환 (색상 필터 및 위아래 반전 문제 수정)
+    private func uiImageToPixelBuffer(_ image: UIImage, width: Int, height: Int) -> CVPixelBuffer? {
+        let attributes = [
+            kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue
+        ] as CFDictionary
+        
+        var pixelBuffer: CVPixelBuffer?
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width,
+            height,
+            kCVPixelFormatType_32BGRA, // ARGB → BGRA로 변경 (색상 채널 순서 문제 해결)
+            attributes,
+            &pixelBuffer
+        )
+        
+        guard status == kCVReturnSuccess, let buffer = pixelBuffer else {
+            logger.error("❌ 픽셀버퍼 생성 실패", category: .streaming)
+            return nil
+        }
+        
+        CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
+        defer { CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0)) }
+        
+        let pixelData = CVPixelBufferGetBaseAddress(buffer)
+        let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
+        
+        let context = CGContext(
+            data: pixelData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
+            space: rgbColorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue // BGRA 포맷에 맞는 설정
+        )
+        
+        guard let cgContext = context else {
+            logger.error("❌ CGContext 생성 실패", category: .streaming)
+            return nil
+        }
+        
+        // 위아래 반전 제거 - 좌표계 변환 없이 이미지를 그대로 그리기
+        let imageRect = CGRect(x: 0, y: 0, width: width, height: height)
+        cgContext.draw(image.cgImage!, in: imageRect)
+        
+        return buffer
+    }
+    
+
     
     // MARK: - Screen Capture MediaMixer Setup
     
@@ -1608,12 +1805,22 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
     
     // MARK: - Manual Frame Injection Methods (최적화된 버전)
     
-    /// 픽셀 버퍼 전처리 (해상도 스케일링 및 포맷 최적화)
+    /// 픽셀 버퍼 전처리 (해상도 스케일링 및 포맷 최적화) - 성능 최적화 매니저 사용
     private func preprocessPixelBuffer(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
         guard let settings = currentSettings else {
             logger.debug("⚠️ 스트리밍 설정이 없어 스케일링 스킵")
             return pixelBuffer // 설정이 없으면 원본 반환
         }
+        
+        // 성능 최적화 매니저를 통한 고성능 프레임 변환
+        let targetSize = CGSize(width: settings.videoWidth, height: settings.videoHeight)
+        if let optimizedBuffer = performanceOptimizer.optimizedFrameConversion(pixelBuffer, targetSize: targetSize) {
+            logger.debug("✅ 성능 최적화 매니저를 통한 프레임 변환 완료: \(String(format: "%.2f", performanceOptimizer.frameProcessingTime * 1000))ms")
+            return optimizedBuffer
+        }
+        
+        // 폴백: 기존 방식
+        logger.warning("⚠️ 성능 최적화 매니저 실패 - 기존 방식 폴백")
         
         // 1단계: VideoToolbox 최적화 포맷 변환 (YUV420 우선)
         guard let formatCompatibleBuffer = convertPixelBufferForVideoToolbox(pixelBuffer) else {
@@ -1648,8 +1855,8 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
             return formatCompatibleBuffer
         }
         
-        let targetSize = CGSize(width: targetWidth, height: targetHeight)
-        guard let scaledPixelBuffer = scalePixelBuffer(formatCompatibleBuffer, to: targetSize) else {
+        let finalTargetSize = CGSize(width: targetWidth, height: targetHeight)
+        guard let scaledPixelBuffer = scalePixelBuffer(formatCompatibleBuffer, to: finalTargetSize) else {
             logger.error("❌ 해상도 스케일링 실패 - 포맷 변환된 프레임으로 대체")
             return formatCompatibleBuffer // 스케일링 실패 시 포맷만 변환된 버퍼 반환
         }
@@ -2374,6 +2581,9 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
             throw LiveStreamError.streamingFailed("이미 스트리밍이 진행 중입니다")
         }
         
+        // 사용자 원본 설정 보존 (덮어쓰기 방지)
+        originalUserSettings = settings
+        
         // 현재 설정 저장
         currentSettings = settings
         saveSettings(settings)
@@ -3048,8 +3258,64 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
             "connectionFailures": connectionFailureCount,
             "hasRTMPStream": currentRTMPStream != nil,
             "networkLatency": transmissionStats.networkLatency,
-            "totalBytesTransmitted": transmissionStats.totalBytesTransmitted
+            "totalBytesTransmitted": transmissionStats.totalBytesTransmitted,
+            "cpuUsage": performanceOptimizer.currentCPUUsage,
+            "memoryUsage": performanceOptimizer.currentMemoryUsage,
+            "gpuUsage": performanceOptimizer.currentGPUUsage,
+            "frameProcessingTime": performanceOptimizer.frameProcessingTime
         ]
+    }
+    
+    /// 성능 최적화 상태 정보 조회 (UI용)
+    public func getPerformanceOptimizationStatus() -> [String: Any] {
+        return [
+            "cpuUsage": performanceOptimizer.currentCPUUsage,
+            "memoryUsage": performanceOptimizer.currentMemoryUsage,
+            "gpuUsage": performanceOptimizer.currentGPUUsage,
+            "frameProcessingTime": performanceOptimizer.frameProcessingTime * 1000, // ms로 변환
+            "performanceGrade": getPerformanceGrade(),
+            "recommendations": getPerformanceRecommendations()
+        ]
+    }
+    
+    /// 성능 등급 계산
+    private func getPerformanceGrade() -> String {
+        let cpuScore = max(0, 100 - performanceOptimizer.currentCPUUsage)
+        let memoryScore = max(0, 100 - (performanceOptimizer.currentMemoryUsage / 10)) // 1000MB = 0점
+        let processingScore = max(0, 100 - (performanceOptimizer.frameProcessingTime * 10000)) // 10ms = 0점
+        
+        let overallScore = (cpuScore + memoryScore + processingScore) / 3.0
+        
+        switch overallScore {
+        case 80...100: return "우수 (A)"
+        case 60...79: return "양호 (B)"
+        case 40...59: return "보통 (C)"
+        case 20...39: return "개선 필요 (D)"
+        default: return "성능 문제 (F)"
+        }
+    }
+    
+    /// 성능 개선 권장사항
+    private func getPerformanceRecommendations() -> [String] {
+        var recommendations: [String] = []
+        
+        if performanceOptimizer.currentCPUUsage > 70 {
+            recommendations.append("CPU 사용량이 높습니다. 다른 앱을 종료하거나 스트리밍 품질을 낮춰보세요.")
+        }
+        
+        if performanceOptimizer.currentMemoryUsage > 400 {
+            recommendations.append("메모리 사용량이 높습니다. 앱을 재시작하거나 해상도를 낮춰보세요.")
+        }
+        
+        if performanceOptimizer.frameProcessingTime > 0.033 { // > 30ms
+            recommendations.append("프레임 처리 시간이 깁니다. GPU 가속이 활성화되어 있는지 확인하세요.")
+        }
+        
+        if recommendations.isEmpty {
+            recommendations.append("현재 성능이 양호합니다. 최적의 스트리밍 상태입니다.")
+        }
+        
+        return recommendations
     }
     
     /// 🔧 스트리밍 문제 해결 가이드 생성
@@ -3107,123 +3373,8 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
     // MARK: - 개발자 전용 디버깅 메서드들
     
     #if DEBUG
-    /// 🧪 개발자 전용: 전체 시스템 상태 덤프
-    public func dumpSystemState() {
-        logInfo("\n시스템 상태 덤프", category: .performance)
-        logInfo("디바이스: \(UIDevice.current.model), iOS \(UIDevice.current.systemVersion)", category: .performance)
-        logInfo("MediaMixer 실행 중: \(Task { await mixer.isRunning })", category: .performance)
-        logInfo("RTMPStream 연결: \(currentRTMPStream != nil)", category: .performance)
-        logInfo("화면 캡처 모드: \(isScreenCaptureMode)", category: .performance)
-        logInfo("스트리밍 활성: \(isStreaming)", category: .performance)
-        logInfo("재연결 시도: \(reconnectAttempts)/\(maxReconnectAttempts)", category: .performance)
-        logInfo("연결 실패: \(connectionFailureCount)/\(maxConnectionFailures)", category: .performance)
-        // 통계는 1000 프레임마다만 출력하여 로그 정리
-        if screenCaptureStats.frameCount > 0 && screenCaptureStats.frameCount % 1000 == 0 {
-            logInfo("프레임 통계: \(screenCaptureStats.frameCount)개 (성공: \(screenCaptureStats.successCount), 실패: \(screenCaptureStats.failureCount))", category: .performance)
-            logInfo("현재 FPS: \(String(format: "%.1f", screenCaptureStats.currentFPS))", category: .performance)
-        }
-        logInfo("네트워크 지연: \(transmissionStats.networkLatency)ms", category: .performance)
-        logInfo("총 전송량: \(formatBytes(transmissionStats.totalBytesTransmitted))", category: .performance)
-        logInfo("═══════════════════════════════════\n", category: .performance)
-    }
-    
-    /// 🧪 개발자 전용: 가짜 프레임 데이터 생성 (테스트용)
-    public func injectTestFrame() async {
-        let testPixelBuffer = createTestPixelBuffer()
-        if let pixelBuffer = testPixelBuffer {
-            await sendManualFrame(pixelBuffer)
-                    // print("🧪 테스트 프레임 주입됨: \(CVPixelBufferGetWidth(pixelBuffer))x\(CVPixelBufferGetHeight(pixelBuffer))") // 반복적인 로그 비활성화
-    } else {
-                    logError("테스트 프레임 생성 실패", category: .performance)
-        }
-    }
-    
-    /// 🧪 개발자 전용: 테스트용 CVPixelBuffer 생성
-    private func createTestPixelBuffer() -> CVPixelBuffer? {
-        let width = 1920
-        let height = 1080
-        let pixelFormat = kCVPixelFormatType_32BGRA
-        
-        var pixelBuffer: CVPixelBuffer?
-        let status = CVPixelBufferCreate(kCFAllocatorDefault, width, height, pixelFormat, nil, &pixelBuffer)
-        
-        guard status == kCVReturnSuccess, let buffer = pixelBuffer else {
-            return nil
-        }
-        
-        CVPixelBufferLockBaseAddress(buffer, [])
-        defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-        
-        guard let baseAddress = CVPixelBufferGetBaseAddress(buffer) else {
-            return nil
-        }
-        
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(buffer)
-        let bufferHeight = CVPixelBufferGetHeight(buffer)
-        
-        // 간단한 그라디언트 패턴 생성
-        for row in 0..<bufferHeight {
-            let rowPtr = baseAddress.advanced(by: row * bytesPerRow).assumingMemoryBound(to: UInt32.self)
-            for col in 0..<width {
-                let gray = UInt8((row * 255) / bufferHeight)
-                let pixel = (255 << 24) | (UInt32(gray) << 16) | (UInt32(gray) << 8) | UInt32(gray)
-                rowPtr[col] = pixel
-            }
-        }
-        
-        return buffer
-    }
-    
-    /// 🧪 개발자 전용: 연결 상태 강제 리셋
-    public func forceResetConnection() async {
-        logInfo("연결 상태 강제 리셋 시작...", category: .performance)
-        
-        // 모든 상태 리셋
-        reconnectAttempts = 0
-        connectionFailureCount = 0
-        reconnectDelay = 15.0
-        
-        // 스트리밍 중지
-        if isStreaming {
-            await stopStreaming()
-        }
-        
-        // 잠시 대기
-        try? await Task.sleep(nanoseconds: 2_000_000_000)
-        
-        logInfo("연결 상태 강제 리셋 완료", category: .performance)
-    }
-    
-    /// 🧪 개발자 전용: HaishinKit 내부 상태 검사
-    public func inspectHaishinKitInternals() async {
-        logInfo("\nHaishinKit 내부 상태", category: .performance)
-        
-        // MediaMixer 상태
-        let mixerRunning = await mixer.isRunning
-        logInfo("MediaMixer.isRunning: \(mixerRunning)", category: .performance)
-        
-        // StreamSwitcher 상태
-        if let connection = await streamSwitcher.connection {
-            let connected = await connection.connected
-            logInfo("RTMPConnection.connected: \(connected)", category: .performance)
-        } else {
-            logInfo("RTMPConnection: nil", category: .performance)
-        }
-        
-        if let stream = await streamSwitcher.stream {
-            // Sendable 프로토콜 문제로 인해 stream.info 접근 제외
-            logInfo("RTMPStream: 연결됨", category: .performance)
-            
-            let videoSettings = await stream.videoSettings
-            let audioSettings = await stream.audioSettings
-            logInfo("Video settings: \(videoSettings.videoSize), \(videoSettings.bitRate)bps", category: .performance)
-            logInfo("Audio settings: \(audioSettings.bitRate)bps", category: .performance)
-        } else {
-            logInfo("RTMPStream: nil", category: .performance)
-        }
-        
-        logInfo("═══════════════════════════════════\n", category: .performance)
-    }
+    // 테스트 및 디버그 관련 메서드들이 제거되었습니다.
+    // 프로덕션 환경에서 불필요한 테스트 데이터 및 더미 기능을 정리했습니다.
     #endif
     
     /// 스트리밍 설정에 맞춰 하드웨어 최적화 연동
@@ -3340,16 +3491,27 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         let originalHeight = CVPixelBufferGetHeight(pixelBuffer)
         logger.debug("📥 수신 프레임: \(originalWidth)x\(originalHeight)")
         
+        // 1.5. 텍스트 오버레이 처리 (픽셀 버퍼에 직접 병합)
+        var frameToProcess = pixelBuffer
+        if showTextOverlay && !textOverlaySettings.text.isEmpty {
+            if let overlaidPixelBuffer = await addTextOverlayToPixelBuffer(pixelBuffer) {
+                frameToProcess = overlaidPixelBuffer
+                logger.debug("📝 텍스트 오버레이 병합 완료: '\(textOverlaySettings.text)'")
+            } else {
+                logger.warning("⚠️ 텍스트 오버레이 병합 실패 - 원본 프레임 사용")
+            }
+        }
+        
         // 2. 프레임 전처리 (포맷 변환 + 해상도 정렬)
-        guard let processedPixelBuffer = preprocessPixelBufferSafely(pixelBuffer) else {
+        guard let processedPixelBuffer = preprocessPixelBufferSafely(frameToProcess) else {
             logger.error("❌ 프레임 전처리 실패 - 프레임 스킵")
             screenCaptureStats.failureCount += 1
             return
         }
         
         // 3. 전처리 결과 확인
-        let finalWidth = CVPixelBufferGetWidth(processedPixelBuffer)
-        let finalHeight = CVPixelBufferGetHeight(processedPixelBuffer)
+        _ = CVPixelBufferGetWidth(processedPixelBuffer)
+        _ = CVPixelBufferGetHeight(processedPixelBuffer)
         // logger.debug("📊 최종 전송 프레임: \(finalWidth)x\(finalHeight)") // 반복적인 로그 비활성화
         
         // 4. CMSampleBuffer 생성 (향상된 에러 핸들링)
@@ -3817,12 +3979,12 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
                     throw LiveStreamError.configurationError("스트리밍 설정이 없음")
                 }
                 
-                let response = try await streamSwitcher.connection?.connect(settings.rtmpURL)
+                _ = try await streamSwitcher.connection?.connect(settings.rtmpURL)
                 os_log("✅ Examples 패턴: RTMP 연결 성공", log: .default, type: .info)
                 
                 // 2. 스트림 퍼블리시 (Examples와 동일)
                 if let stream = await streamSwitcher.stream {
-                    let publishResponse = try await stream.publish(settings.streamKey)
+                    _ = try await stream.publish(settings.streamKey)
                     os_log("✅ Examples 패턴: 스트림 퍼블리시 성공", log: .default, type: .info)
                     
                     // 3. 상태 업데이트
@@ -3871,5 +4033,27 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
 
     // 내부 저장용 프로퍼티 추가
     private var mediaMixer: MediaMixer?
+    
+    // MARK: - Text Overlay Properties
+    
+    /// 텍스트 오버레이 표시 여부
+    public var showTextOverlay: Bool = false
+    
+    /// 텍스트 오버레이 설정
+    public var textOverlaySettings: TextOverlaySettings = TextOverlaySettings()
+    
+    /// 텍스트 오버레이 설정 업데이트
+    public func updateTextOverlay(show: Bool, text: String) {
+        showTextOverlay = show
+        textOverlaySettings.text = text
+        logger.info("📝 텍스트 오버레이 업데이트: \(show ? "표시" : "숨김") - '\(text)'", category: .streaming)
+    }
+    
+    /// 텍스트 오버레이 설정 업데이트 (고급 설정 포함)
+    public func updateTextOverlay(show: Bool, settings: TextOverlaySettings) {
+        showTextOverlay = show
+        textOverlaySettings = settings
+        logger.info("📝 텍스트 오버레이 설정 업데이트: \(show ? "표시" : "숨김") - '\(settings.text)' (\(settings.fontName), \(Int(settings.fontSize))pt)", category: .streaming)
+    }
 
 } 

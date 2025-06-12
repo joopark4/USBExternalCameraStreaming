@@ -59,7 +59,7 @@ final class LiveStreamingTests: XCTestCase {
             let finalStatus = haishinKitManager.connectionStatus
             XCTAssertEqual(finalStatus, "idle")
         } catch {
-            XCTFail("스트리밍 시작 실패: \(error)")
+            XCTFail("Streaming start failed: \(error)")
         }
     }
     
@@ -121,7 +121,7 @@ final class LiveStreamingTests: XCTestCase {
             let finalStatus = haishinKitManager.connectionStatus
             XCTAssertEqual(finalStatus, "idle")
         } catch {
-            XCTFail("통합 테스트 실패: \(error)")
+            XCTFail("Integration test failed: \(error)")
         }
         
         networkMonitoringManager.stopMonitoring()

@@ -75,6 +75,14 @@ final class CameraPreviewUIView: UIView {
     statusView.isHidden = true
     return statusView
   }()
+  
+  // MARK: - Text Overlay Properties (Removed - handled by SwiftUI layer)
+  
+  /// 텍스트 오버레이 표시 여부 (SwiftUI에서 관리하므로 더미 프로퍼티)
+  var showTextOverlay: Bool = false
+  
+  /// 텍스트 오버레이 내용 (SwiftUI에서 관리하므로 더미 프로퍼티)
+  var overlayText: String = ""
 
   // MARK: - Initialization
 
@@ -376,6 +384,7 @@ final class CameraPreviewUIView: UIView {
   /// 정리 작업
   deinit {
     statusMonitorTimer?.invalidate()
+    // textOverlayLabel 제거됨 - SwiftUI에서 관리
   }
 
   /// 프리뷰 레이어 강제 새로고침 (스트리밍 상태 변화 시)
@@ -442,6 +451,40 @@ final class CameraPreviewUIView: UIView {
       newPreviewLayer.connection?.videoRotationAngle = 0
     } else {
       newPreviewLayer.connection?.videoOrientation = .portrait
+    }
+
+    // 🔄 카메라 타입에 따른 미러링 설정 (외장 카메라 좌우 반전 문제 해결)
+    if let connection = newPreviewLayer.connection {
+      // 현재 연결된 카메라 디바이스 확인
+      let currentDevice = getCurrentCameraDevice()
+      let isExternalCamera = currentDevice?.deviceType == .external
+      let isFrontCamera = currentDevice?.position == .front
+      
+      if connection.isVideoMirroringSupported {
+        // 중요: 수동 미러링 설정을 위해 자동 조정 비활성화
+        connection.automaticallyAdjustsVideoMirroring = false
+        
+        if isExternalCamera {
+          // 외장 카메라: 미러링 끄기 (좌우 반전 방지)
+          connection.isVideoMirrored = false
+          logInfo("외장 카메라 미러링 OFF - 좌우 반전 방지", category: .camera)
+        } else if isFrontCamera {
+          // 내장 전면 카메라: 미러링 켜기 (일반적인 셀카 모드)
+          connection.isVideoMirrored = true
+          logInfo("내장 전면 카메라 미러링 ON - 셀카 모드", category: .camera)
+        } else {
+          // 내장 후면 카메라: 미러링 끄기
+          connection.isVideoMirrored = false
+          logInfo("내장 후면 카메라 미러링 OFF", category: .camera)
+        }
+      } else {
+        logWarning("현재 연결에서 비디오 미러링이 지원되지 않음", category: .camera)
+      }
+      
+      // 현재 카메라 정보 로깅
+      if let device = currentDevice {
+        logDebug("현재 카메라: \(device.localizedName), 타입: \(device.deviceType), 위치: \(device.position)", category: .camera)
+      }
     }
 
     layer.insertSublayer(newPreviewLayer, at: 0)
@@ -656,4 +699,8 @@ extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
   ) {
     // 프레임 드롭은 정상적인 현상이므로 로그 비활성화
   }
-} 
+}
+
+// MARK: - Text Overlay Management (Removed)
+// 텍스트 오버레이는 SwiftUI 레이어의 TextOverlayDisplayView에서 처리됩니다.
+// CameraPreviewUIView에서는 중복 구현을 제거했습니다. 
