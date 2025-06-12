@@ -282,10 +282,10 @@ enum ConnectionQuality: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .excellent: return "우수"
-        case .good: return "양호"
-        case .fair: return "보통"
-        case .poor: return "불량"
+        case .excellent: return NSLocalizedString("connection_quality_excellent", comment: "우수")
+        case .good: return NSLocalizedString("connection_quality_good", comment: "양호")
+        case .fair: return NSLocalizedString("connection_quality_fair", comment: "보통")
+        case .poor: return NSLocalizedString("connection_quality_poor", comment: "불량")
         }
     }
     
@@ -303,7 +303,7 @@ enum ConnectionQuality: String, CaseIterable {
         case .excellent: return "🟢"
         case .good: return "🔵"
         case .fair: return "🟡"
-        case .poor: return "��"
+        case .poor: return "🔴"
         }
     }
 } 

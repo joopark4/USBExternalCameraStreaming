@@ -660,154 +660,103 @@
 "output_options_desc" = "로그 메시지에 포함할 추가 정보를 선택하세요.";
 "current_settings_status" = "현재 설정 상태"; 
 
-// MARK: - 하드코딩된 문자열 다국어 처리
-"stream_unavailable" = "스트림을 사용할 수 없습니다";
-"streaming_settings_unavailable" = "스트리밍 설정을 사용할 수 없습니다";
-"codec_initialization_failed" = "코덱 초기화 실패: %@";
-"waiting" = "대기 중";
-"inactive" = "비활성";
-"initialization_complete" = "초기화 완료";
-"active" = "활성";
-"pre_initialization_complete" = "사전 초기화 완료";
-"warmup_complete" = "워밍업 완료";
-"resetting" = "재설정 중";
-"reset_complete" = "재설정 완료";
-"error_12902_recovery" = "-12902 복구 중";
-"recovery_complete" = "복구 완료";
-"hls_segment_creating" = "HLS 세그먼트 생성 중";
-"stopped" = "중지됨";
+// MARK: - System Messages
+"unknown_info" = "알 수 없음";
+"log_search_placeholder" = "로그 검색...";
 
-// MARK: - 추가 UI 문자열
-"live_status" = "🔴 LIVE";
-"waiting_status" = "⚪ 대기 중";
-"live_preview_16_9" = "🎥 라이브 프리뷰 (16:9)";
-"refreshing" = "새로고침 중...";
-"menu" = "메뉴";
-"camera_section" = "카메라 섹션";
-"camera" = "카메라";
-"selected_camera" = "선택됨: ";
-"camera_count_status" = "내장: %d개, 외장: %d개";
-"no_camera_found" = "카메라를 찾을 수 없습니다";
-"select_menu_from_sidebar" = "사이드바에서 메뉴를 선택하세요";
-"select_camera" = "카메라 선택";
-"permission_settings_needed" = "권한 설정 필요";
-"go_to_permission_settings" = "권한 설정으로 이동";
-"loading" = "로딩 중";
+// MARK: - Streaming Status Extended
+"screen_capture_connecting" = "화면 캡처 스트리밍 연결 중...";
+"screen_capture_stop" = "화면 캡처 중지";
+"streaming_start_capture" = "스트리밍 시작 - 캡처";
+"screen_capture_connecting_button" = "화면 캡처 연결 중";
+"screen_capture_disconnecting" = "화면 캡처 중지 중";
+"streaming_start" = "스트리밍 시작";
+"connection_test_starting" = "연결 테스트를 시작합니다...";
+"connection_test_success" = "설정이 유효합니다. 스트리밍을 시작할 수 있습니다.";
+"connection_test_failed" = "설정에 문제가 있습니다. RTMP URL과 스트림 키를 확인해주세요.";
 
-// MARK: - 연결 관련 문자열
-"connection_timeout" = "연결 타임아웃";
-"auto_reconnect" = "자동 재연결";
-"connection_test_result" = "연결 테스트 결과";
-"rtmp_connection_debug" = "RTMP 연결 디버깅";
-"connection_status" = "연결 상태";
-"reconnecting_attempt" = "🔄 재연결 중";
-"connection_failed" = "❌ 연결 실패";
-"attempt_retry_format" = "시도: %d/%d\n%d초 후 재시도";
-"test_connection" = "연결 테스트";
-"testing_connection" = "연결 테스트 중...";
-"ready_to_test" = "연결 테스트 준비됨";
-"connection_test" = "연결 테스트";
-"connecting_to_server" = "연결 중...";
-"connected" = "연결됨";
-"disconnected" = "연결 해제";
-"connecting" = "연결 중";
-"disconnecting" = "연결 해제 중";
-"connection_troubleshooting" = "연결이 안 되는 경우:";
-"connection_failed_detailed" = "연결 실패: %@";
+// MARK: - Stream Status Descriptions
+"status_idle" = "대기 중";
+"status_connecting" = "연결 중";
+"status_connected" = "연결됨";
+"status_streaming" = "스트리밍 중";
+"status_disconnecting" = "연결 해제 중";
+"status_error_prefix" = "오류: ";
 
-// MARK: - 오류 메시지 및 복구 제안
-"check_internet_connection" = "인터넷 연결을 확인해주세요";
-"allow_permission_in_settings" = "설정에서 권한을 허용해주세요";
-"check_network_and_retry" = "네트워크 상태를 확인하고 다시 시도해주세요";
-"try_again_later" = "잠시 후 다시 시도해주세요";
-"check_camera_microphone_connection" = "카메라나 마이크가 연결되어 있는지 확인해주세요";
-"check_wifi_cellular_connection" = "WiFi 또는 셀룰러 데이터 연결을 확인해주세요";
-"allow_permission_privacy_settings" = "설정 > 개인정보 보호에서 권한을 허용해주세요";
-"recheck_rtmp_stream_key" = "RTMP URL과 스트림 키를 다시 확인해주세요";
-"adjust_streaming_settings" = "스트리밍 설정을 조정해보세요";
-"restart_app_if_problem_persists" = "문제가 지속되면 앱을 재시작해보세요";
-"streaming_setup_failed_detailed" = "스트리밍 설정 실패: %@";
-"upload_failed_detailed" = "업로드 실패: %@";
-"initialization_failed_detailed" = "초기화 실패: %@";
-"device_not_found_detailed" = "%@을(를) 찾을 수 없습니다";
-"network_error_detailed" = "네트워크 오류: %@";
-"authentication_failed_detailed" = "인증 실패: %@";
-"streaming_error_detailed" = "스트리밍 오류: %@";
-"low_quality_480p" = "저화질 (480p)";
-"medium_quality_720p" = "중화질 (720p)";
-"high_quality_1080p" = "고화질 (1080p)";
-"ultra_quality_1080p_plus" = "최고화질 (1080p+)";
-"custom_user_defined" = "사용자 정의";
-"user_custom_settings" = "사용자가 직접 설정";
-"excellent" = "우수";
-"good" = "양호";
-"fair" = "보통";
-"poor" = "불량";
-"checking" = "확인 중";
-"cellular" = "셀룰러";
-"ethernet" = "이더넷";
-"unknown" = "알 수 없음";
-"reconnecting_attempt" = "🔄 재연결 중";
-"attempt_retry_format" = "시도: %d/%d\n%d초 후 재시도";
-"connection_failed" = "❌ 연결 실패";
+// MARK: - Error Messages Extended
+"screen_capture_only_supported" = "화면 캡처 스트리밍만 지원됩니다";
+"server_connected" = "서버에 연결됨";
+"streaming_start_failed" = "스트리밍 시작 실패: ";
+"streaming_ended" = "스트리밍이 종료되었습니다";
+"streaming_cleanup_complete" = "스트리밍 종료 완료 (일부 정리 오류 무시됨)";
+"screen_capture_broadcasting" = "화면 캡처 송출 중";
+"network_connection_error" = "네트워크 연결 오류: ";
 
-// MARK: - 도움말 서비스 제목
-"help_rtmp_server_url" = "RTMP 서버 URL";
-"help_stream_key" = "스트림 키";
-"help_video_bitrate" = "비디오 비트레이트";
-"help_audio_bitrate" = "오디오 비트레이트";
-"help_video_resolution" = "비디오 해상도";
-"help_frame_rate" = "프레임 레이트";
-"help_content_in_progress" = "도움말 내용을 준비 중입니다.";
+// MARK: - YouTube Live Instructions
+"youtube_check_stream_waiting" = "스트림이 '대기 중' 상태인지 확인하세요";
+"youtube_check_live_enabled" = "채널에서 라이브 스트리밍 기능이 활성화되어 있는지 확인하세요";
+"youtube_check_phone_verified" = "휴대폰 번호 인증이 완료되어 있는지 확인하세요";
+"streaming_available" = "스트리밍 가능: ";
+"yes" = "예";
+"no" = "아니오";
+"network_status_good" = "네트워크 상태가 양호합니다";
 
-// MARK: - 종횡비 및 프레임률 경고
-"aspect_ratio_warning" = "⚠️ 일반적이지 않은 종횡비입니다: %@";
-"aspect_ratio_recommendation" = "⚠️ 권장 비율: 16:9 (1.78), 4:3 (1.33), 21:9 (2.33)";
-"frame_rate_warning" = "⚠️ 일반적이지 않은 프레임률입니다: %dfps";
-"frame_rate_recommendation" = "⚠️ 권장 프레임률: %@fps";
+// MARK: - Additional UI Elements
+"video_encoder" = "비디오 인코더";
+"audio_encoder" = "오디오 인코더";
+"buffer_size" = "버퍼 크기";
+"streaming_enabled" = "스트리밍 활성화";
+"setup_guide" = "설정 가이드";
+"important_notes" = "중요 사항";
+"troubleshooting" = "문제 해결";
+"streaming_requires_stream_key" = "스트리밍을 시작하려면 YouTube에서 스트림 키를 가져와야 합니다.";
+"view_setup_guide" = "설정 가이드 보기";
 
-// MARK: - 플랫폼별 스트리밍 권장사항
-"youtube_max_bitrate_exceeded" = "YouTube 최대 비트레이트(%dkbps)를 초과합니다";
-"youtube_bitrate_recommendation" = "비트레이트를 %dkbps 이하로 설정하세요";
-"youtube_min_bitrate_recommendation" = "이 해상도(%dx%d)에는 최소 %dkbps를 권장합니다";
-"youtube_max_bitrate_recommendation" = "이 해상도(%dx%d)에는 최대 %dkbps를 권장합니다";
+// MARK: - YouTube Setup Guide
+"youtube_studio_access" = "YouTube Studio 접속";
+"youtube_studio_access_desc" = "웹 브라우저에서 studio.youtube.com에 접속하세요.";
+"live_streaming_menu" = "라이브 스트리밍 메뉴 선택";
+"live_streaming_menu_desc" = "왼쪽 메뉴에서 '라이브 스트리밍'을 클릭하세요.";
+"stream_tab" = "스트림 탭으로 이동";
+"stream_tab_desc" = "상단의 '스트림' 탭을 선택하세요.";
+"start_live_streaming" = "라이브 스트리밍 시작";
+"copy_stream_key" = "스트림 키 복사";
+"copy_stream_key_desc" = "스트림 키를 복사하여 이 앱의 설정에 붙여넣으세요.";
 
-"twitch_max_bitrate_exceeded" = "Twitch 최대 비트레이트(%dkbps)를 초과합니다";
-"twitch_bitrate_recommendation" = "비트레이트를 %dkbps 이하로 설정하세요";
-"twitch_resolution_warning" = "Twitch는 1080p를 초과하는 해상도를 권장하지 않습니다";
-"twitch_resolution_recommendation" = "1920x1080 이하의 해상도를 사용하세요";
+// MARK: - Hardware Optimization
+"hardware_quality_optimization" = "하드웨어 품질 최적화";
+"hardware_optimization_desc" = "스트리밍 설정에 맞춰 카메라와 마이크 하드웨어 품질이 자동으로 최적화됩니다";
+"video_hardware" = "비디오 하드웨어";
+"audio_hardware" = "오디오 하드웨어";
+"overall_optimization_status" = "전체 최적화 상태";
 
-"facebook_max_bitrate_exceeded" = "Facebook Live 권장 최대 비트레이트(%dkbps)를 초과합니다";
-"facebook_bitrate_recommendation" = "안정적인 스트리밍을 위해 %dkbps 이하로 설정하세요";
+// MARK: - Quality Modes
+"low_resolution_mode" = "저해상도 모드";
+"standard_hd_mode" = "표준 HD 모드";
+"high_frame_mode" = "고프레임 모드";
+"high_resolution_mode" = "고해상도 모드";
+"user_defined" = "사용자 정의";
 
-"custom_rtmp_recommendation" = "커스텀 RTMP 서버의 제한사항을 확인하세요";
+// MARK: - Camera Presets
+"camera_1080p_preset" = "카메라 1080p 프리셋 + 연속 자동 포커스";
+"camera_720p_preset" = "카메라 720p 프리셋 + 자동 포커스";
+"camera_vga_preset" = "카메라 VGA 프리셋 + 기본 설정";
 
-// MARK: - HaishinKit 스트리밍 메시지
-"stream_settings_missing" = "스트림 설정이 없습니다";
-"rtmp_connection_attempt" = "RTMP 연결 시도: %@";
-"rtmp_connection_success" = "RTMP 연결 성공";
-"streaming_publish_attempt" = "스트리밍 퍼블리시 시도:";
-"streaming_publish_success" = "스트리밍 퍼블리시 성공";
-"publish_verification_failed" = "퍼블리시 후 연결 상태 확인 실패 - 실제로는 연결되지 않음";
-"rtmp_server_rejected" = "RTMP 서버에서 연결을 거부했습니다. YouTube Live 스트림을 시작했는지 확인해주세요.";
-"final_connection_verified" = "최종 연결 상태 확인 완료 - 실제 스트리밍 시작됨";
-"streaming_failed_error" = "스트리밍 실패: %@";
+// MARK: - Audio Quality
+"low_quality_mode" = "저품질 모드";
+"standard_quality_mode" = "표준 품질 모드";
+"high_quality_mode" = "고품질 모드";
 
-// MARK: - 연결 오류 메시지
-"connection_timeout_check_network" = "연결 타임아웃 - 네트워크 상태를 확인해주세요";
-"connection_timeout_rtmp_server" = "연결 시간 초과 - RTMP 서버 응답이 없습니다. 네트워크 상태와 URL을 확인해주세요.";
-"stream_key_auth_failed" = "스트림 키 인증 실패 - YouTube Studio에서 '라이브 스트리밍 시작' 버튼을 클릭했는지 확인하세요";
-"rtmp_server_connection_failed" = "RTMP 서버 연결 실패 - 네트워크 상태 또는 RTMP URL을 확인하세요";
-"rtmp_streaming_error" = "RTMP 스트리밍 오류 - %@";
-"network_error" = "네트워크 오류 - %@";
-"streaming_connection_failed" = "스트리밍 연결 실패: %@";
+// MARK: - Optimization Status
+"optimal_balance" = "최적 균형 ⭐";
+"video_biased" = "비디오 편중 ⚠️";
+"audio_biased" = "오디오 편중 ⚠️";
+"standard_settings" = "표준 설정 ✅";
+"perfect_balance" = "완벽한 균형";
+"partial_optimization" = "부분 최적화";
+"standard_optimization" = "표준 최적화";
 
-// MARK: - 연결 상태 메시지
-"connection_status_ready" = "준비됨";
-"connection_status_streaming_stopped" = "스트리밍 중지됨";
-"rtmp_connection_closed" = "RTMP 연결 종료됨";
-"connection_close_error" = "연결 종료 중 오류: %@";
-"rtmp_disconnected_reconnecting" = "RTMP 연결이 끊어졌습니다 (재연결 시도 중)";
-"connection_disconnected_waiting" = "연결 끊어짐 - 재연결 대기 중";
-"youtube_live_check_needed" = "YouTube Live 확인 필요 - 수동 재시작 하세요";
-"youtube_live_connection_failed" = "YouTube Live 연결에 실패했습니다. YouTube Studio에서 스트리밍을 시작했는지 확인 후 수동으로 재시도하세요."; 
+// MARK: - Optimization Descriptions
+"perfect_balance_desc" = "오디오와 비디오 품질이 완벽히 균형잡혀 있습니다";
+"video_biased_desc" = "오디오 품질을 높이면 더 균형잡힌 스트리밍이 됩니다";
+"audio_biased_desc" = "비디오 해상도를 높이면 더 균형잡힌 스트리밍이 됩니다"; 

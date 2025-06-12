@@ -190,7 +190,7 @@ public struct KeyboardAccessoryView: View {
                     .foregroundColor(.white)
                     .font(.system(size: 16))
                 
-                Text(manager.inputPlaceholder.isEmpty ? "입력 중..." : manager.inputPlaceholder)
+                Text(manager.inputPlaceholder.isEmpty ? NSLocalizedString("input_in_progress", comment: "입력 중...") : manager.inputPlaceholder)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
             }

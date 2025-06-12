@@ -105,7 +105,7 @@ struct StreamingLogView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
                 
-                TextField("로그 검색...", text: $searchText)
+                TextField(NSLocalizedString("log_search_placeholder", comment: "로그 검색..."), text: $searchText)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                 
                 if !searchText.isEmpty {

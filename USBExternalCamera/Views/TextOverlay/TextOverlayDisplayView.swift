@@ -59,7 +59,7 @@ struct TextOverlayDisplayView: View {
 
 #Preview {
     let sampleSettings = TextOverlaySettings(
-        text: "샘플 텍스트 오버레이",
+        text: NSLocalizedString("sample_text_overlay", comment: "샘플 텍스트 오버레이"),
         fontSize: 24,
         textColor: .white,
         fontName: "System"
