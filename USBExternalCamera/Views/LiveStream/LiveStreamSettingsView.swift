@@ -337,6 +337,84 @@ struct LiveStreamSettingsView: View {
                     Spacer()
                     Toggle("", isOn: $viewModel.settings.isEnabled)
                 }
+                
+                Divider()
+                
+                // 적응형 품질 조정
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("적응형 품질 조정")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Image(systemName: viewModel.adaptiveQualityEnabled ? "exclamationmark.triangle.fill" : "lock.shield.fill")
+                                    .font(.caption)
+                                    .foregroundColor(viewModel.adaptiveQualityEnabled ? .orange : .green)
+                            }
+                            Text(viewModel.adaptiveQualityEnabled ? 
+                                 "성능 이슈 시 설정을 자동으로 조정합니다" : 
+                                 "사용자 설정을 정확히 유지합니다 (권장)")
+                                .font(.caption)
+                                .foregroundColor(viewModel.adaptiveQualityEnabled ? .orange : .green)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $viewModel.adaptiveQualityEnabled)
+                    }
+                    
+                    // 상세 설명
+                    VStack(alignment: .leading, spacing: 6) {
+                        if !viewModel.adaptiveQualityEnabled {
+                            HStack {
+                                Image(systemName: "checkmark.shield.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                Text("사용자가 설정한 해상도, 프레임률, 비트레이트가 정확히 적용됩니다")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            }
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Image(systemName: "info.circle.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                    Text("성능 문제 시 최대 15% 범위 내에서 자동 조정됩니다")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                }
+                                HStack {
+                                    Image(systemName: "minus.circle")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("• 해상도는 변경되지 않습니다")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                HStack {
+                                    Image(systemName: "minus.circle")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("• 프레임률은 최대 5fps까지만 감소됩니다")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                HStack {
+                                    Image(systemName: "minus.circle")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("• 비트레이트는 최대 15%까지만 감소됩니다")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(viewModel.adaptiveQualityEnabled ? Color.orange.opacity(0.1) : Color.green.opacity(0.1))
+                    .cornerRadius(8)
+                }
             }
         }
     }

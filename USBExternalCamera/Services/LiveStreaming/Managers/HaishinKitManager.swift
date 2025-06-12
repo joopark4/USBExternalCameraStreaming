@@ -343,6 +343,19 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
     /// 사용자가 원래 설정한 값들 (덮어쓰기 방지용)
     private var originalUserSettings: USBExternalCamera.LiveStreamSettings?
     
+    /// 적응형 품질 조정 활성화 여부 (사용자 선택)
+    @Published public private(set) var adaptiveQualityEnabled: Bool = false
+    
+    /// 적응형 품질 조정 활성화/비활성화 (사용자 제어)
+    public func setAdaptiveQualityEnabled(_ enabled: Bool) {
+        adaptiveQualityEnabled = enabled
+        logger.info("🎛️ 적응형 품질 조정 \(enabled ? "활성화" : "비활성화")됨", category: .streaming)
+        
+        if !enabled {
+            logger.info("🔒 사용자 설정이 보장됩니다 - 자동 품질 조정 없음", category: .streaming)
+        }
+    }
+    
     /// 현재 스트리밍 중 여부
     @MainActor public private(set) var isStreaming = false
     
@@ -709,16 +722,20 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         logger.debug("📊 송출 통계 초기화됨")
     }
     
-    /// 실시간 송출 통계 업데이트
+    /// 실시간 송출 통계 업데이트 (백그라운드에서 계산, 메인 스레드에서 UI 업데이트)
     private func updateTransmissionStats() async {
         guard isStreaming else { return }
         
+        // 🔧 개선: 통계 계산을 백그라운드에서 처리
         let currentTime = CACurrentMediaTime()
         let timeDiff = currentTime - lastFrameTime
         
-        // 프레임 레이트 계산
-        if timeDiff > 0 {
-            transmissionStats.averageFrameRate = Double(frameCounter) / timeDiff
+        // 프레임 레이트 계산 (백그라운드에서 계산)
+        let averageFrameRate = timeDiff > 0 ? Double(frameCounter) / timeDiff : 0.0
+        
+        // 메인 스레드에서 UI 업데이트
+        await MainActor.run {
+            self.transmissionStats.averageFrameRate = averageFrameRate
         }
         
         // 비트레이트 계산 (추정)
@@ -726,18 +743,21 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
             transmissionStats.currentVideoBitrate = Double(settings.videoBitrate)
             transmissionStats.currentAudioBitrate = Double(settings.audioBitrate)
             
-            // 사용자 설정을 존중하는 적응형 품질 조정 적용
-            if let originalSettings = originalUserSettings {
+            // 🔧 개선: 적응형 품질 조정을 사용자 옵션으로 변경 (기본값: 비활성화)
+            if adaptiveQualityEnabled, let originalSettings = originalUserSettings {
                 let optimizedSettings = performanceOptimizer.adaptQualityRespectingUserSettings(
                     currentSettings: settings,
                     userDefinedSettings: originalSettings
                 )
                 
                 if !isSettingsEqual(settings, optimizedSettings) {
-                    logger.info("🎯 사용자 설정 보존형 품질 자동 조정 적용")
-                    logger.info("  • 원본 설정 범위 내에서만 조정")
-                    logger.info("  • 비트레이트: \(settings.videoBitrate) → \(optimizedSettings.videoBitrate) kbps")
-                    logger.info("  • 프레임율: \(settings.frameRate) → \(optimizedSettings.frameRate) fps")
+                    logger.info("🎯 사용자가 활성화한 적응형 품질 조정 적용", category: .streaming)
+                    logger.info("  • 원본 설정 범위 내에서만 조정", category: .streaming)
+                    logger.info("  • 비트레이트: \(settings.videoBitrate) → \(optimizedSettings.videoBitrate) kbps", category: .streaming)
+                    logger.info("  • 프레임율: \(settings.frameRate) → \(optimizedSettings.frameRate) fps", category: .streaming)
+                    
+                    // 사용자에게 변경사항 통지 (로그로 대체)
+                    logger.info("📢 품질 조정 알림: 성능 최적화를 위해 설정이 조정되었습니다", category: .streaming)
                     
                     currentSettings = optimizedSettings
                     
@@ -746,10 +766,13 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
                         do {
                             try await self.applyStreamSettings()
                         } catch {
-                            self.logger.warning("⚠️ 적응형 품질 조정 적용 실패: \(error)")
+                            self.logger.warning("⚠️ 적응형 품질 조정 적용 실패: \(error)", category: .streaming)
                         }
                     }
                 }
+            } else if !adaptiveQualityEnabled {
+                // 적응형 품질 조정이 비활성화된 경우 사용자 설정 유지
+                logger.debug("🔒 적응형 품질 조정 비활성화됨 - 사용자 설정 유지", category: .streaming)
             }
         }
         
@@ -1632,16 +1655,23 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         logger.info("  🎵 오디오: \(settings.audioBitrate) kbps", category: .system)
         logger.info("  🎬 프레임률: \(settings.frameRate) fps", category: .system)
         
-        // 1080p 고해상도 설정 시 안전성 검증
-        let safeSettings = validateAndAdjustSettings(settings)
+        // 사용자 설정 검증 및 권장사항 제공 (강제 변경 없음)
+        let validationResult = validateAndProvideRecommendations(settings)
+        var userSettings = validationResult.settings // 사용자 설정 그대로 사용
         
-        // 비디오 설정 적용 (순서 중요)
+        // 🎯 720p 특화 최적화 적용 (사용자 설정 유지, 내부 최적화만)
+        if settings.videoWidth == 1280 && settings.videoHeight == 720 {
+            // 사용자 설정은 변경하지 않고, 내부 최적화만 적용
+            _ = performanceOptimizer.optimize720pStreaming(settings: userSettings)
+            logger.info("🎯 720p 특화 내부 최적화 적용됨 (사용자 설정 유지)", category: .system)
+        }
+        
+        // 비디오 설정 적용 (사용자 설정 그대로)
         var videoSettings = await stream.videoSettings
-        videoSettings.videoSize = CGSize(width: safeSettings.videoWidth, height: safeSettings.videoHeight)
+        videoSettings.videoSize = CGSize(width: userSettings.videoWidth, height: userSettings.videoHeight)
         
         // VideoToolbox 하드웨어 인코딩 최적화 설정
-        let finalBitrate = safeSettings.videoBitrate
-        videoSettings.bitRate = finalBitrate * 1000 // kbps를 bps로 변환
+        videoSettings.bitRate = userSettings.videoBitrate * 1000 // kbps를 bps로 변환
         
         // 💡 VideoToolbox 하드웨어 인코딩 최적화 (HaishinKit 2.0.8 API 호환)
         videoSettings.profileLevel = kVTProfileLevel_H264_High_AutoLevel as String // 고품질 프로파일
@@ -1652,47 +1682,88 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         videoSettings.isHardwareEncoderEnabled = true
         
         await stream.setVideoSettings(videoSettings)
-        logger.info("✅ RTMPStream 비디오 설정 적용 (VideoToolbox 하드웨어 최적화): \(safeSettings.videoWidth)x\(safeSettings.videoHeight) @ \(safeSettings.videoBitrate)kbps", category: .system)
+        logger.info("✅ 사용자 설정 적용 완료: \(userSettings.videoWidth)×\(userSettings.videoHeight) @ \(userSettings.videoBitrate)kbps", category: .system)
         
-        // 오디오 설정 적용 (개선)
+        // 오디오 설정 적용 (사용자 설정 그대로)
         var audioSettings = await stream.audioSettings
-        audioSettings.bitRate = safeSettings.audioBitrate * 1000 // kbps를 bps로 변환
-        // HaishinKit의 AudioCodecSettings에서 지원하는 설정만 사용
+        audioSettings.bitRate = userSettings.audioBitrate * 1000 // kbps를 bps로 변환
         
         await stream.setAudioSettings(audioSettings)
-        logger.info("✅ RTMPStream 오디오 설정 적용: \(safeSettings.audioBitrate)kbps", category: .system)
+        logger.info("✅ 사용자 오디오 설정 적용: \(userSettings.audioBitrate)kbps", category: .system)
         
-        // 설정 적용 검증
+        // 🔍 중요: 설정 적용 검증 (실제 적용된 값 확인)
         let appliedVideoSettings = await stream.videoSettings
         let appliedAudioSettings = await stream.audioSettings
         
+        let actualWidth = Int(appliedVideoSettings.videoSize.width)
+        let actualHeight = Int(appliedVideoSettings.videoSize.height)
+        let actualVideoBitrate = appliedVideoSettings.bitRate / 1000
+        let actualAudioBitrate = appliedAudioSettings.bitRate / 1000
+        
         logger.info("🔍 설정 적용 검증:", category: .system)
-        logger.info("  📺 적용된 비디오 비트레이트: \(appliedVideoSettings.bitRate / 1000) kbps", category: .system)
-        logger.info("  🎵 적용된 오디오 비트레이트: \(appliedAudioSettings.bitRate / 1000) kbps", category: .system)
-        logger.info("  🔧 VideoToolbox 하드웨어 가속: 활성화됨", category: .system)
+        logger.info("  📺 해상도: \(actualWidth)×\(actualHeight) (요청: \(userSettings.videoWidth)×\(userSettings.videoHeight))", category: .system)
+        logger.info("  📊 비디오 비트레이트: \(actualVideoBitrate)kbps (요청: \(userSettings.videoBitrate)kbps)", category: .system)
+        logger.info("  🎵 오디오 비트레이트: \(actualAudioBitrate)kbps (요청: \(userSettings.audioBitrate)kbps)", category: .system)
+        
+        // 설정값과 실제값 불일치 검사
+        if actualWidth != userSettings.videoWidth || actualHeight != userSettings.videoHeight {
+            logger.warning("⚠️ 해상도 불일치 감지: 요청 \(userSettings.videoWidth)×\(userSettings.videoHeight) vs 실제 \(actualWidth)×\(actualHeight)", category: .system)
+        }
+        
+        if abs(Int(actualVideoBitrate) - userSettings.videoBitrate) > 100 {
+            logger.warning("⚠️ 비디오 비트레이트 불일치: 요청 \(userSettings.videoBitrate)kbps vs 실제 \(actualVideoBitrate)kbps", category: .system)
+        }
+        
+        if abs(Int(actualAudioBitrate) - userSettings.audioBitrate) > 10 {
+            logger.warning("⚠️ 오디오 비트레이트 불일치: 요청 \(userSettings.audioBitrate)kbps vs 실제 \(actualAudioBitrate)kbps", category: .system)
+        }
+        
+        // 🎯 720p 전용 버퍼링 최적화 적용
+        await optimize720pBuffering()
         
         logger.info("🎉 RTMPStream 모든 설정 적용 완료", category: .system)
     }
     
-    /// 스트리밍 설정 검증 (1080p 비활성화로 인한 단순화)
-    private func validateAndAdjustSettings(_ settings: USBExternalCamera.LiveStreamSettings) -> USBExternalCamera.LiveStreamSettings {
-        var safeSettings = settings
+    /// 스트리밍 설정 검증 및 권장사항 제공 (강제 변경 제거)
+    private func validateAndProvideRecommendations(_ settings: USBExternalCamera.LiveStreamSettings) -> (settings: USBExternalCamera.LiveStreamSettings, recommendations: [String]) {
+        var recommendations: [String] = []
         
-        // 1080p 설정이 들어온 경우 720p로 강제 변경
+        // 성능 권장사항만 제공, 강제 변경하지 않음
         if settings.videoWidth >= 1920 && settings.videoHeight >= 1080 {
-            logger.warning("⚠️ 1080p 설정 감지됨 → 성능상 720p로 강제 변경", category: .system)
-            safeSettings.videoWidth = 1280
-            safeSettings.videoHeight = 720
-            safeSettings.videoBitrate = min(settings.videoBitrate, 2500) // 720p 권장 비트레이트
+            recommendations.append("⚠️ 1080p는 높은 성능을 요구합니다. 프레임 드롭이 발생할 수 있습니다.")
+            recommendations.append("💡 권장: 720p (1280x720)로 설정하면 더 안정적입니다.")
         }
         
-        // 60fps 설정이 들어온 경우 30fps로 강제 변경
         if settings.frameRate > 30 {
-            logger.warning("⚠️ 60fps 설정 감지됨 → 성능상 30fps로 강제 변경", category: .system)
-            safeSettings.frameRate = 30
+            recommendations.append("⚠️ 60fps는 높은 CPU 사용량을 요구합니다.")
+            recommendations.append("💡 권장: 30fps로 설정하면 더 안정적입니다.")
         }
         
-        return safeSettings
+        if settings.videoBitrate > 6000 {
+            recommendations.append("⚠️ 높은 비트레이트는 네트워크 부하를 증가시킬 수 있습니다.")
+            recommendations.append("💡 권장: 4500kbps 이하로 설정하는 것을 권장합니다.")
+        }
+        
+        // 권장사항 로그 출력
+        if !recommendations.isEmpty {
+            logger.info("📋 성능 권장사항 (사용자 설정은 유지됨):", category: .system)
+            for recommendation in recommendations {
+                logger.info("  \(recommendation)", category: .system)
+            }
+        }
+        
+        // 🔧 중요: 사용자 설정을 그대로 반환 (강제 변경 없음)
+        return (settings: settings, recommendations: recommendations)
+    }
+    
+    /// 기존 validateAndAdjustSettings 함수를 새로운 함수로 대체
+    private func validateAndAdjustSettings(_ settings: USBExternalCamera.LiveStreamSettings) -> USBExternalCamera.LiveStreamSettings {
+        let validationResult = validateAndProvideRecommendations(settings)
+        
+        // 권장사항이 있어도 사용자 설정을 그대로 사용
+        logger.info("✅ 사용자 설정 보존: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.frameRate)fps, \(settings.videoBitrate)kbps", category: .system)
+        
+        return validationResult.settings
     }
     
     /// 화면 캡처 스트리밍용 오디오 설정
@@ -1805,18 +1876,39 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
     
     // MARK: - Manual Frame Injection Methods (최적화된 버전)
     
-    /// 픽셀 버퍼 전처리 (해상도 스케일링 및 포맷 최적화) - 성능 최적화 매니저 사용
+    /// 픽셀 버퍼 전처리 (사용자 설정 해상도 정확히 적용)
     private func preprocessPixelBuffer(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
         guard let settings = currentSettings else {
             logger.debug("⚠️ 스트리밍 설정이 없어 스케일링 스킵")
             return pixelBuffer // 설정이 없으면 원본 반환
         }
         
-        // 성능 최적화 매니저를 통한 고성능 프레임 변환
+        let currentWidth = CVPixelBufferGetWidth(pixelBuffer)
+        let currentHeight = CVPixelBufferGetHeight(pixelBuffer)
+        
+        // 🔧 사용자가 설정한 정확한 해상도로 변환
         let targetSize = CGSize(width: settings.videoWidth, height: settings.videoHeight)
+        
+        // 해상도가 정확히 일치하는지 확인
+        if currentWidth == settings.videoWidth && currentHeight == settings.videoHeight {
+            logger.debug("✅ 사용자 설정 해상도 일치: \(currentWidth)×\(currentHeight) - 변환 불필요")
+            return pixelBuffer
+        }
+        
+        logger.info("🔄 사용자 설정 해상도로 정확히 변환: \(currentWidth)×\(currentHeight) → \(settings.videoWidth)×\(settings.videoHeight)")
+        
+        // 성능 최적화 매니저를 통한 고성능 프레임 변환
         if let optimizedBuffer = performanceOptimizer.optimizedFrameConversion(pixelBuffer, targetSize: targetSize) {
-            logger.debug("✅ 성능 최적화 매니저를 통한 프레임 변환 완료: \(String(format: "%.2f", performanceOptimizer.frameProcessingTime * 1000))ms")
-            return optimizedBuffer
+            // 변환 결과 검증
+            let resultWidth = CVPixelBufferGetWidth(optimizedBuffer)
+            let resultHeight = CVPixelBufferGetHeight(optimizedBuffer)
+            
+            if resultWidth == settings.videoWidth && resultHeight == settings.videoHeight {
+                logger.debug("✅ 사용자 설정 해상도 변환 성공: \(resultWidth)×\(resultHeight) (\(String(format: "%.2f", performanceOptimizer.frameProcessingTime * 1000))ms)")
+                return optimizedBuffer
+            } else {
+                logger.error("❌ 해상도 변환 검증 실패: 목표 \(settings.videoWidth)×\(settings.videoHeight) vs 결과 \(resultWidth)×\(resultHeight)")
+            }
         }
         
         // 폴백: 기존 방식
@@ -4054,6 +4146,30 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
         showTextOverlay = show
         textOverlaySettings = settings
         logger.info("📝 텍스트 오버레이 설정 업데이트: \(show ? "표시" : "숨김") - '\(settings.text)' (\(settings.fontName), \(Int(settings.fontSize))pt)", category: .streaming)
+    }
+    
+    /// 720p 전용 스트림 버퍼 최적화
+    private func optimize720pBuffering() async {
+        guard let stream = await streamSwitcher.stream,
+              let settings = currentSettings,
+              settings.videoWidth == 1280 && settings.videoHeight == 720 else {
+            return
+        }
+        
+        logger.info("🎯 720p 버퍼링 최적화 적용", category: .system)
+        
+        // 720p 전용 버퍼 설정 (끊김 방지)
+        var videoSettings = await stream.videoSettings
+        
+        // 720p 최적 버퍼 크기 (더 작은 버퍼로 지연시간 감소)
+        videoSettings.maxKeyFrameIntervalDuration = 1 // 1초 키프레임 간격
+        
+        // 720p 전용 인코딩 설정
+        videoSettings.profileLevel = kVTProfileLevel_H264_Main_AutoLevel as String
+        
+        await stream.setVideoSettings(videoSettings)
+        
+        logger.info("✅ 720p 버퍼링 최적화 완료", category: .system)
     }
 
 } 

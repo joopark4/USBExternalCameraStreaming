@@ -113,20 +113,27 @@ class StreamingDiagnostics: ObservableObject {
         }
     }
     
-    // MARK: - 시스템 메트릭스 업데이트
-    @MainActor
+    // MARK: - 시스템 메트릭스 업데이트 (백그라운드에서 측정, 메인 스레드에서 UI 업데이트)
     private func updateSystemMetrics() async {
-        // CPU 사용량 측정
-        cpuUsage = getCurrentCPUUsage()
-        
-        // 메모리 사용량 측정
-        memoryUsage = getCurrentMemoryUsage()
-        
-        // 열 상태 확인
-        thermalState = ProcessInfo.processInfo.thermalState
-        
-        // 임계값 확인 및 경고
-        checkSystemThresholds()
+        // 🔧 개선: 시스템 메트릭 측정을 백그라운드에서 처리
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                // 백그라운드에서 시스템 메트릭 측정
+                let cpuUsage = self.getCurrentCPUUsage()
+                let memoryUsage = self.getCurrentMemoryUsage()
+                let thermalState = ProcessInfo.processInfo.thermalState
+                
+                // 메인 스레드에서 UI 업데이트
+                await MainActor.run {
+                    self.cpuUsage = cpuUsage
+                    self.memoryUsage = memoryUsage
+                    self.thermalState = thermalState
+                    
+                    // 임계값 확인 및 경고
+                    self.checkSystemThresholds()
+                }
+            }
+        }
     }
     
     private func getCurrentCPUUsage() -> Double {

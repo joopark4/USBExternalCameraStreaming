@@ -13,7 +13,7 @@ import Combine
 // MARK: - Streaming Stats Manager Implementation
 
 /// 스트리밍 통계 관리 클래스
-@MainActor
+/// 🔧 개선: 통계 수집은 백그라운드에서, UI 업데이트만 메인 스레드에서 처리
 public final class StreamingStatsManager: @preconcurrency StreamingStatsManagerProtocol, ObservableObject {
     
     // MARK: - Properties
@@ -30,14 +30,17 @@ public final class StreamingStatsManager: @preconcurrency StreamingStatsManagerP
     /// 스트리밍 시작 시간
     private var streamStartTime: Date?
     
-    /// 현재 통계 정보
-    @Published public var currentStreamingInfo: StreamingInfo?
+    /// 현재 통계 정보 (메인 스레드에서 UI 업데이트)
+    @MainActor @Published public var currentStreamingInfo: StreamingInfo?
     
-    /// 현재 데이터 전송 통계
-    @Published public var currentTransmissionStats: DataTransmissionStats?
+    /// 현재 데이터 전송 통계 (메인 스레드에서 UI 업데이트)
+    @MainActor @Published public var currentTransmissionStats: DataTransmissionStats?
     
     /// Combine 구독 저장소
     private var cancellables = Set<AnyCancellable>()
+    
+    /// 백그라운드 큐 (통계 수집용)
+    private let statsQueue = DispatchQueue(label: "StreamingStats", qos: .utility)
     
     // MARK: - Initialization
     
@@ -130,32 +133,40 @@ public final class StreamingStatsManager: @preconcurrency StreamingStatsManagerP
     
     // MARK: - Private Methods
     
-    /// 통계 정보 업데이트
+    /// 통계 정보 업데이트 (백그라운드에서 수집, 메인 스레드에서 UI 업데이트)
     private func updateStats() {
         guard let _ = haishinKitManager else { return }
         
-        // 기본값으로 통계 생성 (실제 HaishinKit API는 다를 수 있음)
-        let videoBitrate = currentSettings?.videoBitrate ?? 2500
-        let audioBitrate = currentSettings?.audioBitrate ?? 128
-        
-        // 네트워크 통계 (기본값)
-        let bytesPerSecond = Double(videoBitrate * 125) // kbps to bytes/sec
-        
-        // 통계 업데이트
-        currentStreamingInfo = StreamingInfo(
-            actualVideoBitrate: Double(videoBitrate),
-            actualAudioBitrate: Double(audioBitrate),
-            networkQuality: .good // 기본값
-        )
-        
-        currentTransmissionStats = DataTransmissionStats(
-            videoBytesPerSecond: bytesPerSecond,
-            networkLatency: 50.0 // 기본값 50ms
-        )
-        
-        // 상세 로깅
-        if let info = currentStreamingInfo, let settings = currentSettings, let startTime = streamStartTime {
-            logStreamingStatistics(info: info, settings: settings, duration: Date().timeIntervalSince(startTime))
+        // 🔧 개선: 통계 수집을 백그라운드에서 처리
+        statsQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 백그라운드에서 통계 수집
+            let videoBitrate = self.currentSettings?.videoBitrate ?? 2500
+            let audioBitrate = self.currentSettings?.audioBitrate ?? 128
+            let bytesPerSecond = Double(videoBitrate * 125) // kbps to bytes/sec
+            
+            let streamingInfo = StreamingInfo(
+                actualVideoBitrate: Double(videoBitrate),
+                actualAudioBitrate: Double(audioBitrate),
+                networkQuality: .good // 기본값
+            )
+            
+            let transmissionStats = DataTransmissionStats(
+                videoBytesPerSecond: bytesPerSecond,
+                networkLatency: 50.0 // 기본값 50ms
+            )
+            
+            // 메인 스레드에서 UI 업데이트
+            Task { @MainActor in
+                self.currentStreamingInfo = streamingInfo
+                self.currentTransmissionStats = transmissionStats
+                
+                // 상세 로깅
+                if let settings = self.currentSettings, let startTime = self.streamStartTime {
+                    self.logStreamingStatistics(info: streamingInfo, settings: settings, duration: Date().timeIntervalSince(startTime))
+                }
+            }
         }
     }
     

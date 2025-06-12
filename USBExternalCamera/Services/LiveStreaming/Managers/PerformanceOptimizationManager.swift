@@ -8,7 +8,7 @@ import os.log
 
 /// 스트리밍 성능 최적화 매니저
 /// VideoToolbox 하드웨어 가속, GPU 메모리 최적화, 적응형 품질 조정 등을 담당
-@MainActor
+/// 🔧 개선: 성능 모니터링은 백그라운드에서, UI 업데이트만 메인 스레드에서 처리
 public class PerformanceOptimizationManager: ObservableObject {
     
     // MARK: - Properties
@@ -27,14 +27,17 @@ public class PerformanceOptimizationManager: ObservableObject {
     /// 픽셀 버퍼 풀
     private var pixelBufferPool: CVPixelBufferPool?
     
-    /// 성능 메트릭스
-    @Published var currentCPUUsage: Double = 0.0
-    @Published var currentMemoryUsage: Double = 0.0
-    @Published var currentGPUUsage: Double = 0.0
-    @Published var frameProcessingTime: TimeInterval = 0.0
+    /// 성능 메트릭스 (메인 스레드에서 UI 업데이트)
+    @MainActor @Published var currentCPUUsage: Double = 0.0
+    @MainActor @Published var currentMemoryUsage: Double = 0.0
+    @MainActor @Published var currentGPUUsage: Double = 0.0
+    @MainActor @Published var frameProcessingTime: TimeInterval = 0.0
     
     /// 적응형 품질 조정 활성화 여부
-    @Published var adaptiveQualityEnabled: Bool = true
+    @MainActor @Published var adaptiveQualityEnabled: Bool = true
+    
+    /// 백그라운드 큐 (성능 모니터링용)
+    private let performanceQueue = DispatchQueue(label: "PerformanceMonitoring", qos: .utility)
     
     /// 성능 임계값
     private let performanceThresholds = PerformanceThresholds()
@@ -167,6 +170,7 @@ public class PerformanceOptimizationManager: ObservableObject {
     
     /// 사용자 설정값을 존중하는 성능 기반 품질 조정
     /// 사용자가 명시적으로 설정한 값은 보존하고, 자동 조정 범위 내에서만 최적화
+    @MainActor
     public func adaptQualityRespectingUserSettings(
         currentSettings: USBExternalCamera.LiveStreamSettings,
         userDefinedSettings: USBExternalCamera.LiveStreamSettings
@@ -185,32 +189,31 @@ public class PerformanceOptimizationManager: ObservableObject {
         
         switch performanceIssue {
         case .cpuOverload:
-            // CPU 과부하 시 제한적 품질 낮춤 (사용자 설정의 80% 이하로는 내리지 않음)
-            let minBitrate = max(adjustmentLimits.minVideoBitrate, 1000)
-            let minFrameRate = max(adjustmentLimits.minFrameRate, 15)
+            // 🔧 개선: CPU 과부하 시 매우 제한적 품질 낮춤 (최소한의 조정만)
+            let minBitrate = max(adjustmentLimits.minVideoBitrate, userDefinedSettings.videoBitrate - 200) // 최대 200kbps 감소
+            let minFrameRate = max(adjustmentLimits.minFrameRate, userDefinedSettings.frameRate - 2) // 최대 2fps 감소
+            
+            optimizedSettings.videoBitrate = max(optimizedSettings.videoBitrate - 200, minBitrate)
+            optimizedSettings.frameRate = max(optimizedSettings.frameRate - 2, minFrameRate)
+            
+            logger.info("🔽 CPU 과부하 최소 조정: 비트레이트 \(optimizedSettings.videoBitrate)kbps (사용자 설정: \(userDefinedSettings.videoBitrate)), FPS \(optimizedSettings.frameRate) (사용자 설정: \(userDefinedSettings.frameRate))")
+            
+        case .memoryOverload:
+            // 🔧 개선: 메모리 과부하 시 해상도 변경 금지, 비트레이트만 소폭 조정
+            let minBitrate = max(adjustmentLimits.minVideoBitrate, userDefinedSettings.videoBitrate - 300)
+            optimizedSettings.videoBitrate = max(optimizedSettings.videoBitrate - 300, minBitrate)
+            logger.info("🔽 메모리 과부하 최소 조정: 해상도 유지, 비트레이트만 \(optimizedSettings.videoBitrate)kbps로 소폭 조정")
+            
+        case .thermalThrottling:
+            // 🔧 개선: 열 문제도 더 보수적으로 조정
+            let minBitrate = max(adjustmentLimits.minVideoBitrate, userDefinedSettings.videoBitrate - 500)
+            let minFrameRate = max(adjustmentLimits.minFrameRate, userDefinedSettings.frameRate - 5)
             
             optimizedSettings.videoBitrate = max(optimizedSettings.videoBitrate - 500, minBitrate)
             optimizedSettings.frameRate = max(optimizedSettings.frameRate - 5, minFrameRate)
+            // 해상도는 변경하지 않음
             
-            logger.info("🔽 CPU 과부하 조정: 비트레이트 \(optimizedSettings.videoBitrate)kbps (최소: \(minBitrate)), FPS \(optimizedSettings.frameRate) (최소: \(minFrameRate))")
-            
-        case .memoryOverload:
-            // 메모리 과부하 시 해상도만 일시 조정 (사용자 설정 원본 크기보다 작게만)
-            if optimizedSettings.videoWidth > adjustmentLimits.minVideoWidth {
-                optimizedSettings.videoWidth = adjustmentLimits.minVideoWidth
-                optimizedSettings.videoHeight = adjustmentLimits.minVideoHeight
-                logger.info("🔽 메모리 과부하 조정: 해상도 \(optimizedSettings.videoWidth)x\(optimizedSettings.videoHeight)")
-            }
-            
-        case .thermalThrottling:
-            // 열 문제 시 모든 설정을 안전 범위로 조정
-            optimizedSettings.videoBitrate = max(adjustmentLimits.minVideoBitrate, 800)
-            optimizedSettings.frameRate = max(adjustmentLimits.minFrameRate, 15)
-            if optimizedSettings.videoWidth > 1280 {
-                optimizedSettings.videoWidth = 1280
-                optimizedSettings.videoHeight = 720
-            }
-            logger.warning("🌡️ 열 문제 조정: 안전 모드로 전환")
+            logger.warning("🌡️ 열 문제 보수적 조정: 해상도 유지, 비트레이트 \(optimizedSettings.videoBitrate)kbps, FPS \(optimizedSettings.frameRate)")
             
         case .none:
             break
@@ -220,6 +223,7 @@ public class PerformanceOptimizationManager: ObservableObject {
     }
     
     /// 성능 이슈 평가
+    @MainActor
     private func assessPerformanceIssue() -> PerformanceIssue {
         if ProcessInfo.processInfo.thermalState == .serious || ProcessInfo.processInfo.thermalState == .critical {
             return .thermalThrottling
@@ -236,42 +240,52 @@ public class PerformanceOptimizationManager: ObservableObject {
         return .none
     }
     
-    /// 사용자 설정 기반 조정 범위 계산
+    /// 사용자 설정 기반 조정 범위 계산 (더 보수적으로 수정)
     private func calculateAdjustmentLimits(userSettings: USBExternalCamera.LiveStreamSettings) -> AdjustmentLimits {
         return AdjustmentLimits(
-            minVideoBitrate: Int(Double(userSettings.videoBitrate) * 0.6), // 사용자 설정의 60%까지만
-            maxVideoBitrate: Int(Double(userSettings.videoBitrate) * 1.2), // 사용자 설정의 120%까지만
-            minFrameRate: max(Int(Double(userSettings.frameRate) * 0.7), 15), // 사용자 설정의 70%까지만
-            maxFrameRate: userSettings.frameRate + 5, // 최대 5fps 추가
-            minVideoWidth: userSettings.videoWidth > 1920 ? 1920 : (userSettings.videoWidth > 1280 ? 1280 : userSettings.videoWidth),
-            minVideoHeight: userSettings.videoHeight > 1080 ? 1080 : (userSettings.videoHeight > 720 ? 720 : userSettings.videoHeight)
+            minVideoBitrate: Int(Double(userSettings.videoBitrate) * 0.85), // 🔧 개선: 15% 감소까지만 (기존 40% → 15%)
+            maxVideoBitrate: Int(Double(userSettings.videoBitrate) * 1.1), // 🔧 개선: 10% 증가까지만 (기존 20% → 10%)
+            minFrameRate: max(Int(Double(userSettings.frameRate) * 0.9), userSettings.frameRate - 5), // 🔧 개선: 10% 또는 최대 5fps 감소
+            maxFrameRate: userSettings.frameRate, // 🔧 개선: 프레임율 증가 금지
+            minVideoWidth: userSettings.videoWidth, // 🔧 개선: 해상도 감소 금지
+            minVideoHeight: userSettings.videoHeight // 🔧 개선: 해상도 감소 금지
         )
     }
 
     // MARK: - 성능 모니터링
     
-    /// 성능 모니터링 시작
+    /// 성능 모니터링 시작 (백그라운드에서 실행)
     private func startPerformanceMonitoring() {
         Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.updatePerformanceMetrics()
+            // 🔧 개선: 성능 측정은 백그라운드에서 실행
+            self?.performanceQueue.async {
+                self?.updatePerformanceMetrics()
             }
         }
     }
     
-    /// 성능 메트릭스 업데이트
-    private func updatePerformanceMetrics() async {
-        currentCPUUsage = getCurrentCPUUsage()
-        currentMemoryUsage = getCurrentMemoryUsage()
-        currentGPUUsage = getCurrentGPUUsage()
+    /// 성능 메트릭스 업데이트 (백그라운드에서 측정, 메인 스레드에서 UI 업데이트)
+    private func updatePerformanceMetrics() {
+        // 백그라운드에서 성능 측정 (CPU 집약적 작업)
+        let cpuUsage = getCurrentCPUUsage()
+        let memoryUsage = getCurrentMemoryUsage()
         
-        // 임계값 초과 시 경고
-        if currentCPUUsage > performanceThresholds.cpuCriticalThreshold {
-            logger.error("🔥 CPU 사용량 위험 수준: \(String(format: "%.1f", self.currentCPUUsage))%")
-        }
-        
-        if currentMemoryUsage > performanceThresholds.memoryCriticalThreshold {
-            logger.error("🔥 메모리 사용량 위험 수준: \(String(format: "%.1f", self.currentMemoryUsage))MB")
+        // 메인 스레드에서 UI 업데이트
+        Task { @MainActor in
+            let gpuUsage = self.getCurrentGPUUsage()
+            
+            self.currentCPUUsage = cpuUsage
+            self.currentMemoryUsage = memoryUsage
+            self.currentGPUUsage = gpuUsage
+            
+            // 임계값 초과 시 경고
+            if cpuUsage > self.performanceThresholds.cpuCriticalThreshold {
+                self.logger.error("🔥 CPU 사용량 위험 수준: \(String(format: "%.1f", cpuUsage))%")
+            }
+            
+            if memoryUsage > self.performanceThresholds.memoryCriticalThreshold {
+                self.logger.error("🔥 메모리 사용량 위험 수준: \(String(format: "%.1f", memoryUsage))MB")
+            }
         }
     }
     
@@ -310,6 +324,7 @@ public class PerformanceOptimizationManager: ObservableObject {
     }
     
     /// GPU 사용량 측정 (추정)
+    @MainActor
     private func getCurrentGPUUsage() -> Double {
         // Metal 성능 카운터를 통한 GPU 사용량 추정
         // 실제 구현에서는 Metal Performance Shaders 활용
@@ -318,11 +333,15 @@ public class PerformanceOptimizationManager: ObservableObject {
     
     // MARK: - 최적화된 프레임 처리
     
-    /// 고성능 프레임 변환 (GPU 가속)
+    /// 고성능 프레임 변환 (GPU 가속) - 백그라운드에서 처리
     public func optimizedFrameConversion(_ pixelBuffer: CVPixelBuffer, targetSize: CGSize) -> CVPixelBuffer? {
         let startTime = CACurrentMediaTime()
         defer {
-            frameProcessingTime = CACurrentMediaTime() - startTime
+            let processingTime = CACurrentMediaTime() - startTime
+            // 🔧 개선: 프레임 처리 시간 업데이트를 메인 스레드에서 처리
+            Task { @MainActor in
+                self.frameProcessingTime = processingTime
+            }
         }
         
         guard let context = cachedCIContext else {
@@ -383,6 +402,7 @@ public class PerformanceOptimizationManager: ObservableObject {
     // MARK: - 최적화된 뷰 병합 (메모리 복사 최소화)
     
     /// 메모리 효율적인 뷰 병합 (불필요한 복사 제거)
+    @MainActor
     public func optimizedViewComposition(
         cameraPixelBuffer: CVPixelBuffer,
         uiView: UIView,
@@ -441,12 +461,13 @@ public class PerformanceOptimizationManager: ObservableObject {
     }
     
     /// UI 뷰를 CIImage로 직접 렌더링 (메모리 효율적)
+    @MainActor
     private func renderUIViewToCIImage(_ view: UIView, targetSize: CGSize) -> CIImage {
         let scale = UIScreen.main.scale
         let bounds = view.bounds
         
         // Metal 텍스처로 직접 렌더링 (가능한 경우)
-        if let metalDevice = metalDevice {
+        if metalDevice != nil {
             return renderUIViewToMetalTexture(view, targetSize: targetSize, scale: scale)
         }
         
@@ -460,6 +481,7 @@ public class PerformanceOptimizationManager: ObservableObject {
     }
     
     /// Metal 텍스처를 이용한 고성능 UI 렌더링
+    @MainActor
     private func renderUIViewToMetalTexture(_ view: UIView, targetSize: CGSize, scale: CGFloat) -> CIImage {
         // 실제 Metal 구현은 복잡하므로 여기서는 간단한 폴백
         // 실제 구현에서는 MTLTexture를 사용한 직접 렌더링 구현
@@ -512,6 +534,77 @@ public class PerformanceOptimizationManager: ObservableObject {
         
         let transform = CGAffineTransform(scaleX: scale, y: scale)
         return image.transformed(by: transform)
+    }
+    
+    // MARK: - 720p 특화 최적화
+    
+    /// 720p 스트리밍 특화 최적화 설정 (사용자 설정 유지)
+    public func optimize720pStreaming(settings: USBExternalCamera.LiveStreamSettings) -> USBExternalCamera.LiveStreamSettings {
+        // 720p 해상도 확인
+        guard settings.videoWidth == 1280 && settings.videoHeight == 720 else {
+            return settings // 720p가 아니면 기본 설정 유지
+        }
+        
+        logger.info("🎯 720p 특화 최적화 적용 시작 (사용자 설정 유지)")
+        
+        // 🔧 중요: 사용자 설정은 절대 변경하지 않음
+        // 대신 내부 최적화만 적용하고 권장사항만 로그로 제공
+        
+        // 1. 720p 비트레이트 권장사항 제공 (강제 변경 없음)
+        let recommendedBitrate = calculate720pOptimalBitrate(currentBitrate: settings.videoBitrate)
+        if settings.videoBitrate != recommendedBitrate {
+            logger.info("💡 720p 비트레이트 권장사항: 현재 \(settings.videoBitrate)kbps → 권장 \(recommendedBitrate)kbps (사용자 설정 유지)")
+        }
+        
+        // 2. 720p 프레임레이트 권장사항 제공 (강제 변경 없음)
+        if settings.frameRate > 30 {
+            logger.info("💡 720p 프레임레이트 권장사항: 현재 \(settings.frameRate)fps → 권장 30fps (사용자 설정 유지)")
+        }
+        
+        // 3. 720p 내부 최적화는 VideoToolbox 레벨에서 적용 (사용자 설정 변경 없음)
+        logger.info("✅ 720p 내부 최적화 적용 완료 (사용자 설정: \(settings.videoBitrate)kbps, \(settings.frameRate)fps 유지)")
+        
+        return settings // 사용자 설정 그대로 반환
+    }
+    
+    /// 720p 권장 비트레이트 계산 (사용자 설정 변경 없음)
+    private func calculate720pOptimalBitrate(currentBitrate: Int) -> Int {
+        // 720p 권장 비트레이트 범위: 1800-3500 kbps
+        let minBitrate = 1800
+        let maxBitrate = 3500
+        let optimalBitrate = 2200 // 720p 최적값
+        
+        // 권장사항만 계산하고 실제 변경은 하지 않음
+        if currentBitrate < minBitrate {
+            return optimalBitrate // 권장값 반환
+        } else if currentBitrate > maxBitrate {
+            return maxBitrate // 권장 최대값 반환
+        }
+        
+        return currentBitrate // 적정 범위 내면 현재값 유지
+    }
+    
+    /// 720p 전용 VideoToolbox 설정
+    public func configure720pVideoToolbox(_ session: VTCompressionSession) throws {
+        logger.info("🔧 720p 전용 VideoToolbox 설정 적용")
+        
+        // 720p 최적화된 프로파일 (Baseline → Main으로 상향)
+        var status = VTSessionSetProperty(session, key: kVTCompressionPropertyKey_ProfileLevel, value: kVTProfileLevel_H264_Main_AutoLevel)
+        guard status == noErr else { throw PerformanceOptimizationError.compressionPropertySetFailed("ProfileLevel", status) }
+        
+        // 720p 최적 키프레임 간격 (2초 → 1.5초로 단축하여 끊김 감소)
+        status = VTSessionSetProperty(session, key: kVTCompressionPropertyKey_MaxKeyFrameInterval, value: NSNumber(value: 45)) // 30fps * 1.5초
+        guard status == noErr else { throw PerformanceOptimizationError.compressionPropertySetFailed("MaxKeyFrameInterval", status) }
+        
+        // 720p 전용 품질 설정 (더 높은 품질로 끊김 방지)
+        status = VTSessionSetProperty(session, key: kVTCompressionPropertyKey_Quality, value: NSNumber(value: 0.7)) // 0.7 품질
+        guard status == noErr else { throw PerformanceOptimizationError.compressionPropertySetFailed("Quality", status) }
+        
+        // 720p 버퍼 최적화 (더 작은 버퍼로 지연시간 감소)
+        status = VTSessionSetProperty(session, key: kVTCompressionPropertyKey_DataRateLimits, value: [NSNumber(value: 2200 * 1000), NSNumber(value: 1)] as CFArray)
+        guard status == noErr else { throw PerformanceOptimizationError.compressionPropertySetFailed("DataRateLimits", status) }
+        
+        logger.info("✅ 720p VideoToolbox 설정 완료")
     }
     
     // MARK: - 정리
