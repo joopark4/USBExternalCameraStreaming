@@ -400,9 +400,9 @@ extension CameraPreviewUIView {
       logDebug("16:9 캡처 - 480p계열 송출 → 720p 캡처: \(captureSize)", category: .streaming)
       
     case (1280, 720):
-      // 720p → 2배 업스케일
-      captureSize = CGSize(width: 2560, height: 1440)
-      logDebug("16:9 캡처 - 720p 송출 → 1440p 캡처: \(captureSize)", category: .streaming)
+      // 🎯 720p 끊김 개선: 1.5배 업스케일로 성능 부하 감소
+      captureSize = CGSize(width: 1920, height: 1080) // 1080p로 캡처 (기존 1440p → 1080p)
+      logDebug("16:9 캡처 - 720p 송출 → 1080p 캡처 (끊김 개선): \(captureSize)", category: .streaming)
       
     case (1920, 1080):
       // 1080p → 동일 해상도 (안정성 우선)

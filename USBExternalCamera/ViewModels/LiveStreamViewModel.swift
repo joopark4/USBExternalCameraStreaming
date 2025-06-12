@@ -76,6 +76,15 @@ final class LiveStreamViewModel: ObservableObject {
     /// 로딩 상태 (스트리밍 시작/중지 중)
     @Published var isLoading: Bool = false
     
+    /// 적응형 품질 조정 활성화 여부 (사용자 설정 보장을 위해 기본값: false)
+    @Published var adaptiveQualityEnabled: Bool = false {
+        didSet {
+            if let haishinKitManager = liveStreamService as? HaishinKitManager {
+                haishinKitManager.setAdaptiveQualityEnabled(adaptiveQualityEnabled)
+            }
+        }
+    }
+    
     /// 현재 스트리밍 중인지 여부
     var isStreaming: Bool {
         return status == .streaming

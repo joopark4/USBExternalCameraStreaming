@@ -96,9 +96,9 @@ extension CameraPreviewUIView {
     isScreenCapturing = true
     logInfo("화면 캡처 송출 시작", category: .streaming)
 
-    // **성능 최적화**: 30fps → 25fps로 낮춰서 CPU 부하 감소
-    // 25fps는 여전히 부드러운 스트리밍을 제공하면서 시스템 부하를 줄임
-    screenCaptureTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 25.0, repeats: true) {
+    // **720p 특화 최적화**: 해상도별 차등 FPS 적용
+    let captureInterval = getCaptureIntervalForResolution()
+    screenCaptureTimer = Timer.scheduledTimer(withTimeInterval: captureInterval, repeats: true) {
       [weak self] _ in
       self?.captureCurrentFrame()
     }
@@ -302,6 +302,37 @@ extension CameraPreviewUIView {
   /// 화면 캡처 상태 확인
   var isCapturingScreen: Bool {
     return isScreenCapturing
+  }
+
+  /// 해상도별 최적 캡처 간격 계산 (720p 끊김 개선)
+  private func getCaptureIntervalForResolution() -> TimeInterval {
+    // HaishinKitManager에서 현재 스트리밍 설정 가져오기
+    guard let manager = haishinKitManager,
+          let settings = manager.getCurrentSettings() else {
+      return 1.0 / 25.0 // 기본값: 25fps
+    }
+    
+    let width = settings.videoWidth
+    let height = settings.videoHeight
+    
+    switch (width, height) {
+    case (1280, 720):
+      // 🎯 720p 특화: 28fps로 최적화 (끊김 감소 + 성능 균형)
+      logInfo("720p 특화 캡처: 28fps 적용", category: .streaming)
+      return 1.0 / 28.0
+      
+    case (1920, 1080):
+      // 1080p: 24fps (성능 우선)
+      return 1.0 / 24.0
+      
+    case (640...854, 360...480):
+      // 480p: 30fps (여유 있음)
+      return 1.0 / 30.0
+      
+    default:
+      // 기타: 25fps
+      return 1.0 / 25.0
+    }
   }
 }
 

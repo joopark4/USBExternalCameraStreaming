@@ -411,12 +411,12 @@ extension CameraSessionManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         frameCount += 1
         let currentTime = CACurrentMediaTime()
         
-        // 1초마다 FPS 로깅
+        // 🔧 개선: FPS 계산을 백그라운드에서 처리
         if currentTime - lastFrameTime >= 1.0 {
             let fps = Double(frameCount) / (currentTime - lastFrameTime)
             
-            // 비동기로 로깅 (성능 영향 최소화)
-            Task { @Sendable in
+            // 백그라운드 큐에서 로깅 처리 (메인 스레드 부하 최소화)
+            DispatchQueue.global(qos: .utility).async {
                 logDebug("📊 카메라 FPS: \(String(format: "%.1f", fps))", category: .camera)
             }
             
