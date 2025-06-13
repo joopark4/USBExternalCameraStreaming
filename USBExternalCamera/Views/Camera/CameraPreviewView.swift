@@ -22,7 +22,7 @@ struct CameraPreviewView: UIViewRepresentable {
   var overlayText: String = ""
 
   init(
-    session: AVCaptureSession, 
+    session: AVCaptureSession,
     streamViewModel: LiveStreamViewModel? = nil,
     haishinKitManager: HaishinKitManager? = nil,
     showTextOverlay: Bool = false,
@@ -36,13 +36,21 @@ struct CameraPreviewView: UIViewRepresentable {
   }
 
   func makeUIView(context: Context) -> UIView {
-    // 항상 AVCaptureVideoPreviewLayer 사용하여 카메라 미리보기 유지
-    // HaishinKit은 백그라운드에서 스트리밍만 처리
     let view = CameraPreviewUIView()
     view.captureSession = session
     view.haishinKitManager = haishinKitManager
     view.showTextOverlay = showTextOverlay
     view.overlayText = overlayText
+    
+    // 여백을 4픽셀로 설정하고 화면에 꽉차게 설정
+    view.translatesAutoresizingMaskIntoConstraints = false
+    NSLayoutConstraint.activate([
+      view.topAnchor.constraint(equalTo: view.superview?.topAnchor ?? view.topAnchor, constant: 4),
+      view.bottomAnchor.constraint(equalTo: view.superview?.bottomAnchor ?? view.bottomAnchor, constant: -4),
+      view.leadingAnchor.constraint(equalTo: view.superview?.leadingAnchor ?? view.leadingAnchor, constant: 4),
+      view.trailingAnchor.constraint(equalTo: view.superview?.trailingAnchor ?? view.trailingAnchor, constant: -4)
+    ])
+    
     return view
   }
 
@@ -97,4 +105,4 @@ struct CameraPreviewView: UIViewRepresentable {
       NotificationCenter.default.post(name: .stopScreenCapture, object: nil)
     }
   }
-} 
+}
