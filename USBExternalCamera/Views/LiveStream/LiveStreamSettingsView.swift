@@ -345,7 +345,7 @@ struct LiveStreamSettingsView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text("적응형 품질 조정")
+                                Text(NSLocalizedString("adaptive_quality_adjustment", comment: "적응형 품질 조정"))
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Image(systemName: viewModel.adaptiveQualityEnabled ? "exclamationmark.triangle.fill" : "lock.shield.fill")
@@ -353,8 +353,8 @@ struct LiveStreamSettingsView: View {
                                     .foregroundColor(viewModel.adaptiveQualityEnabled ? .orange : .green)
                             }
                             Text(viewModel.adaptiveQualityEnabled ? 
-                                 "성능 이슈 시 설정을 자동으로 조정합니다" : 
-                                 "사용자 설정을 정확히 유지합니다 (권장)")
+                                 NSLocalizedString("adaptive_quality_enabled_desc", comment: "성능 이슈 시 설정을 자동으로 조정합니다") : 
+                                 NSLocalizedString("adaptive_quality_disabled_desc", comment: "사용자 설정을 정확히 유지합니다 (권장)"))
                                 .font(.caption)
                                 .foregroundColor(viewModel.adaptiveQualityEnabled ? .orange : .green)
                         }
@@ -369,7 +369,7 @@ struct LiveStreamSettingsView: View {
                                 Image(systemName: "checkmark.shield.fill")
                                     .font(.caption)
                                     .foregroundColor(.green)
-                                Text("사용자가 설정한 해상도, 프레임률, 비트레이트가 정확히 적용됩니다")
+                                Text(NSLocalizedString("user_settings_exact_desc", comment: "사용자가 설정한 해상도, 프레임률, 비트레이트가 정확히 적용됩니다"))
                                     .font(.caption)
                                     .foregroundColor(.green)
                             }
@@ -379,7 +379,7 @@ struct LiveStreamSettingsView: View {
                                     Image(systemName: "info.circle.fill")
                                         .font(.caption)
                                         .foregroundColor(.orange)
-                                    Text("성능 문제 시 최대 15% 범위 내에서 자동 조정됩니다")
+                                    Text(NSLocalizedString("adaptive_quality_auto_adjust_desc", comment: "성능 문제 시 최대 15% 범위 내에서 자동 조정됩니다"))
                                         .font(.caption)
                                         .foregroundColor(.orange)
                                 }
@@ -387,7 +387,7 @@ struct LiveStreamSettingsView: View {
                                     Image(systemName: "minus.circle")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
-                                    Text("• 해상도는 변경되지 않습니다")
+                                    Text(NSLocalizedString("resolution_not_changed", comment: "• 해상도는 변경되지 않습니다"))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -395,7 +395,7 @@ struct LiveStreamSettingsView: View {
                                     Image(systemName: "minus.circle")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
-                                    Text("• 프레임률은 최대 5fps까지만 감소됩니다")
+                                    Text(NSLocalizedString("framerate_max_decrease", comment: "• 프레임률은 최대 5fps까지만 감소됩니다"))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -403,7 +403,7 @@ struct LiveStreamSettingsView: View {
                                     Image(systemName: "minus.circle")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
-                                    Text("• 비트레이트는 최대 15%까지만 감소됩니다")
+                                    Text(NSLocalizedString("bitrate_max_decrease", comment: "• 비트레이트는 최대 15%까지만 감소됩니다"))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -668,23 +668,23 @@ struct BasicSettingsSectionView: View {
         if !isValid {
             VStack(alignment: .leading, spacing: 4) {
                 if key.count != cleanedLength {
-                    Text("⚠️ 공백이나 특수문자가 제거되었습니다")
+                    Text(NSLocalizedString("whitespace_special_chars_removed", comment: "⚠️ 공백이나 특수문자가 제거되었습니다"))
                         .font(.caption)
                         .foregroundColor(.orange)
                 }
                 
                 if cleanedLength < 16 {
-                    Text("❌ 스트림 키가 너무 짧습니다 (16자 이상 필요)")
+                    Text(NSLocalizedString("stream_key_too_short", comment: "❌ 스트림 키가 너무 짧습니다 (16자 이상 필요)"))
                         .font(.caption)
                         .foregroundColor(.red)
                 } else if cleanedLength > 50 {
-                    Text("⚠️ 스트림 키가 너무 깁니다 (50자 이하 권장)")
+                    Text(NSLocalizedString("stream_key_too_long", comment: "⚠️ 스트림 키가 너무 깁니다 (50자 이하 권장)"))
                         .font(.caption)
                         .foregroundColor(.orange)
                 }
             }
         } else {
-            Text("✅ 유효한 스트림 키입니다 (\(cleanedLength)자)")
+                                Text(String.localizedStringWithFormat(NSLocalizedString("valid_stream_key_format", comment: "✅ 유효한 스트림 키입니다 (%d자)"), cleanedLength))
                 .font(.caption)
                 .foregroundColor(.green)
         }
@@ -1448,7 +1448,7 @@ struct HardwareOptimizationSectionView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
     
     var body: some View {
-        SettingsSectionView(title: "하드웨어 품질 최적화", icon: "cpu") {
+        SettingsSectionView(title: NSLocalizedString("hardware_quality_optimization", comment: "하드웨어 품질 최적화"), icon: "cpu") {
             VStack(spacing: 16) {
                 // 설명 텍스트
                 VStack(spacing: 8) {
@@ -1456,7 +1456,7 @@ struct HardwareOptimizationSectionView: View {
                         Image(systemName: "info.circle")
                             .foregroundColor(.blue)
                             .font(.caption)
-                        Text("스트리밍 설정에 맞춰 카메라와 마이크 하드웨어 품질이 자동으로 최적화됩니다")
+                        Text(NSLocalizedString("hardware_auto_optimization_desc", comment: "스트리밍 설정에 맞춰 카메라와 마이크 하드웨어 품질이 자동으로 최적화됩니다"))
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Spacer()
@@ -1468,7 +1468,7 @@ struct HardwareOptimizationSectionView: View {
                 VStack(spacing: 12) {
                     // 비디오 하드웨어 최적화
                     HardwareOptimizationCard(
-                        title: "비디오 하드웨어",
+                        title: NSLocalizedString("video_hardware", comment: "비디오 하드웨어"),
                         currentSetting: "\(viewModel.settings.videoWidth)×\(viewModel.settings.videoHeight) @ \(viewModel.settings.frameRate)fps",
                         optimizationLevel: getVideoOptimizationLevel(),
                         description: getVideoOptimizationDescription(),
@@ -1478,7 +1478,7 @@ struct HardwareOptimizationSectionView: View {
                     
                     // 오디오 하드웨어 최적화
                     HardwareOptimizationCard(
-                        title: "오디오 하드웨어",
+                        title: NSLocalizedString("audio_hardware", comment: "오디오 하드웨어"),
                         currentSetting: "\(viewModel.settings.audioBitrate) kbps",
                         optimizationLevel: getAudioOptimizationLevel(),
                         description: getAudioOptimizationDescription(),
@@ -1488,7 +1488,7 @@ struct HardwareOptimizationSectionView: View {
                     
                     // 전체 최적화 상태
                     HardwareOptimizationCard(
-                        title: "전체 최적화 상태",
+                        title: NSLocalizedString("overall_optimization_status", comment: "전체 최적화 상태"),
                         currentSetting: getOverallOptimizationStatus(),
                         optimizationLevel: getOverallOptimizationLevel(),
                         description: getOverallOptimizationDescription(),
@@ -1508,15 +1508,15 @@ struct HardwareOptimizationSectionView: View {
         
         switch (pixels, fps) {
         case (0..<(1280*720), 0..<30):
-            return "저해상도 모드"
+            return NSLocalizedString("low_resolution_mode", comment: "저해상도 모드")
         case (0..<(1920*1080), 0..<30):
-            return "표준 HD 모드"
+            return NSLocalizedString("standard_hd_mode", comment: "표준 HD 모드")
         case (0..<(1920*1080), 30...):
-            return "고프레임 모드"
+            return NSLocalizedString("high_framerate_mode", comment: "고프레임 모드")
         case ((1920*1080)..., _):
-            return "고해상도 모드"
+            return NSLocalizedString("high_resolution_mode", comment: "고해상도 모드")
         default:
-            return "사용자 정의"
+            return NSLocalizedString("custom_mode", comment: "사용자 정의")
         }
     }
     
@@ -1524,11 +1524,11 @@ struct HardwareOptimizationSectionView: View {
         let pixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
         
         if pixels >= 1920*1080 {
-            return "카메라 1080p 프리셋 + 연속 자동 포커스"
+            return NSLocalizedString("camera_1080p_preset", comment: "카메라 1080p 프리셋 + 연속 자동 포커스")
         } else if pixels >= 1280*720 {
-            return "카메라 720p 프리셋 + 자동 포커스"
+            return NSLocalizedString("camera_720p_preset", comment: "카메라 720p 프리셋 + 자동 포커스")
         } else {
-            return "카메라 VGA 프리셋 + 기본 설정"
+            return NSLocalizedString("camera_vga_preset", comment: "카메라 VGA 프리셋 + 기본 설정")
         }
     }
     
@@ -1549,11 +1549,11 @@ struct HardwareOptimizationSectionView: View {
     private func getAudioOptimizationLevel() -> String {
         switch viewModel.settings.audioBitrate {
         case 0..<96:
-            return "저품질 모드"
+            return NSLocalizedString("low_quality_mode", comment: "저품질 모드")
         case 96..<160:
-            return "표준 품질 모드"
+            return NSLocalizedString("standard_quality_mode", comment: "표준 품질 모드")
         default:
-            return "고품질 모드"
+            return NSLocalizedString("high_quality_mode", comment: "고품질 모드")
         }
     }
     
@@ -1585,17 +1585,17 @@ struct HardwareOptimizationSectionView: View {
         let audioLevel = getAudioOptimizationLevel()
         let videoPixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
         
-        let isBalanced = (audioLevel.contains("표준") && videoPixels >= 1280*720 && videoPixels < 1920*1080) ||
-                        (audioLevel.contains("고품질") && videoPixels >= 1920*1080)
+        let isBalanced = (audioLevel.contains(NSLocalizedString("standard_quality_mode", comment: "표준 품질 모드")) && videoPixels >= 1280*720 && videoPixels < 1920*1080) ||
+                        (audioLevel.contains(NSLocalizedString("high_quality_mode", comment: "고품질 모드")) && videoPixels >= 1920*1080)
         
         if isBalanced {
-            return "최적 균형 ⭐"
-        } else if audioLevel.contains("저품질") && videoPixels >= 1920*1080 {
-            return "비디오 편중 ⚠️"
-        } else if audioLevel.contains("고품질") && videoPixels < 1280*720 {
-            return "오디오 편중 ⚠️"
+            return NSLocalizedString("optimal_balance", comment: "최적 균형 ⭐")
+        } else if audioLevel.contains(NSLocalizedString("low_quality_mode", comment: "저품질 모드")) && videoPixels >= 1920*1080 {
+            return NSLocalizedString("video_biased", comment: "비디오 편중 ⚠️")
+        } else if audioLevel.contains(NSLocalizedString("high_quality_mode", comment: "고품질 모드")) && videoPixels < 1280*720 {
+            return NSLocalizedString("audio_biased", comment: "오디오 편중 ⚠️")
         } else {
-            return "표준 설정 ✅"
+            return NSLocalizedString("standard_settings", comment: "표준 설정 ✅")
         }
     }
     

@@ -295,7 +295,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             let currentFPS = 1.0 / CMTimeGetSeconds(device.activeVideoMinFrameDuration)
             frameRate = String(format: "%.0f fps", currentFPS)
         } else {
-            frameRate = "알 수 없음"
+            frameRate = NSLocalizedString("unknown", comment: "알 수 없음")
         }
         
         // 세션 프리셋에서 대략적인 해상도 추정
@@ -312,7 +312,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
         case .high:
             resolution = "High (가변)"
         default:
-            resolution = "알 수 없음"
+            resolution = NSLocalizedString("unknown", comment: "알 수 없음")
         }
         
         return (resolution, frameRate, preset)

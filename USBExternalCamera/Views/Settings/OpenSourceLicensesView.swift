@@ -14,11 +14,11 @@ struct OpenSourceLicensesView: View {
                 }
                 .padding()
             }
-            .navigationTitle("오픈소스 라이선스")
+            .navigationTitle(NSLocalizedString("open_source_licenses", comment: "오픈소스 라이선스"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("닫기") {
+                    Button(NSLocalizedString("close", comment: "닫기")) {
                         dismiss()
                     }
                 }
@@ -87,7 +87,7 @@ struct OpenSourceLibraryCard: View {
             if isExpanded {
                 Divider()
                 
-                Text("라이선스 전문")
+                Text(NSLocalizedString("license_full_text", comment: "라이선스 전문"))
                     .font(.headline)
                     .padding(.top, 8)
                 

@@ -562,7 +562,7 @@ struct LiveStreamView: View {
             HStack {
                 Image(systemName: "gear")
                     .foregroundColor(.blue)
-                Text("RTMP 설정")
+                Text(NSLocalizedString("rtmp_settings", comment: "RTMP 설정"))
                     .font(.subheadline)
                     .fontWeight(.medium)
             }
@@ -572,22 +572,22 @@ struct LiveStreamView: View {
                     Text("URL:")
                         .fontWeight(.medium)
                         .frame(width: 60, alignment: .leading)
-                    Text(viewModel.settings.rtmpURL.isEmpty ? "설정되지 않음" : viewModel.settings.rtmpURL)
+                    Text(viewModel.settings.rtmpURL.isEmpty ? NSLocalizedString("not_configured", comment: "설정되지 않음") : viewModel.settings.rtmpURL)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(viewModel.settings.rtmpURL.isEmpty ? .red : .primary)
                 }
                 
                 HStack {
-                    Text("스트림 키:")
+                    Text(NSLocalizedString("stream_key_label", comment: "스트림 키:"))
                         .fontWeight(.medium)
                         .frame(width: 60, alignment: .leading)
-                    Text(viewModel.settings.streamKey.isEmpty ? "설정되지 않음" : "\(viewModel.settings.streamKey.count)자 (\(String(viewModel.settings.streamKey.prefix(8)))...)")
+                    Text(viewModel.settings.streamKey.isEmpty ? NSLocalizedString("not_configured", comment: "설정되지 않음") : "\(viewModel.settings.streamKey.count)자 (\(String(viewModel.settings.streamKey.prefix(8)))...)")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(viewModel.settings.streamKey.isEmpty ? .red : .primary)
                 }
                 
                 HStack {
-                    Text("유효성:")
+                    Text(NSLocalizedString("validity_label", comment: "유효성:"))
                         .fontWeight(.medium)
                         .frame(width: 60, alignment: .leading)
                     
@@ -622,7 +622,7 @@ struct LiveStreamView: View {
             if let haishinKitManager = viewModel.liveStreamService as? HaishinKitManager {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("상태:")
+                        Text(NSLocalizedString("status_label", comment: "상태:"))
                             .fontWeight(.medium)
                             .frame(width: 60, alignment: .leading)
                         Text(haishinKitManager.connectionStatus)
@@ -631,16 +631,16 @@ struct LiveStreamView: View {
                     }
                     
                     HStack {
-                        Text("송출:")
+                        Text(NSLocalizedString("broadcast_label", comment: "송출:"))
                             .fontWeight(.medium)
                             .frame(width: 60, alignment: .leading)
-                        Text("화면 캡처 스트리밍 중")
+                        Text(NSLocalizedString("screen_capture_streaming", comment: "화면 캡처 스트리밍 중"))
                             .font(.caption)
                             .foregroundColor(.primary)
                     }
                 }
             } else {
-                Text("스트리밍 매니저가 초기화되지 않음")
+                                        Text(NSLocalizedString("streaming_manager_not_initialized", comment: "스트리밍 매니저가 초기화되지 않음"))
                     .font(.caption)
                     .foregroundColor(.red)
             }
@@ -655,7 +655,7 @@ struct LiveStreamView: View {
             HStack {
                 Image(systemName: "ladybug")
                     .foregroundColor(.purple)
-                Text("디버그 정보")
+                Text(NSLocalizedString("debug_info", comment: "디버그 정보"))
                     .font(.subheadline)
                     .fontWeight(.medium)
             }
@@ -663,13 +663,13 @@ struct LiveStreamView: View {
             // HaishinKitManager에서 디버그 정보 가져오기
             if viewModel.liveStreamService is HaishinKitManager {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    Text("화면 캡처 스트리밍 활성화됨")
+                    Text(NSLocalizedString("screen_capture_streaming_enabled", comment: "화면 캡처 스트리밍 활성화됨"))
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.primary)
                         .padding(.horizontal, 4)
                 }
             } else {
-                Text("디버그 정보를 사용할 수 없음")
+                Text(NSLocalizedString("debug_info_unavailable", comment: "디버그 정보를 사용할 수 없음"))
                     .font(.caption)
                     .foregroundColor(.gray)
             }

@@ -295,7 +295,7 @@ final class MainViewModel: ObservableObject {
                 if self?.isScreenCaptureStreaming != newScreenCaptureState {
                     self?.isScreenCaptureStreaming = newScreenCaptureState
                     
-                    let statusText = newScreenCaptureState ? "활성화" : "비활성화"
+                    let statusText = newScreenCaptureState ? NSLocalizedString("activated", comment: "활성화") : NSLocalizedString("deactivated", comment: "비활성화")
                     logDebug("🔄 [MainViewModel] 화면 캡처 스트리밍 상태 \(statusText): \(status)", category: .ui)
                 }
             }

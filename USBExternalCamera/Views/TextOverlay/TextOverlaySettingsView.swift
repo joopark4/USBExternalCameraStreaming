@@ -10,7 +10,7 @@ struct TextOverlaySettingsView: View {
             VStack(spacing: 0) {
                 // 텍스트 입력 영역
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("텍스트 입력")
+                    Text(NSLocalizedString("text_input", comment: "텍스트 입력"))
                         .font(.headline)
                         .foregroundColor(.primary)
                     
@@ -65,7 +65,7 @@ struct TextOverlaySettingsView: View {
     // MARK: - 텍스트 히스토리 섹션
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("최근 사용한 텍스트")
+                            Text(NSLocalizedString("recent_texts", comment: "최근 사용한 텍스트"))
                 .font(.headline)
                 .foregroundColor(.primary)
             

@@ -817,4 +817,143 @@
 "rtmp_disconnected_reconnecting" = "RTMP connection lost (attempting reconnection)";
 "connection_disconnected_waiting" = "Connection lost - waiting for reconnection";
 "youtube_live_check_needed" = "YouTube Live check needed - manual restart required";
-"youtube_live_connection_failed" = "YouTube Live connection failed. Please check if streaming is started in YouTube Studio and retry manually."; 
+"youtube_live_connection_failed" = "YouTube Live connection failed. Please check if streaming is started in YouTube Studio and retry manually.";
+
+// MARK: - New Localization Keys
+// Duration formatting
+"duration_hours_minutes_seconds" = "%d hours %d minutes %d seconds";
+"duration_minutes_seconds" = "%d minutes %d seconds";
+"duration_seconds" = "%d seconds";
+
+// Connection quality
+"excellent" = "Excellent";
+"good" = "Good";
+"fair" = "Fair";
+"poor" = "Poor";
+
+// Connection status
+"disconnected" = "Disconnected";
+"connecting" = "Connecting";
+"connected" = "Connected";
+"reconnecting_attempt" = "Reconnecting";
+"connection_failed" = "Connection Failed";
+
+// UI Messages
+"input_in_progress" = "Typing...";
+"sample_text_overlay" = "Sample Text Overlay";
+"open_source_licenses" = "Open Source Licenses";
+"license_full_text" = "Full License Text";
+"unknown" = "Unknown";
+"log_search_placeholder" = "Search logs...";
+
+// Screen capture streaming
+"screen_capture_connecting" = "Connecting screen capture streaming...";
+"screen_capture_disconnecting" = "Stopping screen capture";
+"screen_capture_stop" = "Stop Screen Capture";
+"streaming_start_capture" = "Start Streaming - Capture";
+"screen_capture_connecting_button" = "Screen Capture Connecting";
+"streaming_start" = "Start Streaming";
+
+// Connection test
+"connection_test_starting" = "Starting connection test...";
+"connection_test_success" = "Settings are valid. You can start streaming.";
+"connection_test_failed" = "There's an issue with the settings. Please check RTMP URL and stream key.";
+
+// Status messages
+"status_idle" = "Idle";
+"status_connecting" = "Connecting";
+"status_connected" = "Connected";
+"status_streaming" = "Streaming";
+"status_disconnecting" = "Disconnecting";
+"status_error_prefix" = "Error: ";
+
+// Streaming messages
+"screen_capture_only_supported" = "Only screen capture streaming is supported";
+"server_connected" = "Connected to server";
+"streaming_start_failed" = "Failed to start streaming: ";
+"streaming_ended" = "Streaming has ended";
+"streaming_cleanup_complete" = "Streaming cleanup complete (some cleanup errors ignored)";
+
+// YouTube checks
+"youtube_check_stream_waiting" = "Check if the stream is in 'Waiting' status";
+"youtube_check_live_enabled" = "Check if live streaming is enabled on your channel";
+"youtube_check_phone_verified" = "Check if phone number verification is complete";
+
+// Adaptive quality settings
+"adaptive_quality_adjustment" = "Adaptive Quality Adjustment";
+"adaptive_quality_enabled_desc" = "Automatically adjusts settings when performance issues occur";
+"adaptive_quality_disabled_desc" = "Maintains user settings exactly (recommended)";
+"user_settings_exact_desc" = "User-configured resolution, frame rate, and bitrate will be applied exactly";
+"adaptive_quality_auto_adjust_desc" = "Automatically adjusts within 15% range when performance issues occur";
+"resolution_not_changed" = "• Resolution will not be changed";
+"framerate_max_decrease" = "• Frame rate will decrease by maximum 5fps";
+"bitrate_max_decrease" = "• Bitrate will decrease by maximum 15%";
+
+// Hardware optimization
+"hardware_quality_optimization" = "Hardware Quality Optimization";
+"hardware_auto_optimization_desc" = "Camera and microphone hardware quality is automatically optimized according to streaming settings";
+"video_hardware" = "Video Hardware";
+"audio_hardware" = "Audio Hardware";
+"overall_optimization_status" = "Overall Optimization Status";
+
+// Optimization modes
+"low_resolution_mode" = "Low Resolution Mode";
+"standard_hd_mode" = "Standard HD Mode";
+"high_framerate_mode" = "High Frame Rate Mode";
+"high_resolution_mode" = "High Resolution Mode";
+"custom_mode" = "Custom";
+
+// Camera presets
+"camera_1080p_preset" = "Camera 1080p preset + continuous autofocus";
+"camera_720p_preset" = "Camera 720p preset + autofocus";
+"camera_vga_preset" = "Camera VGA preset + default settings";
+
+// Quality modes
+"low_quality_mode" = "Low Quality Mode";
+"standard_quality_mode" = "Standard Quality Mode";
+"high_quality_mode" = "High Quality Mode";
+
+// Optimization status
+"optimal_balance" = "Optimal Balance ⭐";
+"video_biased" = "Video Biased ⚠️";
+"audio_biased" = "Audio Biased ⚠️";
+"standard_settings" = "Standard Settings ✅";
+
+// Additional UI strings
+"activated" = "Activated";
+"deactivated" = "Deactivated";
+"rtmp_settings" = "RTMP Settings";
+"not_configured" = "Not configured";
+"stream_key_label" = "Stream Key:";
+"validity_label" = "Validity:";
+"status_label" = "Status:";
+"broadcast_label" = "Broadcast:";
+"screen_capture_streaming" = "Screen capture streaming";
+"streaming_manager_not_initialized" = "Streaming manager not initialized";
+"debug_info" = "Debug Info";
+"screen_capture_streaming_enabled" = "Screen capture streaming enabled";
+"debug_info_unavailable" = "Debug info unavailable";
+"text_input" = "Text Input";
+"recent_texts" = "Recent Texts";
+"buffer_size" = "Buffer Size";
+"youtube_guide_description" = "Step-by-step guide to start live streaming on YouTube.";
+
+// Stream key validation
+"whitespace_special_chars_removed" = "⚠️ Whitespace and special characters have been removed";
+"stream_key_too_short" = "❌ Stream key is too short (16+ characters required)";
+"stream_key_too_long" = "⚠️ Stream key is too long (50 characters or less recommended)";
+"valid_stream_key_format" = "✅ Valid stream key (%d characters)";
+
+// YouTube setup and troubleshooting
+"timeout_seconds_format" = "%d seconds";
+"youtube_requirement_1" = "• Live streaming feature must be enabled";
+"youtube_requirement_2" = "• Phone number verification must be completed";
+"youtube_requirement_3" = "• Never share your stream key publicly";
+"youtube_requirement_4" = "• You must start a new live stream each time";
+"troubleshoot_1" = "• Try generating a new stream key";
+"troubleshoot_2" = "• Switch between WiFi/mobile data";
+"troubleshoot_3" = "• Turn off VPN and retry";
+"troubleshoot_4" = "• Allow port 1935 in firewall";
+"youtube_setup_required" = "YouTube Live setup required";
+"youtube_stream_key_required" = "You need to get a stream key from YouTube to start streaming.";
+"view_setup_guide" = "View Setup Guide";

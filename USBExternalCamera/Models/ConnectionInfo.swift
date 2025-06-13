@@ -77,11 +77,11 @@ final class ConnectionInfo {
         let seconds = Int(duration) % 60
         
         if hours > 0 {
-            return String(format: "%d시간 %d분 %d초", hours, minutes, seconds)
+            return String(format: NSLocalizedString("duration_hours_minutes_seconds", comment: "%d시간 %d분 %d초"), hours, minutes, seconds)
         } else if minutes > 0 {
-            return String(format: "%d분 %d초", minutes, seconds)
+            return String(format: NSLocalizedString("duration_minutes_seconds", comment: "%d분 %d초"), minutes, seconds)
         } else {
-            return String(format: "%d초", seconds)
+            return String(format: NSLocalizedString("duration_seconds", comment: "%d초"), seconds)
         }
     }
     
@@ -282,10 +282,10 @@ enum ConnectionQuality: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .excellent: return "우수"
-        case .good: return "양호"
-        case .fair: return "보통"
-        case .poor: return "불량"
+        case .excellent: return NSLocalizedString("excellent", comment: "우수")
+        case .good: return NSLocalizedString("good", comment: "양호")
+        case .fair: return NSLocalizedString("fair", comment: "보통")
+        case .poor: return NSLocalizedString("poor", comment: "불량")
         }
     }
     

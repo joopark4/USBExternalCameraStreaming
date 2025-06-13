@@ -363,7 +363,7 @@ struct AdvancedStreamingSettingsView: View {
                 // 고급 네트워크 설정
                 Section(header: Text(NSLocalizedString("network_settings", comment: "네트워크 설정"))) {
                     HStack {
-                        Text("버퍼 크기")
+                        Text(NSLocalizedString("buffer_size", comment: "버퍼 크기"))
                         Spacer()
                         Text("\(viewModel.settings.bufferSize) MB")
                     }
@@ -379,7 +379,7 @@ struct AdvancedStreamingSettingsView: View {
                     HStack {
                         Text(NSLocalizedString("connection_timeout", comment: "연결 타임아웃"))
                         Spacer()
-                        Text("\(viewModel.settings.connectionTimeout)초")
+                        Text(String.localizedStringWithFormat(NSLocalizedString("timeout_seconds_format", comment: "%d초"), viewModel.settings.connectionTimeout))
                     }
                     Slider(
                         value: Binding(
@@ -431,11 +431,11 @@ struct YouTubeLiveSetupGuide: View {
                             .font(.system(size: 60))
                             .foregroundColor(.red)
                         
-                        Text("YouTube Live 설정 가이드")
+                        Text(NSLocalizedString("youtube_live_setup_guide", comment: "YouTube Live 설정 가이드"))
                             .font(.title)
                             .fontWeight(.bold)
                         
-                        Text("YouTube에서 라이브 스트리밍을 시작하기 위한 단계별 가이드입니다.")
+                        Text(NSLocalizedString("youtube_guide_description", comment: "YouTube에서 라이브 스트리밍을 시작하기 위한 단계별 가이드입니다."))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -491,10 +491,10 @@ struct YouTubeLiveSetupGuide: View {
                             .foregroundColor(.orange)
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("• 라이브 스트리밍 기능이 활성화되어 있어야 합니다")
-                            Text("• 휴대폰 번호 인증이 완료되어 있어야 합니다")
-                            Text("• 스트림 키는 절대 공개하지 마세요")
-                            Text("• 매번 새로운 라이브 스트리밍을 시작해야 합니다")
+                                                    Text(NSLocalizedString("youtube_requirement_1", comment: "• 라이브 스트리밍 기능이 활성화되어 있어야 합니다"))
+                        Text(NSLocalizedString("youtube_requirement_2", comment: "• 휴대폰 번호 인증이 완료되어 있어야 합니다"))
+                        Text(NSLocalizedString("youtube_requirement_3", comment: "• 스트림 키는 절대 공개하지 마세요"))
+                        Text(NSLocalizedString("youtube_requirement_4", comment: "• 매번 새로운 라이브 스트리밍을 시작해야 합니다"))
                         }
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -512,10 +512,10 @@ struct YouTubeLiveSetupGuide: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(NSLocalizedString("connection_troubleshooting", comment: "연결이 안 되는 경우:"))
                                 .fontWeight(.semibold)
-                            Text("• 새로운 스트림 키를 생성해보세요")
-                            Text("• WiFi/모바일 데이터를 전환해보세요")
-                            Text("• VPN을 끄고 재시도하세요")
-                            Text("• 방화벽에서 포트 1935를 허용하세요")
+                                                    Text(NSLocalizedString("troubleshoot_1", comment: "• 새로운 스트림 키를 생성해보세요"))
+                        Text(NSLocalizedString("troubleshoot_2", comment: "• WiFi/모바일 데이터를 전환해보세요"))
+                        Text(NSLocalizedString("troubleshoot_3", comment: "• VPN을 끄고 재시도하세요"))
+                        Text(NSLocalizedString("troubleshoot_4", comment: "• 방화벽에서 포트 1935를 허용하세요"))
                         }
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -595,11 +595,11 @@ struct YouTubeSetupPrompt: View {
                     .font(.title2)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("YouTube Live 설정이 필요합니다")
+                    Text(NSLocalizedString("youtube_setup_required", comment: "YouTube Live 설정이 필요합니다"))
                         .font(.headline)
                         .fontWeight(.semibold)
                     
-                    Text("스트리밍을 시작하려면 YouTube에서 스트림 키를 가져와야 합니다.")
+                    Text(NSLocalizedString("youtube_stream_key_required", comment: "스트리밍을 시작하려면 YouTube에서 스트림 키를 가져와야 합니다."))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -612,7 +612,7 @@ struct YouTubeSetupPrompt: View {
             }) {
                 HStack {
                     Image(systemName: "play.rectangle.on.rectangle")
-                    Text("설정 가이드 보기")
+                    Text(NSLocalizedString("view_setup_guide", comment: "설정 가이드 보기"))
                 }
                 .foregroundColor(.white)
                 .padding()

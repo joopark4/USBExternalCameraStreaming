@@ -173,7 +173,7 @@ final class LiveStreamViewModel: ObservableObject {
         
         // UI 로딩 상태 시작
         isLoading = true
-        await updateStatus(.connecting, message: "화면 캡처 스트리밍 연결 중...")
+        await updateStatus(.connecting, message: NSLocalizedString("screen_capture_connecting", comment: "화면 캡처 스트리밍 연결 중..."))
         
         do {
             // Step 1: 스트리밍 서비스 초기화 및 서버 연결
@@ -239,7 +239,7 @@ final class LiveStreamViewModel: ObservableObject {
         logInfo("🎬 Stopping screen capture streaming...", category: .streaming)
         
         isLoading = true
-        await updateStatus(.disconnecting, message: "화면 캡처 스트리밍 중지 중...")
+        await updateStatus(.disconnecting, message: NSLocalizedString("screen_capture_disconnecting", comment: "화면 캡처 중지 중"))
         
         do {
             // Step 1: 스트리밍 서비스 중지 및 화면 캡처 중지 신호 전송
@@ -265,17 +265,17 @@ final class LiveStreamViewModel: ObservableObject {
     /// 화면 캡처 스트리밍 버튼 텍스트
     var screenCaptureButtonText: String {
         if isScreenCaptureStreaming {
-            return "화면 캡처 중지"
+            return NSLocalizedString("screen_capture_stop", comment: "화면 캡처 중지")
         } else {
             switch status {
             case .idle, .error:
-                return "스트리밍 시작 - 캡처"
+                return NSLocalizedString("streaming_start_capture", comment: "스트리밍 시작 - 캡처")
             case .connecting:
-                return "화면 캡처 연결 중"
+                return NSLocalizedString("screen_capture_connecting_button", comment: "화면 캡처 연결 중")
             case .disconnecting:
-                return "화면 캡처 중지 중"
+                return NSLocalizedString("screen_capture_disconnecting", comment: "화면 캡처 중지 중")
             default:
-                return "스트리밍 시작 - 캡처"
+                return NSLocalizedString("streaming_start_capture", comment: "스트리밍 시작 - 캡처")
             }
         }
     }
@@ -297,17 +297,17 @@ final class LiveStreamViewModel: ObservableObject {
     /// 화면 캡처 스트리밍 버튼 텍스트
     var streamingButtonText: String {
         if isScreenCaptureStreaming {
-            return "화면 캡처 중지"
+            return NSLocalizedString("screen_capture_stop", comment: "화면 캡처 중지")
         } else {
             switch status {
             case .idle, .error:
-                return "스트리밍 시작"
+                return NSLocalizedString("streaming_start", comment: "스트리밍 시작")
             case .connecting:
-                return "화면 캡처 연결 중"
+                return NSLocalizedString("screen_capture_connecting_button", comment: "화면 캡처 연결 중")
             case .disconnecting:
-                return "화면 캡처 중지 중"
+                return NSLocalizedString("screen_capture_disconnecting", comment: "화면 캡처 중지 중")
             default:
-                return "스트리밍 시작"
+                return NSLocalizedString("streaming_start", comment: "스트리밍 시작")
             }
         }
     }
@@ -364,7 +364,7 @@ final class LiveStreamViewModel: ObservableObject {
         logDebug("🔍 [TEST] Testing connection...", category: .streaming)
         
         await MainActor.run {
-            self.connectionTestResult = "연결 테스트를 시작합니다..."
+            self.connectionTestResult = NSLocalizedString("connection_test_starting", comment: "연결 테스트를 시작합니다...")
         }
         
         // 간단한 연결 테스트 시뮬레이션
@@ -372,13 +372,13 @@ final class LiveStreamViewModel: ObservableObject {
         
         let isValid = validateRTMPURL(settings.rtmpURL) && validateStreamKey(settings.streamKey)
         
-        await MainActor.run {
-            if isValid {
-                self.connectionTestResult = "설정이 유효합니다. 스트리밍을 시작할 수 있습니다."
-            } else {
-                self.connectionTestResult = "설정에 문제가 있습니다. RTMP URL과 스트림 키를 확인해주세요."
-            }
-        }
+                  await MainActor.run {
+              if isValid {
+                  self.connectionTestResult = NSLocalizedString("connection_test_success", comment: "설정이 유효합니다. 스트리밍을 시작할 수 있습니다.")
+              } else {
+                  self.connectionTestResult = NSLocalizedString("connection_test_failed", comment: "설정에 문제가 있습니다. RTMP URL과 스트림 키를 확인해주세요.")
+              }
+          }
     }
     
     /// 빠른 연결 상태 확인
@@ -621,12 +621,12 @@ final class LiveStreamViewModel: ObservableObject {
         
         // getStreamingDataSummary 메서드가 아직 구현되지 않음
         let statusText = switch status {
-        case .idle: "대기 중"
-        case .connecting: "연결 중"
-        case .connected: "연결됨"
-        case .streaming: "스트리밍 중"
-        case .disconnecting: "연결 해제 중"
-        case .error(let error): "오류: \(error.localizedDescription)"
+        case .idle: NSLocalizedString("status_idle", comment: "대기 중")
+        case .connecting: NSLocalizedString("status_connecting", comment: "연결 중")
+        case .connected: NSLocalizedString("status_connected", comment: "연결됨")
+        case .streaming: NSLocalizedString("status_streaming", comment: "스트리밍 중")
+        case .disconnecting: NSLocalizedString("status_disconnecting", comment: "연결 해제 중")
+        case .error(let error): NSLocalizedString("status_error_prefix", comment: "오류: ") + error.localizedDescription
         }
         let summary = "📊 스트리밍 상태: \(statusText)\n📡 연결 상태: 정상"
         logDebug("📋 [DATA SUMMARY] \(summary)", category: .streaming)
@@ -944,7 +944,7 @@ final class LiveStreamViewModel: ObservableObject {
             try await haishinKitManager.startScreenCaptureStreaming(with: settings)
         } else {
             // 다른 서비스의 경우 화면 캡처 스트리밍을 구현해야 함
-            throw LiveStreamError.streamingFailed("화면 캡처 스트리밍만 지원됩니다")
+            throw LiveStreamError.streamingFailed(NSLocalizedString("screen_capture_only_supported", comment: "화면 캡처 스트리밍만 지원됩니다"))
         }
     }
     
@@ -962,24 +962,24 @@ final class LiveStreamViewModel: ObservableObject {
     }
     
     private func handleStreamingStartSuccess() async {
-        await updateStatus(.connected, message: "서버에 연결됨")
+        await updateStatus(.connected, message: NSLocalizedString("server_connected", comment: "서버에 연결됨"))
         try? await Task.sleep(nanoseconds: Constants.statusTransitionDelay)
         await updateStatus(.streaming, message: "YouTube Live 스트리밍 중")
         logDebug("✅ [STREAM] Streaming started successfully", category: .streaming)
     }
     
     private func handleStreamingStartFailure(_ error: Error) async {
-        await updateStatus(.error(.streamingFailed(error.localizedDescription)), message: "스트리밍 시작 실패: \(error.localizedDescription)")
+        await updateStatus(.error(.streamingFailed(error.localizedDescription)), message: NSLocalizedString("streaming_start_failed", comment: "스트리밍 시작 실패: ") + error.localizedDescription)
         logDebug("❌ [STREAM] Failed to start: \(error.localizedDescription)", category: .streaming)
     }
     
     private func handleStreamingStopSuccess() async {
-        await updateStatus(.idle, message: "스트리밍이 종료되었습니다")
+        await updateStatus(.idle, message: NSLocalizedString("streaming_ended", comment: "스트리밍이 종료되었습니다"))
         logDebug("✅ [STREAM] Streaming stopped successfully", category: .streaming)
     }
     
     private func handleStreamingStopFailure(_ error: Error) async {
-        await updateStatus(.idle, message: "스트리밍 종료 완료 (일부 정리 오류 무시됨)")
+        await updateStatus(.idle, message: NSLocalizedString("streaming_cleanup_complete", comment: "스트리밍 종료 완료 (일부 정리 오류 무시됨)"))
         logDebug("⚠️ [STREAM] Stopped with minor issues: \(error.localizedDescription)", category: .streaming)
     }
     
@@ -1089,9 +1089,9 @@ final class LiveStreamViewModel: ObservableObject {
         return [
             "YouTube Studio (studio.youtube.com)에서 '라이브 스트리밍' 메뉴를 확인하세요",
             "'스트림' 탭에서 '라이브 스트리밍 시작' 버튼을 눌렀는지 확인하세요",
-            "스트림이 '대기 중' 상태인지 확인하세요",
-            "채널에서 라이브 스트리밍 기능이 활성화되어 있는지 확인하세요",
-            "휴대폰 번호 인증이 완료되어 있는지 확인하세요"
+            NSLocalizedString("youtube_check_stream_waiting", comment: "스트림이 '대기 중' 상태인지 확인하세요"),
+            NSLocalizedString("youtube_check_live_enabled", comment: "채널에서 라이브 스트리밍 기능이 활성화되어 있는지 확인하세요"),
+            NSLocalizedString("youtube_check_phone_verified", comment: "휴대폰 번호 인증이 완료되어 있는지 확인하세요")
         ]
     }
     
