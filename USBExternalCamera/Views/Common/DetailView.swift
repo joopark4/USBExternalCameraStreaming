@@ -132,9 +132,12 @@ struct CameraPreviewContainerView: View {
                 verticalLayout(containerSize: containerSize)
             }
         }
-        .padding(12) // 패딩 줄임
+        .padding(.top, 0)        // 상단 패딩 제거
+        .padding(.horizontal, 12) // 좌우 패딩은 12픽셀 유지  
+        .padding(.bottom, 12)     // 하단 패딩은 12픽셀 유지
         .background(Color.black.opacity(0.1))
         .ignoresSafeArea(.keyboard) // 키보드로 인한 레이아웃 변경 방지
+        .ignoresSafeArea(.container, edges: []) // safe area 무시 제거
         .onTapGesture {
             // 뷰를 탭하면 키보드 숨김
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -176,14 +179,15 @@ struct CameraPreviewContainerView: View {
     
     @ViewBuilder
     private func verticalLayout(containerSize: CGSize) -> some View {
-        VStack(spacing: 12) { // 간격 줄임
-            // 위쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역
-            HStack(spacing: 12) {
+        VStack(spacing: 7) { // 간격을 4에서 7픽셀로 조정
+            // 위쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역 (고정 크기)
+            // 상단 safe area 높이만큼 음수 오프셋 적용하여 인디케이터 영역으로 이동
+            HStack(alignment: .top, spacing: 12) { // alignment .top으로 변경하여 상단 정렬
                 // 카메라 프리뷰
                 cameraPreviewSection(
                     availableSize: CGSize(
                         width: containerSize.width - 140, // 텍스트 컨트롤 공간 확보
-                        height: containerSize.height * 0.35 // 35%로 증가
+                        height: containerSize.height * 0.32 // 수정 전 크기로 되돌림
                     )
                 )
                 
@@ -194,10 +198,13 @@ struct CameraPreviewContainerView: View {
                 }
                 .frame(width: 120) // 고정 너비
             }
+            .layoutPriority(0) // 낮은 우선순위로 설정
+            .offset(y: -20) // 상단으로 20픽셀 이동하여 인디케이터와 같은 레벨로 이동
             
-            // 아래쪽: YouTube Studio 영역 (더 크게)
+            // 아래쪽: YouTube Studio 영역 (남은 공간 모두 차지)
             YouTubeStudioAccessView(viewModel: viewModel)
-                .frame(maxHeight: containerSize.height * 0.6) // 60%로 증가
+                .frame(maxWidth: .infinity, maxHeight: .infinity) // 남은 공간 모두 차지
+                .layoutPriority(1) // 높은 우선순위로 확장
         }
     }
     
@@ -206,7 +213,7 @@ struct CameraPreviewContainerView: View {
             // 16:9 비율 계산 (유튜브 라이브 표준)
             let aspectRatio: CGFloat = 16.0 / 9.0
         let maxWidth = availableSize.width
-        let maxHeight = availableSize.height - 60 // 텍스트 영역 고려
+        let maxHeight = availableSize.height // 텍스트 영역 제거되어 60픽셀 빼기 불필요
             
             // Aspect Fit 방식으로 16:9 프레임 계산
             let previewSize: CGSize = {
@@ -221,72 +228,56 @@ struct CameraPreviewContainerView: View {
                 }
             }()
             
-        VStack(spacing: 8) {
-            // 16:9 프리뷰 영역
-            ZStack {
-                // 카메라 프리뷰
-                CameraPreviewView(
-                    session: viewModel.cameraViewModel.captureSession,
-                    streamViewModel: viewModel.liveStreamViewModel,
-                    haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
-                    showTextOverlay: viewModel.showTextOverlay,
-                    overlayText: viewModel.currentOverlayText
-                )
-                .aspectRatio(aspectRatio, contentMode: .fit)
-                .frame(width: previewSize.width, height: previewSize.height)
-                .background(Color.black)
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
-                .onAppear {
-                    // HaishinKitManager에 텍스트 오버레이 정보 전달
-                    if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
-                        haishinKitManager.updateTextOverlay(show: viewModel.showTextOverlay, settings: viewModel.textOverlaySettings)
-                    }
-                }
-                .onChange(of: viewModel.textOverlaySettings) { _, newSettings in
-                    // 텍스트 설정 변경 시 HaishinKitManager 업데이트
-                    if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
-                        haishinKitManager.updateTextOverlay(show: viewModel.showTextOverlay, settings: newSettings)
-                    }
-                }
-                .onChange(of: viewModel.showTextOverlay) { _, newValue in
-                    // 텍스트 표시 상태 변경 시 HaishinKitManager 업데이트
-                    if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
-                        haishinKitManager.updateTextOverlay(show: newValue, settings: viewModel.textOverlaySettings)
-                    }
-                }
-                
-                // 텍스트 오버레이
-                if viewModel.showTextOverlay {
-                    TextOverlayDisplayView(
-                        settings: viewModel.textOverlaySettings,
-                        previewSize: previewSize
-                    )
-                }
-                
-                // 16:9 경계선 표시 (선택적으로 표시)
+        // 16:9 프리뷰 영역 (프리뷰 정보 텍스트 제거하여 간격 최소화)
+        ZStack {
+            // 카메라 프리뷰
+            CameraPreviewView(
+                session: viewModel.cameraViewModel.captureSession,
+                streamViewModel: viewModel.liveStreamViewModel,
+                haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
+                showTextOverlay: viewModel.showTextOverlay,
+                overlayText: viewModel.currentOverlayText
+            )
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .frame(width: previewSize.width, height: previewSize.height)
+            .background(Color.black)
+            .cornerRadius(8)
+            .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.clear)
-                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                    .frame(width: previewSize.width, height: previewSize.height)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .onAppear {
+                // HaishinKitManager에 텍스트 오버레이 정보 전달
+                if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
+                    haishinKitManager.updateTextOverlay(show: viewModel.showTextOverlay, settings: viewModel.textOverlaySettings)
+                }
+            }
+            .onChange(of: viewModel.textOverlaySettings) { _, newSettings in
+                // 텍스트 설정 변경 시 HaishinKitManager 업데이트
+                if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
+                    haishinKitManager.updateTextOverlay(show: viewModel.showTextOverlay, settings: newSettings)
+                }
+            }
+            .onChange(of: viewModel.showTextOverlay) { _, newValue in
+                // 텍스트 표시 상태 변경 시 HaishinKitManager 업데이트
+                if let haishinKitManager = viewModel.liveStreamViewModel.streamingService as? HaishinKitManager {
+                    haishinKitManager.updateTextOverlay(show: newValue, settings: viewModel.textOverlaySettings)
+                }
             }
             
-            // 프리뷰 정보
-            HStack {
-                Text(NSLocalizedString("live_preview_16_9", comment: "🎥 라이브 프리뷰 (16:9)"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text("\(Int(previewSize.width))×\(Int(previewSize.height))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .monospaced()
+            // 텍스트 오버레이
+            if viewModel.showTextOverlay {
+                TextOverlayDisplayView(
+                    settings: viewModel.textOverlaySettings,
+                    previewSize: previewSize
+                )
             }
+            
+            // 16:9 경계선 표시 (선택적으로 표시)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.clear)
+                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                .frame(width: previewSize.width, height: previewSize.height)
         }
     }
     

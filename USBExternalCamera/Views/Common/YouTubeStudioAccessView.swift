@@ -11,14 +11,14 @@ import WebKit
 // MARK: - YouTube Studio Access Components
 
 /// YouTube Studio 접근 및 관리를 위한 통합 뷰 컴포넌트
-/// 
+///
 /// **주요 기능:**
 /// - **내장 YouTube Studio WebView** - Safari 17.1 User-Agent로 완전한 브라우저 호환성
 /// - **실시간 스트리밍 상태 모니터링** - 라이브 상태 및 스트림 키 상태 표시
 /// - **직접적인 스트림 관리 접근** - 앱 전환 없이 YouTube Studio 조작
 /// - **커스텀 키보드 액세서리** - 키보드 입력 시 레이아웃 문제 해결
 /// - **최적화된 레이아웃** - 웹뷰 공간 최대화 (500px 최소 높이)
-/// 
+///
 /// **WebView 개선사항:**
 /// - 데스크톱 브라우저 User-Agent (구버전 브라우저 메시지 해결)
 /// - JavaScript 및 팝업 창 완전 지원
@@ -29,42 +29,43 @@ struct YouTubeStudioAccessView: View {
     @StateObject private var keyboardAccessoryManager = KeyboardAccessoryManager()
     
     var body: some View {
-        ZStack {
+        // 이중 VStack 제거하고 단일 VStack으로 간소화
+        VStack(spacing: 2) { // spacing 4에서 2로 줄임
             // 메인 컨텐츠 - 웹뷰 공간을 최대화하기 위해 여백 최소화
-            VStack(spacing: 8) {
-                // 헤더 (컴팩트하게)
-                headerSection
-                
-                // 스트리밍 상태 정보 (컴팩트하게)
-                streamingStatusCard
-                
-                // YouTube Studio WebView (최대한 확장)
-                youtubeStudioWebView
-            }
-            .padding(.horizontal, 12) // 좌우 패딩 줄임
-            .padding(.vertical, 8)   // 상하 패딩 줄임
-            .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-            .ignoresSafeArea(.keyboard) // 키보드로 인한 크기 변경 완전 차단
+            headerSection
+                .layoutPriority(0) // 낮은 우선순위
             
-            // 키보드가 실제로 표시될 때만 액세서리 뷰 표시
-            if keyboardAccessoryManager.isKeyboardVisible && keyboardAccessoryManager.keyboardHeight > 0 {
-                GeometryReader { geometry in
-                    VStack {
-                        Spacer()
-                                            KeyboardAccessoryView(manager: keyboardAccessoryManager)
-                        .offset(y: -keyboardAccessoryManager.keyboardHeight)
-                        .allowsHitTesting(false)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 스트리밍 상태 정보 (컴팩트하게)
+            streamingStatusCard
+                .layoutPriority(0) // 낮은 우선순위
+            
+            // YouTube Studio WebView (최대한 확장) - Spacer 역할로 남은 공간 모두 차지
+            youtubeStudioWebView
+                .frame(maxWidth: .infinity, maxHeight: .infinity) // 명시적으로 maxWidth, maxHeight infinity 설정
+                .layoutPriority(1) // 높은 우선순위로 확장
+        }
+        .padding(2) // 패딩 4에서 2로 줄임
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .ignoresSafeArea(.keyboard) // 키보드로 인한 크기 변경 완전 차단
+        
+        // 키보드가 실제로 표시될 때만 액세서리 뷰 표시
+        if keyboardAccessoryManager.isKeyboardVisible && keyboardAccessoryManager.keyboardHeight > 0 {
+            GeometryReader { geometry in
+                VStack {
+                    Spacer()
+                                    KeyboardAccessoryView(manager: keyboardAccessoryManager)
+                    .offset(y: -keyboardAccessoryManager.keyboardHeight)
+                    .allowsHitTesting(false)
                 }
-                .allowsHitTesting(false) // GeometryReader는 터치 차단하지 않음
-                .ignoresSafeArea()
-                .zIndex(1000) // 최상위 레이어지만 터치는 통과
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.easeInOut(duration: 0.25), value: keyboardAccessoryManager.isKeyboardVisible)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .allowsHitTesting(false) // GeometryReader는 터치 차단하지 않음
+            .ignoresSafeArea()
+            .zIndex(1000) // 최상위 레이어지만 터치는 통과
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: keyboardAccessoryManager.isKeyboardVisible)
         }
     }
     
@@ -83,7 +84,7 @@ struct YouTubeStudioAccessView: View {
                 .fontWeight(.semibold)
             Spacer()
         }
-        .padding(.vertical, 4) // 상하 패딩 최소화
+        .padding(.vertical, 2) // 상하 패딩을 4에서 2로 더 최소화
     }
     
     @ViewBuilder
@@ -116,8 +117,8 @@ struct YouTubeStudioAccessView: View {
             // 스트림 키 상태 표시
             streamKeyStatusIndicator
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6) // 상하 패딩 줄임
+        .padding(.horizontal, 6) // 좌우 패딩 8에서 6으로 줄임
+        .padding(.vertical, 3) // 상하 패딩 6에서 3으로 더 줄임
         .background(Color(UIColor.tertiarySystemBackground))
         .cornerRadius(6)
     }
@@ -135,7 +136,7 @@ struct YouTubeStudioAccessView: View {
     @ViewBuilder
     private var youtubeStudioWebView: some View {
         YouTubeStudioWebView(keyboardAccessoryManager: keyboardAccessoryManager)
-            .frame(minHeight: 500, maxHeight: .infinity) // 최소 높이를 500으로 대폭 증가
+            .frame(maxWidth: .infinity, maxHeight: .infinity) // maxHeight .infinity 추가하여 전체 공간 활용
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -149,7 +150,7 @@ struct YouTubeStudioAccessView: View {
 // MARK: - YouTube Studio WebView Component
 
 /// YouTube Studio 내장 WebView 컴포넌트
-/// 
+///
 /// **기술적 특징:**
 /// - **Safari 17.1 User-Agent** - 최신 브라우저로 인식하여 모든 기능 사용 가능
 /// - **고급 JavaScript 지원** - 팝업 창, 웹 앱 기능 완전 지원
@@ -189,7 +190,7 @@ struct YouTubeStudioWebView: UIViewRepresentable {
         // 키보드 입력 추적을 위한 메시지 핸들러 설정
         let messageHandler = InputTrackingMessageHandler(accessoryManager: keyboardAccessoryManager)
         configuration.userContentController.add(messageHandler, name: "inputChanged")
-        configuration.userContentController.add(messageHandler, name: "inputFocused") 
+        configuration.userContentController.add(messageHandler, name: "inputFocused")
         configuration.userContentController.add(messageHandler, name: "inputBlurred")
         
         // WebView 인스턴스 생성
@@ -279,4 +280,4 @@ struct YouTubeStudioWebView: UIViewRepresentable {
  4. 성능 최적화:
     - 데이터 지속성으로 로그인 상태 유지
     - iOS 버전별 최신 웹 기능 활용
- */ 
+ */
