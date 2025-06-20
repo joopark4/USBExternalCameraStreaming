@@ -9,7 +9,6 @@ import AVFoundation
 import HaishinKit
 import SwiftUI
 import UIKit
-import Foundation
 
 /// 실제 카메라 미리보기를 담당하는 UIView
 final class CameraPreviewUIView: UIView {
@@ -50,11 +49,7 @@ final class CameraPreviewUIView: UIView {
   }
 
   /// 스트리밍 상태
-  private var isStreaming: Bool = false {
-    didSet {
-      updateStreamingStatusView()
-    }
-  }
+  private var isStreaming: Bool = false
 
   /// 스트리밍 상태 모니터링 타이머
   private var statusMonitorTimer: Timer?
@@ -68,19 +63,11 @@ final class CameraPreviewUIView: UIView {
     return overlay
   }()
 
-  /// 스트리밍 상태 표시
-  private lazy var streamingStatusView: StreamingStatusView = {
-    let statusView = StreamingStatusView()
-    statusView.translatesAutoresizingMaskIntoConstraints = false
-    statusView.isHidden = true
-    return statusView
-  }()
-  
   // MARK: - Text Overlay Properties (Removed - handled by SwiftUI layer)
-  
+
   /// 텍스트 오버레이 표시 여부 (SwiftUI에서 관리하므로 더미 프로퍼티)
   var showTextOverlay: Bool = false
-  
+
   /// 텍스트 오버레이 내용 (SwiftUI에서 관리하므로 더미 프로퍼티)
   var overlayText: String = ""
 
@@ -101,7 +88,7 @@ final class CameraPreviewUIView: UIView {
   private func setupView() {
     backgroundColor = .black
 
-    // 컨트롤 오버레이만 추가 (StreamingStatusView는 중복되므로 제거)
+    // 컨트롤 오버레이 추가
     addSubview(controlOverlay)
 
     setupConstraints()
@@ -360,13 +347,7 @@ final class CameraPreviewUIView: UIView {
     connectionStatus: String,
     status: LiveStreamStatus
   ) {
-    // StreamingStatusView 사용하지 않음 (중복 방지)
-  }
-
-  /// 스트리밍 상태 표시 뷰 업데이트 (비활성화 - 중복 방지)
-  private func updateStreamingStatusView() {
-    // StreamingStatusView 사용하지 않음 (중복 방지)
-    logDebug("스트리밍 상태 뷰 업데이트 건너뜀 (중복 방지)", category: .streaming)
+    // 스트리밍 상태 업데이트는 다른 방식으로 처리됨
   }
 
   /// 스트리밍 상태 모니터링 설정
@@ -422,11 +403,11 @@ final class CameraPreviewUIView: UIView {
     logInfo("AVFoundation 프리뷰 레이어 설정 중...", category: .camera)
 
     let newPreviewLayer = AVCaptureVideoPreviewLayer(session: session)
-    
+
     // 16:9 비율 계산 및 적용
     let aspectRatio: CGFloat = 16.0 / 9.0
     let viewBounds = bounds
-    
+
     // 16:9 비율에 맞는 프레임 계산
     let previewFrame: CGRect
     if viewBounds.width / viewBounds.height > aspectRatio {
@@ -440,9 +421,9 @@ final class CameraPreviewUIView: UIView {
       let offsetY = (viewBounds.height - height) / 2
       previewFrame = CGRect(x: 0, y: offsetY, width: viewBounds.width, height: height)
     }
-    
+
     newPreviewLayer.frame = previewFrame
-    
+
     // 실제 송출 영역과 일치: resizeAspectFill 사용
     // 카메라 이미지가 프레임을 완전히 채우도록 설정
     newPreviewLayer.videoGravity = .resizeAspectFill
@@ -459,11 +440,11 @@ final class CameraPreviewUIView: UIView {
       let currentDevice = getCurrentCameraDevice()
       let isExternalCamera = currentDevice?.deviceType == .external
       let isFrontCamera = currentDevice?.position == .front
-      
+
       if connection.isVideoMirroringSupported {
         // 중요: 수동 미러링 설정을 위해 자동 조정 비활성화
         connection.automaticallyAdjustsVideoMirroring = false
-        
+
         if isExternalCamera {
           // 외장 카메라: 미러링 끄기 (좌우 반전 방지)
           connection.isVideoMirrored = false
@@ -480,10 +461,12 @@ final class CameraPreviewUIView: UIView {
       } else {
         logWarning("현재 연결에서 비디오 미러링이 지원되지 않음", category: .camera)
       }
-      
+
       // 현재 카메라 정보 로깅
       if let device = currentDevice {
-        logDebug("현재 카메라: \(device.localizedName), 타입: \(device.deviceType), 위치: \(device.position)", category: .camera)
+        logDebug(
+          "현재 카메라: \(device.localizedName), 타입: \(device.deviceType), 위치: \(device.position)",
+          category: .camera)
       }
     }
 
@@ -501,11 +484,11 @@ final class CameraPreviewUIView: UIView {
     // 프리뷰 레이어 프레임 업데이트 (16:9 비율 유지)
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
-      
+
       // 16:9 비율 계산
       let aspectRatio: CGFloat = 16.0 / 9.0
       let viewBounds = self.bounds
-      
+
       // 16:9 비율에 맞는 프레임 재계산
       let previewFrame: CGRect
       if viewBounds.width / viewBounds.height > aspectRatio {
@@ -519,7 +502,7 @@ final class CameraPreviewUIView: UIView {
         let offsetY = (viewBounds.height - height) / 2
         previewFrame = CGRect(x: 0, y: offsetY, width: viewBounds.width, height: height)
       }
-      
+
       // 프리뷰 레이어 프레임 업데이트 (16:9 비율 적용)
       self.previewLayer?.frame = previewFrame
       self.hkPreviewLayer?.frame = previewFrame
@@ -529,7 +512,7 @@ final class CameraPreviewUIView: UIView {
         layer.setNeedsLayout()
         layer.layoutIfNeeded()
       }
-      
+
       logDebug("레이아웃 업데이트 - 16:9 프레임: \(previewFrame)", category: .camera)
     }
   }
@@ -655,12 +638,7 @@ final class CameraPreviewUIView: UIView {
 
   func updateStreamingState(_ isStreaming: Bool) {
     self.isStreaming = isStreaming
-    streamingStatusView.isHidden = !isStreaming
     updatePreviewLayer()
-  }
-
-  func updateStreamingStats(_ stats: StreamStats) {
-    streamingStatusView.updateStats(stats)
   }
 }
 
@@ -683,7 +661,7 @@ extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
   ) {
     // 🎬 화면 캡처 모드: 실시간 카메라 프레임 저장 (CameraScreenCapture.swift)
     processVideoFrameForScreenCapture(sampleBuffer)
-    
+
     // 📡 일반 스트리밍 모드: HaishinKit에 프레임 통계 전달
     guard isStreaming, let manager = haishinKitManager else { return }
 
@@ -703,4 +681,4 @@ extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
 
 // MARK: - Text Overlay Management (Removed)
 // 텍스트 오버레이는 SwiftUI 레이어의 TextOverlayDisplayView에서 처리됩니다.
-// CameraPreviewUIView에서는 중복 구현을 제거했습니다. 
+// CameraPreviewUIView에서는 중복 구현을 제거했습니다.

@@ -1,5 +1,5 @@
 {
-  "originHash" : "94bdeabcf7f53e4c56a3636078dc53c9f02ab2f22c0e5103dbf84b61a9bc52c3",
+  "originHash" : "8556dd82d26673d1afd3819574f15a778e2d38bd3ae4969e60f576eb2af7b16f",
   "pins" : [
     {
       "identity" : "haishinkit.swift",
@@ -8,15 +8,6 @@
       "state" : {
         "revision" : "d5a94b06f7623fe8e7804993adfd963b06212041",
         "version" : "2.0.8"
-      }
-    },
-    {
-      "identity" : "inject",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/krzysztofzablocki/Inject",
-      "state" : {
-        "revision" : "728c56639ecb3df441d51d5bc6747329afabcfc9",
-        "version" : "1.5.2"
       }
     },
     {

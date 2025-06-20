@@ -10,7 +10,6 @@
 		53AF02DB2DE864F7006B527D /* HaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = 53AF02DA2DE864F7006B527D /* HaishinKit */; };
 		53AF02DD2DE864F7006B527D /* MoQTHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = 53AF02DC2DE864F7006B527D /* MoQTHaishinKit */; };
 		53AF02DF2DE864F7006B527D /* SRTHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = 53AF02DE2DE864F7006B527D /* SRTHaishinKit */; };
-		53BAAC562DE9930000E228D2 /* Inject in Frameworks */ = {isa = PBXBuildFile; productRef = 53BAAC552DE9930000E228D2 /* Inject */; };
 		53D4E2372DE8379900B36A15 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 53D4E2362DE8379900B36A15 /* AVFoundation.framework */; };
 /* End PBXBuildFile section */
 
@@ -66,7 +65,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				53BAAC562DE9930000E228D2 /* Inject in Frameworks */,
 				53AF02DD2DE864F7006B527D /* MoQTHaishinKit in Frameworks */,
 				53AF02DB2DE864F7006B527D /* HaishinKit in Frameworks */,
 				53AF02DF2DE864F7006B527D /* SRTHaishinKit in Frameworks */,
@@ -145,7 +143,6 @@
 				53AF02DA2DE864F7006B527D /* HaishinKit */,
 				53AF02DC2DE864F7006B527D /* MoQTHaishinKit */,
 				53AF02DE2DE864F7006B527D /* SRTHaishinKit */,
-				53BAAC552DE9930000E228D2 /* Inject */,
 			);
 			productName = USBExternalCamera;
 			productReference = 537567A22DE32C9500946357 /* USBExternalCamera.app */;
@@ -232,7 +229,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				53AF02D92DE864F7006B527D /* XCRemoteSwiftPackageReference "HaishinKit" */,
-				53BAAC542DE9930000E228D2 /* XCRemoteSwiftPackageReference "Inject" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 537567A32DE32C9500946357 /* Products */;
@@ -629,14 +625,6 @@
 				minimumVersion = 2.0.8;
 			};
 		};
-		53BAAC542DE9930000E228D2 /* XCRemoteSwiftPackageReference "Inject" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/krzysztofzablocki/Inject";
-			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 1.5.2;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -654,11 +642,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 53AF02D92DE864F7006B527D /* XCRemoteSwiftPackageReference "HaishinKit" */;
 			productName = SRTHaishinKit;
-		};
-		53BAAC552DE9930000E228D2 /* Inject */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 53BAAC542DE9930000E228D2 /* XCRemoteSwiftPackageReference "Inject" */;
-			productName = Inject;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
