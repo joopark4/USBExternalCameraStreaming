@@ -6,17 +6,17 @@
 //
 
 import AVFoundation
+import Foundation
 import HaishinKit
 import SwiftUI
 import UIKit
-import Foundation
 
 /// **실제 HaishinKit RTMP 스트리밍을 위한 카메라 미리보기**
 struct CameraPreviewView: UIViewRepresentable {
   let session: AVCaptureSession
   var streamViewModel: LiveStreamViewModel?
   var haishinKitManager: HaishinKitManager?
-  
+
   // 텍스트 오버레이 관련 프로퍼티
   var showTextOverlay: Bool = false
   var overlayText: String = ""
@@ -41,16 +41,19 @@ struct CameraPreviewView: UIViewRepresentable {
     view.haishinKitManager = haishinKitManager
     view.showTextOverlay = showTextOverlay
     view.overlayText = overlayText
-    
+
     // 여백을 4픽셀로 설정하고 화면에 꽉차게 설정
     view.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
       view.topAnchor.constraint(equalTo: view.superview?.topAnchor ?? view.topAnchor, constant: 4),
-      view.bottomAnchor.constraint(equalTo: view.superview?.bottomAnchor ?? view.bottomAnchor, constant: -4),
-      view.leadingAnchor.constraint(equalTo: view.superview?.leadingAnchor ?? view.leadingAnchor, constant: 4),
-      view.trailingAnchor.constraint(equalTo: view.superview?.trailingAnchor ?? view.trailingAnchor, constant: -4)
+      view.bottomAnchor.constraint(
+        equalTo: view.superview?.bottomAnchor ?? view.bottomAnchor, constant: -4),
+      view.leadingAnchor.constraint(
+        equalTo: view.superview?.leadingAnchor ?? view.leadingAnchor, constant: 4),
+      view.trailingAnchor.constraint(
+        equalTo: view.superview?.trailingAnchor ?? view.trailingAnchor, constant: -4),
     ])
-    
+
     return view
   }
 
@@ -59,7 +62,8 @@ struct CameraPreviewView: UIViewRepresentable {
       // 세션이나 매니저가 변경된 경우에만 업데이트
       let sessionChanged = previewView.captureSession !== session
       let managerChanged = previewView.haishinKitManager !== haishinKitManager
-      let textOverlayChanged = previewView.showTextOverlay != showTextOverlay || previewView.overlayText != overlayText
+      let textOverlayChanged =
+        previewView.showTextOverlay != showTextOverlay || previewView.overlayText != overlayText
 
       if sessionChanged {
         logInfo("캡처 세션 변경 감지 - 업데이트", category: .camera)
@@ -70,12 +74,12 @@ struct CameraPreviewView: UIViewRepresentable {
         logInfo("HaishinKit 매니저 변경 감지 - 업데이트", category: .camera)
         previewView.haishinKitManager = haishinKitManager
       }
-      
+
       if textOverlayChanged {
         logInfo("텍스트 오버레이 변경 감지 - 업데이트", category: .camera)
         previewView.showTextOverlay = showTextOverlay
         previewView.overlayText = overlayText
-        
+
         // HaishinKitManager에 텍스트 오버레이 정보 전달
         if let haishinKitManager = haishinKitManager {
           haishinKitManager.updateTextOverlay(show: showTextOverlay, text: overlayText)
@@ -98,11 +102,6 @@ struct CameraPreviewView: UIViewRepresentable {
 
   /// 화면 캡처 송출 중지 (외부에서 호출 가능)
   func stopScreenCapture() {
-    logInfo("화면 캡처 중지 요청됨", category: .streaming)
-
-    // 화면 캡처 중지 알림 전송
-    DispatchQueue.main.async {
-      NotificationCenter.default.post(name: .stopScreenCapture, object: nil)
-    }
+    logInfo("화면 캡처 중지 요청됨 - HaishinKitManager 사용 권장", category: .streaming)
   }
 }

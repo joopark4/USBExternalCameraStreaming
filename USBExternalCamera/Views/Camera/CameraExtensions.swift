@@ -5,11 +5,8 @@
 //  Created by EUN YEON on 5/25/25.
 //
 
-import AVFoundation
-import HaishinKit
-import SwiftUI
-import UIKit
 import Foundation
+import UIKit
 
 // MARK: - String Extension for Regex
 
@@ -30,7 +27,7 @@ extension String {
 // MARK: - Extensions
 
 /// CVPixelBuffer를 UIImage로 변환하는 확장
-/// 
+///
 /// **용도:**
 /// - 실시간 카메라 프레임(CVPixelBuffer)을 UI 합성이 가능한 UIImage로 변환
 /// - AVCaptureVideoDataOutput에서 받은 프레임을 화면 캡처 시 사용
@@ -40,9 +37,9 @@ extension String {
 /// 2. CIImage → CGImage 변환 (Core Graphics 호환)
 /// 3. CGImage → UIImage 변환 (UIKit 호환)
 extension CVPixelBuffer {
-  
+
   /// CVPixelBuffer를 UIImage로 변환
-  /// 
+  ///
   /// Core Image 프레임워크를 사용하여 픽셀 버퍼를 이미지로 변환합니다.
   /// 이 과정은 GPU 가속을 활용하여 효율적으로 수행됩니다.
   ///
@@ -55,18 +52,18 @@ extension CVPixelBuffer {
     // Step 1: CVPixelBuffer를 CIImage로 변환
     // Core Image가 픽셀 버퍼를 직접 처리할 수 있는 형태로 변환
     let ciImage = CIImage(cvPixelBuffer: self)
-    
+
     // Step 2: CIContext 생성 (GPU 가속 활용)
-    // TODO: 성능 최적화를 위해 전역 CIContext 캐싱 고려
+    // Note: 현재는 매번 생성하지만, 향후 성능 최적화를 위해 전역 CIContext 캐싱 고려 가능
     let context = CIContext()
-    
+
     // Step 3: CIImage를 CGImage로 변환
     // extent: 이미지의 전체 영역을 의미 (원본 크기 유지)
     guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
       print("❌ [CVPixelBuffer] CIImage → CGImage 변환 실패")
       return nil
     }
-    
+
     // Step 4: CGImage를 UIImage로 변환 (UIKit 호환)
     // 최종적으로 UIKit에서 사용 가능한 형태로 변환 완료
     return UIImage(cgImage: cgImage)
@@ -137,4 +134,4 @@ extension UIImage {
     print("✅ [CVPixelBuffer] 생성 성공: \(Int(size.width))x\(Int(size.height)) BGRA")
     return buffer
   }
-} 
+}
