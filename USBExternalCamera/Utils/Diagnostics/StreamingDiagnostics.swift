@@ -4,6 +4,7 @@ import SystemConfiguration
 import AVFoundation
 import SwiftUI
 import os.log
+import LiveStreamingCore
 
 /// 스트리밍 진단 및 모니터링 시스템 (YouTube, Twitch, FastPix 패턴 적용)
 class StreamingDiagnostics: ObservableObject {

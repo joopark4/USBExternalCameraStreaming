@@ -11,6 +11,7 @@
 		53AF02DD2DE864F7006B527D /* MoQTHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = 53AF02DC2DE864F7006B527D /* MoQTHaishinKit */; };
 		53AF02DF2DE864F7006B527D /* SRTHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = 53AF02DE2DE864F7006B527D /* SRTHaishinKit */; };
 		53D4E2372DE8379900B36A15 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 53D4E2362DE8379900B36A15 /* AVFoundation.framework */; };
+		53F0A0012DF2000000000001 /* LiveStreamingCore in Frameworks */ = {isa = PBXBuildFile; productRef = 53F0A0022DF2000000000001 /* LiveStreamingCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +70,7 @@
 				53AF02DB2DE864F7006B527D /* HaishinKit in Frameworks */,
 				53AF02DF2DE864F7006B527D /* SRTHaishinKit in Frameworks */,
 				53D4E2372DE8379900B36A15 /* AVFoundation.framework in Frameworks */,
+				53F0A0012DF2000000000001 /* LiveStreamingCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -143,6 +145,7 @@
 				53AF02DA2DE864F7006B527D /* HaishinKit */,
 				53AF02DC2DE864F7006B527D /* MoQTHaishinKit */,
 				53AF02DE2DE864F7006B527D /* SRTHaishinKit */,
+				53F0A0022DF2000000000001 /* LiveStreamingCore */,
 			);
 			productName = USBExternalCamera;
 			productReference = 537567A22DE32C9500946357 /* USBExternalCamera.app */;
@@ -229,6 +232,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				53AF02D92DE864F7006B527D /* XCRemoteSwiftPackageReference "HaishinKit" */,
+				53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "LiveStreamingCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 537567A32DE32C9500946357 /* Products */;
@@ -627,6 +631,13 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "LiveStreamingCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Modules/LiveStreamingCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		53AF02DA2DE864F7006B527D /* HaishinKit */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -642,6 +653,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 53AF02D92DE864F7006B527D /* XCRemoteSwiftPackageReference "HaishinKit" */;
 			productName = SRTHaishinKit;
+		};
+		53F0A0022DF2000000000001 /* LiveStreamingCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "LiveStreamingCore" */;
+			productName = LiveStreamingCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

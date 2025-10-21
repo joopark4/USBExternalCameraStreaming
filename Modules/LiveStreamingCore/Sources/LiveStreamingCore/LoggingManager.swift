@@ -9,11 +9,11 @@ import os.log
 /// - os.Logger 기반의 성능 최적화된 로깅
 /// - 다른 프로젝트에서 재사용 가능
 @MainActor
-final class LoggingManager: ObservableObject {
+public final class LoggingManager: ObservableObject {
     
     // MARK: - Singleton
     
-    static let shared = LoggingManager()
+    public static let shared = LoggingManager()
     
     // MARK: - Configuration Properties
     
@@ -41,7 +41,7 @@ final class LoggingManager: ObservableObject {
     ///   - userDefaultsKey: UserDefaults 저장 키
     ///   - categories: 사용할 로그 카테고리들
     /// - Returns: 설정된 LoggingManager 인스턴스
-    static func configure(
+    public static func configure(
         bundleIdentifier: String? = nil,
         userDefaultsKey: String = "LoggingConfiguration",
         categories: [Category]? = nil
@@ -54,7 +54,7 @@ final class LoggingManager: ObservableObject {
     // MARK: - Log Categories
     
     /// 로그 카테고리 정의
-    enum Category: String, CaseIterable {
+    public enum Category: String, CaseIterable {
         // 범용 카테고리들 (모든 앱에서 사용 가능)
         case general = "General"
         case ui = "UI"
@@ -78,26 +78,26 @@ final class LoggingManager: ObservableObject {
         case security = "Security"
         
         /// 기본 카테고리들 (대부분의 앱에서 사용)
-        static var defaultCategories: [Category] {
+        public static var defaultCategories: [Category] {
             return [.general, .ui, .network, .data, .settings, .device, .performance, .error]
         }
         
         /// 미디어 앱용 카테고리들
-        static var mediaCategories: [Category] {
+        public static var mediaCategories: [Category] {
             return defaultCategories + [.camera, .streaming]
         }
         
         /// E-커머스 앱용 카테고리들
-        static var ecommerceCategories: [Category] {
+        public static var ecommerceCategories: [Category] {
             return defaultCategories + [.auth, .payment, .analytics]
         }
         
         /// 소셜 앱용 카테고리들
-        static var socialCategories: [Category] {
+        public static var socialCategories: [Category] {
             return defaultCategories + [.auth, .push, .location, .storage]
         }
         
-        var icon: String {
+        public var icon: String {
             switch self {
             case .camera: return "📹"
             case .streaming: return "🎥"
@@ -120,7 +120,7 @@ final class LoggingManager: ObservableObject {
             }
         }
         
-        var description: String {
+        public var description: String {
             switch self {
             case .camera: return "카메라 관련 로그"
             case .streaming: return "스트리밍 관련 로그"
@@ -143,19 +143,19 @@ final class LoggingManager: ObservableObject {
             }
         }
         
-        func osLogCategory(bundleIdentifier: String) -> String {
+        public func osLogCategory(bundleIdentifier: String) -> String {
             return "\(bundleIdentifier).\(self.rawValue.lowercased())"
         }
     }
     
     /// 로그 레벨 정의
-    enum LogLevel: String, CaseIterable, Comparable {
+    public enum LogLevel: String, CaseIterable, Comparable {
         case debug = "DEBUG"
         case info = "INFO"
         case warning = "WARNING"
         case error = "ERROR"
         
-        static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
+        public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
             let order: [LogLevel] = [.debug, .info, .warning, .error]
             guard let lhsIndex = order.firstIndex(of: lhs),
                   let rhsIndex = order.firstIndex(of: rhs) else {
@@ -164,7 +164,7 @@ final class LoggingManager: ObservableObject {
             return lhsIndex < rhsIndex
         }
         
-        var osLogType: OSLogType {
+        public var osLogType: OSLogType {
             switch self {
             case .debug: return .debug
             case .info: return .info
@@ -173,7 +173,7 @@ final class LoggingManager: ObservableObject {
             }
         }
         
-        var emoji: String {
+        public var emoji: String {
             switch self {
             case .debug: return "🔍"
             case .info: return "ℹ️"
@@ -194,7 +194,7 @@ final class LoggingManager: ObservableObject {
     // MARK: - Public Properties
     
     /// 디버그 모드 여부
-    var isDebugMode: Bool {
+    public var isDebugMode: Bool {
         #if DEBUG
         return true
         #else
@@ -203,12 +203,12 @@ final class LoggingManager: ObservableObject {
     }
     
     /// 로깅 활성화 여부 (배포에서는 자동으로 false)
-    var isLoggingEnabled: Bool {
+    public var isLoggingEnabled: Bool {
         return isDebugMode && configuration.isGloballyEnabled
     }
     
     /// 현재 사용 가능한 카테고리들
-    var categories: [Category] {
+    public var categories: [Category] {
         return availableCategories
     }
     
@@ -357,7 +357,7 @@ final class LoggingManager: ObservableObject {
     // MARK: - Configuration Management
     
     /// 특정 카테고리 활성화/비활성화
-    func setCategoryEnabled(_ category: Category, enabled: Bool) {
+    public func setCategoryEnabled(_ category: Category, enabled: Bool) {
         guard availableCategories.contains(category) else { return }
         configuration.categoryStates[category] = enabled
         saveConfiguration()
@@ -365,7 +365,7 @@ final class LoggingManager: ObservableObject {
     }
     
     /// 모든 카테고리 활성화/비활성화
-    func setAllCategoriesEnabled(_ enabled: Bool) {
+    public func setAllCategoriesEnabled(_ enabled: Bool) {
         for category in availableCategories {
             configuration.categoryStates[category] = enabled
         }
@@ -374,35 +374,35 @@ final class LoggingManager: ObservableObject {
     }
     
     /// 최소 로그 레벨 설정
-    func setMinimumLogLevel(_ level: LogLevel) {
+    public func setMinimumLogLevel(_ level: LogLevel) {
         configuration.minimumLogLevel = level
         saveConfiguration()
         objectWillChange.send()
     }
     
     /// 전역 로깅 활성화/비활성화
-    func setGlobalLoggingEnabled(_ enabled: Bool) {
+    public func setGlobalLoggingEnabled(_ enabled: Bool) {
         configuration.isGloballyEnabled = enabled
         saveConfiguration()
         objectWillChange.send()
     }
     
     /// 콘솔 출력 활성화/비활성화
-    func setConsoleOutputEnabled(_ enabled: Bool) {
+    public func setConsoleOutputEnabled(_ enabled: Bool) {
         configuration.shouldPrintToConsole = enabled
         saveConfiguration()
         objectWillChange.send()
     }
     
     /// 타임스탬프 포함 여부
-    func setTimestampEnabled(_ enabled: Bool) {
+    public func setTimestampEnabled(_ enabled: Bool) {
         configuration.shouldIncludeTimestamp = enabled
         saveConfiguration()
         objectWillChange.send()
     }
     
     /// 파일 정보 포함 여부
-    func setFileInfoEnabled(_ enabled: Bool) {
+    public func setFileInfoEnabled(_ enabled: Bool) {
         configuration.shouldIncludeFileInfo = enabled
         saveConfiguration()
         objectWillChange.send()
@@ -426,7 +426,7 @@ final class LoggingManager: ObservableObject {
     // MARK: - Status Methods
     
     /// 현재 로깅 설정 상태 반환
-    func getCurrentStatus() -> LoggingStatus {
+    public func getCurrentStatus() -> LoggingStatus {
         return LoggingStatus(
             isGloballyEnabled: configuration.isGloballyEnabled,
             isDebugMode: isDebugMode,
@@ -441,7 +441,7 @@ final class LoggingManager: ObservableObject {
     }
     
     /// 로깅 설정을 기본값으로 초기화
-    func resetToDefaults() {
+    public func resetToDefaults() {
         configuration = LogConfiguration(availableCategories: availableCategories)
         saveConfiguration()
         objectWillChange.send()
@@ -485,18 +485,18 @@ private struct LogConfiguration: Codable {
 // MARK: - Logging Status
 
 /// 현재 로깅 상태를 나타내는 구조체
-struct LoggingStatus {
-    let isGloballyEnabled: Bool
-    let isDebugMode: Bool
-    let isLoggingEnabled: Bool
-    let minimumLogLevel: LoggingManager.LogLevel
-    let availableCategories: [LoggingManager.Category]
-    let enabledCategories: [LoggingManager.Category]
-    let shouldPrintToConsole: Bool
-    let shouldIncludeTimestamp: Bool
-    let shouldIncludeFileInfo: Bool
+public struct LoggingStatus {
+    public let isGloballyEnabled: Bool
+    public let isDebugMode: Bool
+    public let isLoggingEnabled: Bool
+    public let minimumLogLevel: LoggingManager.LogLevel
+    public let availableCategories: [LoggingManager.Category]
+    public let enabledCategories: [LoggingManager.Category]
+    public let shouldPrintToConsole: Bool
+    public let shouldIncludeTimestamp: Bool
+    public let shouldIncludeFileInfo: Bool
     
-    var summary: String {
+    public var summary: String {
         return """
         === 로깅 설정 상태 ===
         전역 활성화: \(isGloballyEnabled ? "✅" : "❌")
@@ -520,25 +520,25 @@ extension LoggingManager.LogLevel: Codable {}
 // MARK: - Global Logging Functions
 
 /// 전역 로깅 함수들 (편의성을 위해)
-func logDebug(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
+public func logDebug(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
     Task { @MainActor in
         LoggingManager.shared.debug(message, category: category, file: file, function: function, line: line)
     }
 }
 
-func logInfo(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
+public func logInfo(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
     Task { @MainActor in
         LoggingManager.shared.info(message, category: category, file: file, function: function, line: line)
     }
 }
 
-func logWarning(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
+public func logWarning(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
     Task { @MainActor in
         LoggingManager.shared.warning(message, category: category, file: file, function: function, line: line)
     }
 }
 
-func logError(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
+public func logError(_ message: String, category: LoggingManager.Category = .general, file: String = #file, function: String = #function, line: Int = #line) {
     Task { @MainActor in
         LoggingManager.shared.error(message, category: category, file: file, function: function, line: line)
     }
@@ -550,13 +550,13 @@ func logError(_ message: String, category: LoggingManager.Category = .general, f
 extension LoggingManager {
     
     /// 현재 프로젝트 (USBExternalCamera)용 설정
-    static func setupForCurrentProject() {
+    public static func setupForCurrentProject() {
         // 현재 프로젝트에서는 기본 설정 사용
         // 필요시 추가 설정 가능
     }
     
     /// 미디어 앱용 설정
-    static func setupForMediaApp(bundleIdentifier: String? = nil) -> LoggingManager {
+    public static func setupForMediaApp(bundleIdentifier: String? = nil) -> LoggingManager {
         return configure(
             bundleIdentifier: bundleIdentifier,
             userDefaultsKey: "MediaAppLoggingConfiguration",
@@ -565,7 +565,7 @@ extension LoggingManager {
     }
     
     /// E-커머스 앱용 설정
-    static func setupForEcommerceApp(bundleIdentifier: String? = nil) -> LoggingManager {
+    public static func setupForEcommerceApp(bundleIdentifier: String? = nil) -> LoggingManager {
         return configure(
             bundleIdentifier: bundleIdentifier,
             userDefaultsKey: "EcommerceAppLoggingConfiguration",
@@ -574,7 +574,7 @@ extension LoggingManager {
     }
     
     /// 소셜 앱용 설정
-    static func setupForSocialApp(bundleIdentifier: String? = nil) -> LoggingManager {
+    public static func setupForSocialApp(bundleIdentifier: String? = nil) -> LoggingManager {
         return configure(
             bundleIdentifier: bundleIdentifier,
             userDefaultsKey: "SocialAppLoggingConfiguration",

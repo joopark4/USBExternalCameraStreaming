@@ -7,6 +7,7 @@
 
 import XCTest
 @testable import USBExternalCamera
+import LiveStreamingCore
 
 @MainActor
 final class LiveStreamingTests: XCTestCase {

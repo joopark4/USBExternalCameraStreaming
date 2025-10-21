@@ -1,14 +1,6 @@
 import AVFoundation
 import Foundation
-
-/// 카메라 프레임 데이터 전달을 위한 델리게이트 프로토콜
-public protocol CameraFrameDelegate: AnyObject {
-    /// 새로운 비디오 프레임 수신
-    /// - Parameters:
-    ///   - sampleBuffer: 비디오 프레임 데이터
-    ///   - connection: 캡처 연결 정보
-    func didReceiveVideoFrame(_ sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection)
-}
+import LiveStreamingCore
 
 /// 카메라 전환 완료를 알리는 델리게이트
 public protocol CameraSwitchDelegate: AnyObject {

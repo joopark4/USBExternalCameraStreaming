@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import LiveStreamingCore
 
 // MARK: - Main View (MVVM Architecture)
 

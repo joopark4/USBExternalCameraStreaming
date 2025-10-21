@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import SwiftData
 import Combine
+import LiveStreamingCore
 
 /// 메인 화면의 ViewModel
 /// MVVM 패턴에서 View와 Model 사이의 중간층 역할을 담당합니다.

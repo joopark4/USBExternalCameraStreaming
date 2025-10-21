@@ -9,6 +9,7 @@ import AVFoundation
 import HaishinKit
 import SwiftUI
 import UIKit
+import LiveStreamingCore
 
 // MARK: - Rendering Helpers Extension for CameraPreviewUIView
 
