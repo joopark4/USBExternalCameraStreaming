@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 /// 민감한 데이터를 iOS Keychain에 안전하게 저장하는 매니저
-final class KeychainManager {
+public final class KeychainManager {
     
     // MARK: - Constants
     
@@ -13,7 +13,7 @@ final class KeychainManager {
     
     // MARK: - Singleton
     
-    static let shared = KeychainManager()
+    public static let shared = KeychainManager()
     
     private init() {}
     
@@ -22,7 +22,7 @@ final class KeychainManager {
     /// 스트림 키를 Keychain에 저장
     /// - Parameter streamKey: 저장할 스트림 키
     /// - Returns: 저장 성공 여부
-    func saveStreamKey(_ streamKey: String) -> Bool {
+    public func saveStreamKey(_ streamKey: String) -> Bool {
         guard !streamKey.isEmpty else { return false }
         
         let data = Data(streamKey.utf8)
@@ -44,7 +44,7 @@ final class KeychainManager {
     
     /// Keychain에서 스트림 키 로드
     /// - Returns: 저장된 스트림 키 (없으면 nil)
-    func loadStreamKey() -> String? {
+    public func loadStreamKey() -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Constants.service,
@@ -68,7 +68,7 @@ final class KeychainManager {
     /// 스트림 키 삭제
     /// - Returns: 삭제 성공 여부
     @discardableResult
-    func deleteStreamKey() -> Bool {
+    public func deleteStreamKey() -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Constants.service,
@@ -86,7 +86,7 @@ final class KeychainManager {
     ///   - value: 저장할 값
     ///   - account: 계정 식별자
     /// - Returns: 저장 성공 여부
-    func saveString(_ value: String, forAccount account: String) -> Bool {
+    public func saveString(_ value: String, forAccount account: String) -> Bool {
         guard !value.isEmpty else { return false }
         
         let data = Data(value.utf8)
@@ -109,7 +109,7 @@ final class KeychainManager {
     /// Keychain에서 문자열 데이터 로드
     /// - Parameter account: 계정 식별자
     /// - Returns: 저장된 값 (없으면 nil)
-    func loadString(forAccount account: String) -> String? {
+    public func loadString(forAccount account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Constants.service,
@@ -134,7 +134,7 @@ final class KeychainManager {
     /// - Parameter account: 계정 식별자
     /// - Returns: 삭제 성공 여부
     @discardableResult
-    func deleteString(forAccount account: String) -> Bool {
+    public func deleteString(forAccount account: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Constants.service,
@@ -148,7 +148,7 @@ final class KeychainManager {
     // MARK: - Utility Methods
     
     /// 모든 저장된 데이터 삭제 (앱 삭제 시 호출)
-    func clearAll() -> Bool {
+    public func clearAll() -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Constants.service

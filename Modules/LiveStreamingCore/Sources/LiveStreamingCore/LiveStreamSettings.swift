@@ -10,74 +10,74 @@ import SwiftData
 
 /// 라이브 스트리밍 설정 모델
 @Model
-final class LiveStreamSettingsModel: @unchecked Sendable {
+public final class LiveStreamSettingsModel: @unchecked Sendable {
     
     // MARK: - Basic Settings
     
     /// 스트림 제목
-    var streamTitle: String = "Live Stream"
+    public var streamTitle: String = "Live Stream"
     
     /// RTMP 서버 URL
-    var rtmpURL: String = "rtmp://a.rtmp.youtube.com/live2"
+    public var rtmpURL: String = "rtmp://a.rtmp.youtube.com/live2"
     
     /// 스트림 키
-    var streamKey: String = ""
+    public var streamKey: String = ""
     
     // MARK: - Video Settings
     
     /// 비디오 비트레이트 (kbps)
-    var videoBitrate: Int = 2500
+    public var videoBitrate: Int = 2500
     
     /// 비디오 너비
-    var videoWidth: Int = 1920
+    public var videoWidth: Int = 1920
     
     /// 비디오 높이
-    var videoHeight: Int = 1080
+    public var videoHeight: Int = 1080
     
     /// 프레임 레이트
-    var frameRate: Int = 30
+    public var frameRate: Int = 30
     
     /// 키프레임 간격 (초)
-    var keyframeInterval: Int = 2
+    public var keyframeInterval: Int = 2
     
     /// 비디오 인코더
-    var videoEncoder: String = "H.264"
+    public var videoEncoder: String = "H.264"
     
     /// 하드웨어 가속 사용 여부 (VideoToolbox)
-    var useHardwareAcceleration: Bool = true
+    public var useHardwareAcceleration: Bool = true
     
     /// H.264 프로파일 레벨
-    var h264ProfileLevel: String = "High"
+    public var h264ProfileLevel: String = "High"
     
     // MARK: - Audio Settings
     
     /// 오디오 비트레이트 (kbps)
-    var audioBitrate: Int = 128
+    public var audioBitrate: Int = 128
     
     /// 오디오 인코더
-    var audioEncoder: String = "AAC"
+    public var audioEncoder: String = "AAC"
     
     // MARK: - Advanced Settings
     
     /// 자동 재연결 활성화
-    var autoReconnect: Bool = true
+    public var autoReconnect: Bool = true
     
     /// 스트리밍 활성화 여부
-    var isEnabled: Bool = true
+    public var isEnabled: Bool = true
     
     /// 버퍼 크기 (MB)
-    var bufferSize: Int = 3
+    public var bufferSize: Int = 3
     
     /// 연결 타임아웃 (초)
-    var connectionTimeout: Int = 30
+    public var connectionTimeout: Int = 30
     
     // MARK: - SwiftData Properties
     
     /// 생성 시간
-    var createdAt: Date = Date()
+    public var createdAt: Date = Date()
     
     /// 업데이트 시간
-    var updatedAt: Date = Date()
+    public var updatedAt: Date = Date()
     
     // MARK: - Initialization
     
@@ -129,12 +129,12 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     // MARK: - Computed Properties
     
     /// 비디오 해상도 문자열
-    var resolutionString: String {
+    public var resolutionString: String {
         return "\(videoWidth)×\(videoHeight)"
     }
     
     /// 설정 유효성 검사
-    var isValid: Bool {
+    public var isValid: Bool {
         return !rtmpURL.isEmpty && 
                !streamKey.isEmpty && 
                rtmpURL.hasPrefix("rtmp://") &&
@@ -146,14 +146,14 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 설정 요약 정보
-    var summary: String {
+    public var summary: String {
         return "Video: \(resolutionString)@\(frameRate)fps, \(videoBitrate)kbps | Audio: \(audioBitrate)kbps"
     }
     
     // MARK: - JSON Export/Import Methods
     
     /// JSON으로 내보내기
-    func exportToJSON() -> String {
+    public func exportToJSON() -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
         encoder.dateEncodingStrategy = .iso8601
@@ -186,7 +186,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// JSON에서 가져오기
-    func importFromJSON(_ jsonString: String) -> Bool {
+    public func importFromJSON(_ jsonString: String) -> Bool {
         guard let data = jsonString.data(using: .utf8) else { return false }
         
         let decoder = JSONDecoder()
@@ -221,7 +221,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     // MARK: - Validation Methods
     
     /// RTMP URL 유효성 검사
-    func validateRTMPURL() -> ValidationResult {
+    public func validateRTMPURL() -> ValidationResult {
         guard !rtmpURL.isEmpty else {
             return ValidationResult(isValid: false, message: NSLocalizedString("validation_rtmp_url_empty", comment: "RTMP URL이 비어있습니다"))
         }
@@ -238,7 +238,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 스트림 키 유효성 검사
-    func validateStreamKey() -> ValidationResult {
+    public func validateStreamKey() -> ValidationResult {
         guard !streamKey.isEmpty else {
             return ValidationResult(isValid: false, message: NSLocalizedString("validation_stream_key_empty", comment: "스트림 키가 비어있습니다"))
         }
@@ -251,7 +251,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 비디오 설정 유효성 검사
-    func validateVideoSettings() -> ValidationResult {
+    public func validateVideoSettings() -> ValidationResult {
         guard videoBitrate >= 500 && videoBitrate <= 50000 else {
             return ValidationResult(isValid: false, message: NSLocalizedString("validation_video_bitrate_range", comment: "비디오 비트레이트는 500-50000 kbps 범위여야 합니다"))
         }
@@ -272,7 +272,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 오디오 설정 유효성 검사
-    func validateAudioSettings() -> ValidationResult {
+    public func validateAudioSettings() -> ValidationResult {
         guard audioBitrate >= 32 && audioBitrate <= 320 else {
             return ValidationResult(isValid: false, message: NSLocalizedString("validation_audio_bitrate_range", comment: "오디오 비트레이트는 32-320 kbps 범위여야 합니다"))
         }
@@ -281,7 +281,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 전체 설정 유효성 검사
-    func validateAllSettings() -> [ValidationResult] {
+    public func validateAllSettings() -> [ValidationResult] {
         return [
             validateRTMPURL(),
             validateStreamKey(),
@@ -293,7 +293,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     // MARK: - Preset Methods
     
     /// 해상도 프리셋 적용
-    func applyResolutionPreset(_ preset: ResolutionPreset) {
+    public func applyResolutionPreset(_ preset: ResolutionPreset) {
         switch preset {
         case .sd480p:
             videoWidth = 848  // 16의 배수 호환성 개선
@@ -319,7 +319,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 품질 프리셋 적용
-    func applyQualityPreset(_ preset: QualityPreset) {
+    public func applyQualityPreset(_ preset: QualityPreset) {
         switch preset {
         case .low:
             videoBitrate = 1000
@@ -337,7 +337,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 플랫폼별 최적화 설정 적용
-    func applyPlatformOptimization(_ platformName: String) {
+    public func applyPlatformOptimization(_ platformName: String) {
         switch platformName.lowercased() {
         case "youtube":
             // YouTube 권장 설정
@@ -364,7 +364,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 유튜브 라이브 스트리밍 표준 프리셋 적용
-    func applyYouTubeLivePreset(_ preset: YouTubeLivePreset) {
+    public func applyYouTubeLivePreset(_ preset: YouTubeLivePreset) {
         let settings = preset.settings
         
         videoWidth = settings.width
@@ -383,7 +383,7 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
     }
     
     /// 현재 설정이 어떤 유튜브 프리셋에 가장 가까운지 검사
-    func detectYouTubePreset() -> YouTubeLivePreset? {
+    public func detectYouTubePreset() -> YouTubeLivePreset? {
         for preset in YouTubeLivePreset.allCases {
             if preset == .custom { continue }
             
@@ -405,19 +405,19 @@ final class LiveStreamSettingsModel: @unchecked Sendable {
 // MARK: - Supporting Types
 
 /// 유효성 검사 결과
-struct ValidationResult {
-    let isValid: Bool
-    let message: String
+public struct ValidationResult {
+    public let isValid: Bool
+    public let message: String
 }
 
 /// 해상도 프리셋
-enum ResolutionPreset: String, CaseIterable {
+public enum ResolutionPreset: String, CaseIterable {
     case sd480p = "480p"
     case hd720p = "720p"
     case fhd1080p = "1080p"
     case uhd4k = "4K"
     
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .sd480p: return "480p (848×480)"
         case .hd720p: return "720p (1280×720)"
@@ -428,13 +428,13 @@ enum ResolutionPreset: String, CaseIterable {
 }
 
 /// 품질 프리셋
-enum QualityPreset: String, CaseIterable {
+public enum QualityPreset: String, CaseIterable {
     case low = "low"
     case medium = "medium"
     case high = "high"
     case ultra = "ultra"
     
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .low: return NSLocalizedString("quality_preset_low", comment: "낮음")
         case .medium: return NSLocalizedString("quality_preset_medium", comment: "보통")

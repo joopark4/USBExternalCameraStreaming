@@ -21,7 +21,10 @@ struct SidebarView: View {
             CameraSectionView(viewModel: viewModel)
             
             // 라이브 스트리밍 섹션: 라이브 스트리밍 관련 메뉴
-            LiveStreamSectionView(viewModel: viewModel)
+            LiveStreamSectionView(
+                viewModel: viewModel.liveStreamViewModel,
+                onShowSettings: { viewModel.showLiveStreamSettings() }
+            )
         }
         .navigationTitle(NSLocalizedString("menu", comment: "메뉴"))
         .navigationBarTitleDisplayMode(.inline)

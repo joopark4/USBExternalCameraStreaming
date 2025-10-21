@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import AVFoundation
 import HaishinKit
+import LiveStreamingCore
 
 /// 라이브 스트리밍 컨트롤 View
 /// HaishinKit을 사용한 실시간 스트리밍 제어 및 모니터링 기능을 제공합니다.

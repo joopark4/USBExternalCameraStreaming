@@ -9,6 +9,7 @@ import AVFoundation
 import Foundation
 import HaishinKit
 import UIKit
+import LiveStreamingCore
 
 // MARK: - Screen Capture Extension for CameraPreviewUIView
 

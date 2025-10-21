@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import AVFoundation
+import LiveStreamingCore
 
 @main
 struct USBExternalCameraApp: App {

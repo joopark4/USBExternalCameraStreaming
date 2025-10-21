@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import Foundation
 import SwiftUI
+import LiveStreamingCore
 
 /// 카메라 관련 기능을 관리하는 뷰모델
 /// - @MainActor: UI 관련 작업은 메인 스레드에서 실행
