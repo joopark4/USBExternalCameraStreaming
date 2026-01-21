@@ -116,40 +116,29 @@ open USBExternalCamera.xcodeproj
 
 The project uses Swift Package Manager with the following dependencies:
 
+- [LiveStreamingCore](https://github.com/joopark4/LiveStreamingCore) (1.0.0) - Reusable RTMP streaming module
 - [HaishinKit](https://github.com/HaishinKit/HaishinKit.swift) (2.0.8) - RTMP streaming engine
-- [Inject](https://github.com/krzysztofzablocki/Inject) (1.5.2) - Development hot reload
 - [Logboard](https://github.com/shogo4405/Logboard) (2.5.0) - Advanced logging
 
 All dependencies are managed automatically by Xcode.
 
-### Modular Architecture
+### LiveStreamingCore Module
 
-This project includes the **LiveStreamingCore** module as a separate Swift Package that can be reused in other projects:
+The **[LiveStreamingCore](https://github.com/joopark4/LiveStreamingCore)** is a separate Swift Package that provides reusable RTMP streaming functionality:
 
-```
-Modules/
-└── LiveStreamingCore/     # Reusable RTMP streaming module
-    ├── Package.swift
-    └── Sources/
-        └── LiveStreamingCore/
-            ├── LiveStreamSettings.swift
-            ├── LoggingManager.swift
-            ├── Models/
-            ├── LiveStreaming/
-            │   ├── Managers/
-            │   ├── Types/
-            │   └── Utilities/
-            └── ...
-```
-
-The **LiveStreamingCore** module provides:
+**Features:**
 - RTMP streaming functionality based on HaishinKit
 - YouTube Live optimized presets and settings
 - Streaming statistics and diagnostics
 - Text overlay support
 - Connection management and error handling
 
-See [LiveStreamingCore README](Modules/LiveStreamingCore/README.md) for detailed usage instructions.
+**Installation via SPM:**
+```swift
+.package(url: "https://github.com/joopark4/LiveStreamingCore.git", from: "1.0.0")
+```
+
+See [LiveStreamingCore Repository](https://github.com/joopark4/LiveStreamingCore) for detailed usage instructions.
 
 ## 🎯 Quick Start
 
@@ -218,16 +207,16 @@ USBExternalCamera-iOS/
 │   ├── Managers/               # System managers
 │   └── Utils/                  # Utilities and extensions
 │
-└── Modules/                     # Reusable Swift Packages
-    └── LiveStreamingCore/       # RTMP Streaming Module
-        └── Sources/
-            └── LiveStreamingCore/
-                ├── Models/              # StreamStats, ConnectionInfo, etc.
-                ├── LiveStreaming/
-                │   ├── Managers/        # HaishinKitManager
-                │   ├── Types/           # StreamingModels, Validation
-                │   └── Utilities/       # Helpers
-                └── ...
+└── [External Package: LiveStreamingCore]
+    # https://github.com/joopark4/LiveStreamingCore
+    └── Sources/
+        └── LiveStreamingCore/
+            ├── Models/              # StreamStats, ConnectionInfo, etc.
+            ├── LiveStreaming/
+            │   ├── Managers/        # HaishinKitManager
+            │   ├── Types/           # StreamingModels, Validation
+            │   └── Utilities/       # Helpers
+            └── ...
 ```
 
 ### Key Components
@@ -344,7 +333,7 @@ xcodebuild -scheme USBExternalCamera -destination 'platform=iOS,name=Your-Device
 ## 📖 Documentation
 
 ### Project Documentation
-- [LiveStreamingCore Module Guide](Modules/LiveStreamingCore/README.md) - Reusable streaming module documentation
+- [LiveStreamingCore Repository](https://github.com/joopark4/LiveStreamingCore) - Reusable streaming module (separate GitHub repository)
 
 ### External References
 - [HaishinKit Documentation](https://github.com/HaishinKit/HaishinKit.swift)
