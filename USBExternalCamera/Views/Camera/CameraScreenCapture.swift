@@ -43,7 +43,10 @@ extension CameraPreviewUIView {
   var latestCameraFrame: CVPixelBuffer? {
     get {
       let object = objc_getAssociatedObject(self, &AssociatedKeys.latestCameraFrame)
-      return object.map { $0 as! CVPixelBuffer }
+      if let buffer = object {
+        return buffer as! CVPixelBuffer
+      }
+      return nil
     }
     set {
       objc_setAssociatedObject(

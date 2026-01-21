@@ -4,7 +4,7 @@ import AVFoundation
 extension LiveStreamView {
     // MARK: - Status Dashboard
     
-    private var statusDashboard: some View {
+    var statusDashboard: some View {
         VStack(spacing: 16) {
             HStack {
                 Text(NSLocalizedString("streaming_status", comment: "스트리밍 상태"))

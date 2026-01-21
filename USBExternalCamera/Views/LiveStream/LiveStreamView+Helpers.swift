@@ -5,14 +5,14 @@ import LiveStreamingCore
 extension LiveStreamView {
     // MARK: - Helper Methods
     
-    private func toggleStreaming() {
+    func toggleStreaming() {
         Task {
             // 화면 캡처 스트리밍 토글
             viewModel.toggleScreenCaptureStreaming()
         }
     }
     
-    private func testConnection() {
+    func testConnection() {
         Task {
             await viewModel.testConnection()
             connectionTestResult = viewModel.connectionTestResult
@@ -21,25 +21,25 @@ extension LiveStreamView {
     }
 
     
-    private var streamingButtonText: String {
+    var streamingButtonText: String {
         if viewModel.isLoading {
             return "처리 중..."
         }
         return viewModel.streamingButtonText
     }
     
-    private var streamingButtonColor: Color {
+    var streamingButtonColor: Color {
         if viewModel.isLoading {
             return .gray
         }
         return viewModel.streamingButtonColor
     }
     
-    private var resolutionText: String {
+    var resolutionText: String {
         return "\(viewModel.settings.videoWidth)×\(viewModel.settings.videoHeight)"
     }
     
-    private func formatDuration(_ duration: TimeInterval) -> String {
+    func formatDuration(_ duration: TimeInterval) -> String {
         let hours = Int(duration) / 3600
         let minutes = Int(duration) % 3600 / 60
         let seconds = Int(duration) % 60
@@ -57,7 +57,7 @@ extension LiveStreamView {
 
     
     /// 실제 HaishinKit을 사용한 RTMP 연결 테스트
-    private func performRealConnectionTest() async {
+    func performRealConnectionTest() async {
         logger.info("🧪 실제 RTMP 연결 테스트 시작", category: .connection)
         
         // HaishinKitManager 인스턴스 생성
@@ -94,7 +94,7 @@ extension LiveStreamView {
     }
     
     /// 빠른 연결 상태 확인
-    private func performQuickCheck() {
+    func performQuickCheck() {
         logger.info("⚡ 빠른 연결 상태 확인 시작", category: .connection)
         
         // 현재 viewModel 사용해서 빠른 진단 수행
@@ -107,7 +107,7 @@ extension LiveStreamView {
     }
     
     /// RTMP 연결 테스트 (HaishinKit 매니저 사용)
-    private func testRTMPConnection() async {
+    func testRTMPConnection() async {
         logger.info("🧪 [RTMP] HaishinKit RTMP 연결 테스트 시작", category: .connection)
         
         guard viewModel.liveStreamService is HaishinKitManager else {
@@ -134,7 +134,7 @@ extension LiveStreamView {
 
     
     /// 🩺 빠른 스트리밍 진단 (새로운 메서드)
-    private func performQuickDiagnosis() async {
+    func performQuickDiagnosis() async {
         logger.info("🩺 빠른 스트리밍 진단 시작", category: .connection)
         
         // HaishinKitManager의 진단 기능 사용
@@ -183,7 +183,7 @@ extension LiveStreamView {
     }
     
     /// 🔍 종합 스트리밍 진단 (새로운 메서드)
-    private func performFullDiagnostics() async {
+    func performFullDiagnostics() async {
         logger.info("🔍 종합 스트리밍 진단 시작", category: .connection)
         
         // HaishinKitManager의 종합 진단 기능 사용
@@ -265,29 +265,25 @@ extension LiveStreamView {
     }
     
     // MARK: - Helper Properties
-    
-    private var statusColor: Color {
+
+    var statusColor: Color {
         if viewModel.isScreenCaptureStreaming {
             return .green
         }
-        
-        switch viewModel.status {
-        case .idle:
-            return .gray
-        case .connecting:
-            return .orange
-        case .connected:
+
+        // StatusColorMappable 프로토콜 활용
+        struct Helper: StatusColorMappable {}
+        let helper = Helper()
+
+        // connected는 streaming과 동일하게 처리
+        if viewModel.status == .connected {
             return .green
-        case .streaming:
-            return .green
-        case .disconnecting:
-            return .orange
-        case .error:
-            return .red
         }
+
+        return helper.colorForStatus(viewModel.status)
     }
     
-    private var statusText: String {
+    var statusText: String {
         if viewModel.isScreenCaptureStreaming {
             return "화면 캡처 스트리밍 중"
         }

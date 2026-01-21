@@ -46,7 +46,8 @@ struct TransmissionInfoCard: View {
     let value: String
     let subtitle: String
     let color: Color
-    
+    @State private var pulseAnimation = false
+
     var body: some View {
         VStack(spacing: 8) {
             HStack {
@@ -94,8 +95,6 @@ struct TransmissionInfoCard: View {
                 .stroke(color.opacity(0.2), lineWidth: 1)
         )
     }
-    
-    @State private var pulseAnimation = false
 }
 
 }

@@ -1,20 +1,15 @@
 import AVFoundation
 import Combine
 import Foundation
+import LiveStreamingCore
 import SwiftData
 import SwiftUI
-import LiveStreamingCore
 
 extension LiveStreamViewModel {
   // MARK: - Private Methods - Streaming
-
   private func performStreamingStart(with captureSession: AVCaptureSession) async throws {
-    guard let service = liveStreamService else {
-      throw LiveStreamError.networkError("Service not initialized")
-    }
-
     // 화면 캡처 스트리밍 시작 (카메라 스트리밍은 제거됨)
-    if let haishinKitManager = service as? HaishinKitManager {
+    if let haishinKitManager = liveStreamService as? HaishinKitManager {
       try await haishinKitManager.startScreenCaptureStreaming(with: settings)
     } else {
       // 다른 서비스의 경우 화면 캡처 스트리밍을 구현해야 함
@@ -24,16 +19,11 @@ extension LiveStreamViewModel {
   }
 
   private func performStreamingStop() async throws {
-    guard let service = liveStreamService else {
-      throw LiveStreamError.networkError("Service not initialized")
-    }
-
     // 화면 캡처 중지 알림 전송 (화면 캡처 모드인 경우)
     DispatchQueue.main.async {
-      NotificationCenter.default.post(name: NSNotification.Name("stopScreenCapture"), object: nil)
+      NotificationCenter.default.post(name: .stopScreenCapture, object: nil)
     }
-
-    await service.stopStreaming()
+    await liveStreamService.stopStreaming()
   }
 
   private func handleStreamingStartSuccess() async {
@@ -66,5 +56,4 @@ extension LiveStreamViewModel {
     logDebug(
       "⚠️ [STREAM] Stopped with minor issues: \(error.localizedDescription)", category: .streaming)
   }
-
 }

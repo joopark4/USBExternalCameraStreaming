@@ -7,15 +7,15 @@
 import AVFoundation
 import Combine
 import Foundation
+import LiveStreamingCore
 import SwiftData
 import SwiftUI
-import LiveStreamingCore
 /// 라이브 스트리밍 뷰모델 (MVVM 아키텍처)
 /// Services Layer를 통해 Data와 Network Layer에 접근하여 UI 상태를 관리합니다.
 @MainActor
 final class LiveStreamViewModel: ObservableObject {
   // MARK: - Constants
-  private enum Constants {
+  enum Constants {
     static let dataMonitoringInterval: TimeInterval = 5.0
     static let statusTransitionDelay: UInt64 = 500_000_000  // 0.5초
     static let minimumStreamKeyLength = 16
@@ -74,17 +74,22 @@ final class LiveStreamViewModel: ObservableObject {
   // 기존 일반 스트리밍 버튼 관련 속성들 제거 - 화면 캡처 스트리밍만 사용
   // MARK: - Dependencies
   /// 라이브 스트리밍 서비스 (Services Layer)
-  internal var liveStreamService: HaishinKitManagerProtocol!
+  /// - Note: 초기화 시점에 반드시 할당되므로 안전하게 사용 가능
+  internal let liveStreamService: HaishinKitManagerProtocol
   /// 라이브 스트리밍 서비스 접근자 (카메라 연결용)
   public var streamingService: HaishinKitManagerProtocol? {
     return liveStreamService
   }
   /// Combine 구독 저장소
-  private var cancellables = Set<AnyCancellable>()
+  var cancellables = Set<AnyCancellable>()
   // MARK: - Initialization
-  init(modelContext: ModelContext) {
+  /// 라이브 스트리밍 뷰모델 초기화
+  /// - Parameters:
+  ///   - modelContext: SwiftData 모델 컨텍스트
+  ///   - liveStreamService: 스트리밍 서비스 (테스트 시 Mock 주입 가능, 기본값: HaishinKitManager)
+  init(modelContext: ModelContext, liveStreamService: HaishinKitManagerProtocol? = nil) {
     self.settings = Self.createDefaultSettings()
-    self.liveStreamService = HaishinKitManager()
+    self.liveStreamService = liveStreamService ?? HaishinKitManager()
     setupBindings()
     updateStreamingAvailability()
     loadInitialSettings()
@@ -212,16 +217,7 @@ final class LiveStreamViewModel: ObservableObject {
     if isScreenCaptureStreaming {
       return NSLocalizedString("screen_capture_stop", comment: "화면 캡처 중지")
     } else {
-      switch status {
-      case .idle, .error:
-        return NSLocalizedString("streaming_start_capture", comment: "스트리밍 시작 - 캡처")
-      case .connecting:
-        return NSLocalizedString("screen_capture_connecting_button", comment: "화면 캡처 연결 중")
-      case .disconnecting:
-        return NSLocalizedString("screen_capture_disconnecting", comment: "화면 캡처 중지 중")
-      default:
-        return NSLocalizedString("streaming_start_capture", comment: "스트리밍 시작 - 캡처")
-      }
+      return StreamingButtonHelper.screenCaptureButtonText(for: status)
     }
   }
   /// 화면 캡처 스트리밍 버튼 색상
@@ -229,42 +225,23 @@ final class LiveStreamViewModel: ObservableObject {
     if isScreenCaptureStreaming {
       return .red
     } else {
-      switch status {
-      case .connecting, .disconnecting:
-        return .gray
-      default:
-        return .purple
-      }
+      return StreamingButtonHelper.buttonColor(for: status)
     }
   }
-  /// 화면 캡처 스트리밍 버튼 텍스트
+  /// 스트리밍 버튼 텍스트
   var streamingButtonText: String {
     if isScreenCaptureStreaming {
       return NSLocalizedString("screen_capture_stop", comment: "화면 캡처 중지")
     } else {
-      switch status {
-      case .idle, .error:
-        return NSLocalizedString("streaming_start", comment: "스트리밍 시작")
-      case .connecting:
-        return NSLocalizedString("screen_capture_connecting_button", comment: "화면 캡처 연결 중")
-      case .disconnecting:
-        return NSLocalizedString("screen_capture_disconnecting", comment: "화면 캡처 중지 중")
-      default:
-        return NSLocalizedString("streaming_start", comment: "스트리밍 시작")
-      }
+      return StreamingButtonHelper.streamingButtonText(for: status)
     }
   }
-  /// 화면 캡처 스트리밍 버튼 색상
+  /// 스트리밍 버튼 색상
   var streamingButtonColor: Color {
     if isScreenCaptureStreaming {
       return .red
     } else {
-      switch status {
-      case .connecting, .disconnecting:
-        return .gray
-      default:
-        return .purple
-      }
+      return StreamingButtonHelper.buttonColor(for: status)
     }
   }
   /// 화면 캡처 스트리밍 버튼 활성화 상태

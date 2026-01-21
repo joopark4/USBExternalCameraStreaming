@@ -13,30 +13,55 @@ import LiveStreamingCore
 
 /// 앱의 메인 화면 View
 struct ContentView: View {
-    
+
     @StateObject private var mainViewModel: MainViewModel
-    
+    @State private var modelContainerError: Bool = false
+
     // MARK: - Initialization
-    
+
     init() {
-        // SwiftData ModelContainer 접근
-        let container = try! ModelContainer(for: LiveStreamSettingsModel.self)
-        
-        // 의존성 생성 및 주입
-        let cameraViewModel = CameraViewModel()
-        let permissionManager = PermissionManager()
-        let permissionViewModel = PermissionViewModel(permissionManager: permissionManager)
-        let liveStreamViewModel = LiveStreamViewModel(modelContext: container.mainContext)
-        
-        _mainViewModel = StateObject(wrappedValue: MainViewModel(
-            cameraViewModel: cameraViewModel,
-            permissionViewModel: permissionViewModel,
-            liveStreamViewModel: liveStreamViewModel
-        ))
+        // SwiftData ModelContainer 안전하게 생성
+        do {
+            let container = try ModelContainer(for: LiveStreamSettingsModel.self)
+
+            // 의존성 생성 및 주입
+            let cameraViewModel = CameraViewModel()
+            let permissionManager = PermissionManager()
+            let permissionViewModel = PermissionViewModel(permissionManager: permissionManager)
+            let liveStreamViewModel = LiveStreamViewModel(modelContext: container.mainContext)
+
+            _mainViewModel = StateObject(wrappedValue: MainViewModel(
+                cameraViewModel: cameraViewModel,
+                permissionViewModel: permissionViewModel,
+                liveStreamViewModel: liveStreamViewModel
+            ))
+            _modelContainerError = State(initialValue: false)
+        } catch {
+            // ModelContainer 생성 실패 시 기본 설정으로 초기화
+            logError("Failed to create ModelContainer: \(error.localizedDescription)", category: .error)
+
+            // 메모리 내 임시 컨테이너 생성 시도
+            let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+            guard let container = try? ModelContainer(for: LiveStreamSettingsModel.self, configurations: configuration) else {
+                fatalError("Failed to create even in-memory ModelContainer: \(error)")
+            }
+
+            let cameraViewModel = CameraViewModel()
+            let permissionManager = PermissionManager()
+            let permissionViewModel = PermissionViewModel(permissionManager: permissionManager)
+            let liveStreamViewModel = LiveStreamViewModel(modelContext: container.mainContext)
+
+            _mainViewModel = StateObject(wrappedValue: MainViewModel(
+                cameraViewModel: cameraViewModel,
+                permissionViewModel: permissionViewModel,
+                liveStreamViewModel: liveStreamViewModel
+            ))
+            _modelContainerError = State(initialValue: true)
+        }
     }
     
     // MARK: - Body
-    
+
     var body: some View {
         NavigationSplitView {
             SidebarView(viewModel: mainViewModel)
@@ -54,6 +79,13 @@ struct ContentView: View {
         }
         .sheet(isPresented: $mainViewModel.showingTextSettings) {
             TextOverlaySettingsView(viewModel: mainViewModel)
+        }
+        .alert("데이터 저장소 오류", isPresented: .constant(modelContainerError)) {
+            Button("확인") {
+                // 메모리 내 저장소를 사용중이므로 계속 진행
+            }
+        } message: {
+            Text("설정을 디스크에 저장할 수 없습니다. 앱이 종료되면 설정이 사라집니다.")
         }
     }
 }

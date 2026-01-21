@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import LiveStreamingCore
 import UIKit
 
 // MARK: - String Extension for Regex
@@ -15,8 +16,8 @@ extension String {
     do {
       let regex = try NSRegularExpression(pattern: regex)
       let results = regex.matches(in: self, range: NSRange(self.startIndex..., in: self))
-      return results.map {
-        String(self[Range($0.range, in: self)!])
+      return results.compactMap {
+        Range($0.range, in: self).map { String(self[$0]) }
       }
     } catch {
       return []
@@ -60,7 +61,7 @@ extension CVPixelBuffer {
     // Step 3: CIImage를 CGImage로 변환
     // extent: 이미지의 전체 영역을 의미 (원본 크기 유지)
     guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
-      print("❌ [CVPixelBuffer] CIImage → CGImage 변환 실패")
+      logError("[CVPixelBuffer] CIImage → CGImage 변환 실패", category: .camera)
       return nil
     }
 
@@ -93,7 +94,7 @@ extension UIImage {
     )
 
     guard status == kCVReturnSuccess, let buffer = pixelBuffer else {
-      print("❌ [CVPixelBuffer] 생성 실패: \(status)")
+      logError("[CVPixelBuffer] 생성 실패: \(status)", category: .camera)
       return nil
     }
 
@@ -119,7 +120,7 @@ extension UIImage {
           | CGBitmapInfo.byteOrder32Little.rawValue
       )
     else {
-      print("❌ [CVPixelBuffer] CGContext 생성 실패")
+      logError("[CVPixelBuffer] CGContext 생성 실패", category: .camera)
       return nil
     }
 
@@ -131,7 +132,7 @@ extension UIImage {
     draw(in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
     UIGraphicsPopContext()
 
-    print("✅ [CVPixelBuffer] 생성 성공: \(Int(size.width))x\(Int(size.height)) BGRA")
+    logDebug("[CVPixelBuffer] 생성 성공: \(Int(size.width))x\(Int(size.height)) BGRA", category: .camera)
     return buffer
   }
 }

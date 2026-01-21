@@ -1,4 +1,5 @@
 import AVFoundation
+import LiveStreamingCore
 
 /// 카메라 디바이스 모델
 /// - Identifiable: SwiftUI에서 리스트 표시를 위한 고유 식별자 프로토콜
@@ -56,20 +57,14 @@ public struct CameraDevice: Identifiable {
       self.position = "unknown"
     }
 
-    // 고유 ID 생성: 더 구체적인 정보 포함
-    // 형식: deviceType_position_uniqueID_timestamp
-    let timestamp = String(Int(Date().timeIntervalSince1970 * 1000) % 100000)
-    let baseId = "\(deviceType)_\(position)_\(device.uniqueID)"
-    self.id = "\(baseId)_\(timestamp)"
+    // 고유 ID 생성: 디바이스 고유 정보만 사용 (타임스탬프 제거)
+    // 형식: deviceType_position_uniqueID
+    // 동일한 디바이스는 항상 동일한 ID를 가지도록 보장
+    self.id = "\(deviceTypeString)_\(self.position)_\(device.uniqueID)"
 
-    logDebug("======== CAMERA DEVICE CREATED ========", category: .camera)
-    logDebug("Final ID: \(self.id)", category: .camera)
-    logDebug("- Name: \(self.name)", category: .camera)
-    logDebug("- Device Type: \(self.deviceType)", category: .camera)
-    logDebug("- Position: \(self.position)", category: .camera)
-    logDebug("- Original uniqueID: \(device.uniqueID)", category: .camera)
-    logDebug("- Timestamp: \(timestamp)", category: .camera)
-    logDebug("==========================================", category: .camera)
+    #if DEBUG
+    logDebug("📹 CameraDevice created: \(self.name) (ID: \(self.id))", category: .camera)
+    #endif
   }
 }
 

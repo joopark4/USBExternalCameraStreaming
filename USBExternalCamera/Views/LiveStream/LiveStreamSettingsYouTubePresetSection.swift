@@ -279,4 +279,120 @@ struct HardwareOptimizationSectionView: View {
             }
         }
     }
+
+    // MARK: - Optimization Helper Methods
+
+    func getVideoOptimizationLevel() -> String {
+        let width = viewModel.settings.videoWidth
+        let height = viewModel.settings.videoHeight
+        let fps = viewModel.settings.frameRate
+
+        if width == 1920 && height == 1080 && fps >= 30 {
+            return NSLocalizedString("high", comment: "높음")
+        } else if width == 1280 && height == 720 && fps >= 24 {
+            return NSLocalizedString("medium", comment: "중간")
+        } else {
+            return NSLocalizedString("low", comment: "낮음")
+        }
+    }
+
+    func getVideoOptimizationDescription() -> String {
+        if viewModel.settings.useHardwareAcceleration {
+            return NSLocalizedString("hardware_accelerated", comment: "하드웨어 가속 활성화")
+        } else {
+            return NSLocalizedString("software_encoding", comment: "소프트웨어 인코딩")
+        }
+    }
+
+    func getVideoOptimizationColor() -> Color {
+        let level = getVideoOptimizationLevel()
+        if level == NSLocalizedString("high", comment: "높음") {
+            return .green
+        } else if level == NSLocalizedString("medium", comment: "중간") {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
+    func getAudioOptimizationLevel() -> String {
+        let bitrate = viewModel.settings.audioBitrate
+        if bitrate >= 192 {
+            return NSLocalizedString("high", comment: "높음")
+        } else if bitrate >= 128 {
+            return NSLocalizedString("medium", comment: "중간")
+        } else {
+            return NSLocalizedString("low", comment: "낮음")
+        }
+    }
+
+    func getAudioOptimizationDescription() -> String {
+        // Since audioChannels is not available in settings, default to stereo description
+        return NSLocalizedString("stereo_audio", comment: "스테레오 오디오")
+    }
+
+    func getAudioOptimizationColor() -> Color {
+        let level = getAudioOptimizationLevel()
+        if level == NSLocalizedString("high", comment: "높음") {
+            return .green
+        } else if level == NSLocalizedString("medium", comment: "중간") {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
+    func getOverallOptimizationStatus() -> String {
+        var enabledFeatures: [String] = []
+
+        if viewModel.settings.useHardwareAcceleration {
+            enabledFeatures.append("VideoToolbox")
+        }
+        if viewModel.settings.autoReconnect {
+            enabledFeatures.append(NSLocalizedString("auto_reconnect", comment: "자동 재연결"))
+        }
+
+        if enabledFeatures.isEmpty {
+            return NSLocalizedString("none", comment: "없음")
+        } else {
+            return enabledFeatures.joined(separator: ", ")
+        }
+    }
+
+    func getOverallOptimizationLevel() -> String {
+        let enabledCount = [
+            viewModel.settings.useHardwareAcceleration,
+            viewModel.settings.autoReconnect
+        ].filter { $0 }.count
+
+        if enabledCount >= 2 {
+            return NSLocalizedString("optimized", comment: "최적화됨")
+        } else if enabledCount >= 1 {
+            return NSLocalizedString("partial", comment: "부분적")
+        } else {
+            return NSLocalizedString("not_optimized", comment: "미최적화")
+        }
+    }
+
+    func getOverallOptimizationDescription() -> String {
+        let level = getOverallOptimizationLevel()
+        if level == NSLocalizedString("optimized", comment: "최적화됨") {
+            return NSLocalizedString("all_optimizations_enabled", comment: "모든 최적화 활성화")
+        } else if level == NSLocalizedString("partial", comment: "부분적") {
+            return NSLocalizedString("some_optimizations_enabled", comment: "일부 최적화 활성화")
+        } else {
+            return NSLocalizedString("enable_optimizations", comment: "최적화를 활성화하세요")
+        }
+    }
+
+    func getOverallOptimizationColor() -> Color {
+        let level = getOverallOptimizationLevel()
+        if level == NSLocalizedString("optimized", comment: "최적화됨") {
+            return .green
+        } else if level == NSLocalizedString("partial", comment: "부분적") {
+            return .orange
+        } else {
+            return .red
+        }
+    }
 }

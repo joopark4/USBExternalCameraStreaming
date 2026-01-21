@@ -4,7 +4,7 @@ import AVFoundation
 extension LiveStreamView {
     // MARK: - Streaming Info Section
     
-    private var streamingInfoSection: some View {
+    var streamingInfoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(NSLocalizedString("streaming_info", comment: "스트리밍 정보"))
                 .font(.headline)
