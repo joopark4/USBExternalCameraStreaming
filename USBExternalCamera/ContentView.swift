@@ -42,8 +42,13 @@ struct ContentView: View {
 
             // 메모리 내 임시 컨테이너 생성 시도
             let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
-            guard let container = try? ModelContainer(for: LiveStreamSettingsModel.self, configurations: configuration) else {
-                fatalError("Failed to create even in-memory ModelContainer: \(error)")
+            let container: ModelContainer
+            do {
+                container = try ModelContainer(for: LiveStreamSettingsModel.self, configurations: configuration)
+            } catch {
+                // 인메모리 컨테이너마저 실패 시 최후의 시도
+                logError("Failed to create in-memory ModelContainer: \(error). Attempting final fallback.", category: .error)
+                container = try! ModelContainer(for: LiveStreamSettingsModel.self)
             }
 
             let cameraViewModel = CameraViewModel()

@@ -30,11 +30,14 @@ extension LiveStreamViewModel {
     let isRTMPFormat =
       settings.rtmpURL.hasPrefix("rtmp://") || settings.rtmpURL.hasPrefix("rtmps://")
     canStartStreaming = hasValidRTMP && hasValidKey && isRTMPFormat
-    // 개발용 강제 활성화
+
+    #if DEBUG
+    // 개발용 강제 활성화 (릴리스 빌드에서는 제외됨)
     if !canStartStreaming {
       logWarning("Forcing canStartStreaming to true for development", category: .streaming)
       canStartStreaming = true
     }
+    #endif
   }
 
   func updateNetworkRecommendations() {

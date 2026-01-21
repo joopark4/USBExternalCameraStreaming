@@ -81,6 +81,9 @@ extension LiveStreamViewModel {
     settings.audioBitrate = presetSettings.audioBitrate
     settings.frameRate = presetSettings.frameRate
     // keyframeInterval, videoEncoder, audioEncoder는 LiveStreamSettings에 없음
+
+    // 스트리밍 가능 여부 업데이트
+    updateStreamingAvailability()
   }
 
   /// 설정 초기화 (저장된 설정도 삭제)

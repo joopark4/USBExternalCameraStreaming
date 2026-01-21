@@ -6,10 +6,10 @@ public struct ScreenCaptureStats {
     public private(set) var frameCount: Int = 0
 
     /// 성공적으로 전송된 프레임 수
-    public var successCount: Int = 0
+    public private(set) var successCount: Int = 0
 
     /// 전송 실패한 프레임 수
-    public var failureCount: Int = 0
+    public private(set) var failureCount: Int = 0
 
     /// 시작 시간
     private let startTime: Date = Date()
@@ -60,6 +60,16 @@ public struct ScreenCaptureStats {
 
         // 1초 이상 된 타임스탬프 제거
         frameTimes = frameTimes.filter { now.timeIntervalSince($0) <= 1.0 }
+    }
+
+    /// 성공 카운트 증가
+    public mutating func incrementSuccessCount() {
+        successCount += 1
+    }
+
+    /// 실패 카운트 증가
+    public mutating func incrementFailureCount() {
+        failureCount += 1
     }
 
     /// 통계 요약 문자열

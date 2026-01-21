@@ -14,53 +14,53 @@ public final class StreamStats {
     // MARK: - Basic Statistics
 
     /// 스트리밍 시작 시간
-    public var startTime: Date?
+    public private(set) var startTime: Date?
 
     /// 현재 비디오 비트레이트 (kbps)
-    public var videoBitrate: Double = 0.0
+    public private(set) var videoBitrate: Double = 0.0
 
     /// 현재 오디오 비트레이트 (kbps)
-    public var audioBitrate: Double = 0.0
+    public private(set) var audioBitrate: Double = 0.0
 
     /// 현재 프레임 레이트 (fps)
-    public var frameRate: Double = 0.0
+    public private(set) var frameRate: Double = 0.0
 
     /// 드롭된 프레임 수
-    public var droppedFrames: Int = 0
+    public private(set) var droppedFrames: Int = 0
 
     /// 업로드 속도 (kbps)
-    public var uploadSpeed: Double = 0.0
+    public private(set) var uploadSpeed: Double = 0.0
 
     // MARK: - Network Statistics
 
     /// 네트워크 지연시간 (ms)
-    public var latency: Double = 0.0
+    public private(set) var latency: Double = 0.0
 
     /// 패킷 손실률 (%)
-    public var packetLoss: Double = 0.0
+    public private(set) var packetLoss: Double = 0.0
 
     /// 재연결 횟수
-    public var reconnectCount: Int = 0
+    public private(set) var reconnectCount: Int = 0
 
     /// 총 전송된 데이터 (MB)
-    public var totalDataSent: Double = 0.0
+    public private(set) var totalDataSent: Double = 0.0
 
     /// 총 프레임 수
-    public var totalFrames: Int = 0
+    public private(set) var totalFrames: Int = 0
 
     /// 버퍼 상태 (%)
-    public var bufferHealth: Double = 100.0
+    public private(set) var bufferHealth: Double = 100.0
 
     // MARK: - Quality Metrics
 
     /// 인코딩 품질 점수 (0-100)
-    public var encodingQuality: Int = 100
+    public private(set) var encodingQuality: Int = 100
 
     /// 네트워크 안정성 점수 (0-100)
-    public var networkStability: Int = 100
+    public private(set) var networkStability: Int = 100
 
     /// 전체 품질 점수 (0-100)
-    public var overallQuality: Int = 100
+    public private(set) var overallQuality: Int = 100
     
     // MARK: - Computed Properties
 

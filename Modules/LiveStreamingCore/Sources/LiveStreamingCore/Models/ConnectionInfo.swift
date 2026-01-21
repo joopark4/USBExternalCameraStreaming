@@ -13,11 +13,11 @@ public final class ConnectionInfo {
 
     // MARK: - Connection Details
 
-    /// 서버 주소
-    public var serverAddress: String
+    /// 서버 주소 (초기화 후 변경 불가)
+    public let serverAddress: String
 
-    /// 포트 번호
-    public var port: Int
+    /// 포트 번호 (초기화 후 변경 불가)
+    public let port: Int
 
     /// 연결 상태
     public var status: ConnectionStatus
