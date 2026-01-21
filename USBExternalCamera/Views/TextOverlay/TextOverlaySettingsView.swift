@@ -2,61 +2,7 @@ import SwiftUI
 import LiveStreamingCore
 
 // MARK: - Supporting Types
-
-/// Available font options for text overlay
-enum AvailableFont: String, CaseIterable {
-    case system = "System"
-    case rounded = "SF Rounded"
-    case mono = "SF Mono"
-    case serif = "New York"
-
-    var displayName: String {
-        switch self {
-        case .system: return "System"
-        case .rounded: return "Rounded"
-        case .mono: return "Mono"
-        case .serif: return "Serif"
-        }
-    }
-
-    var previewFont: Font {
-        switch self {
-        case .system: return .system(size: 14)
-        case .rounded: return .system(size: 14, design: .rounded)
-        case .mono: return .system(size: 14, design: .monospaced)
-        case .serif: return .system(size: 14, design: .serif)
-        }
-    }
-}
-
-/// Available color options for text overlay
-enum TextOverlayColor: String, CaseIterable {
-    case white = "White"
-    case black = "Black"
-    case red = "Red"
-    case blue = "Blue"
-    case green = "Green"
-    case yellow = "Yellow"
-    case orange = "Orange"
-    case purple = "Purple"
-
-    var color: Color {
-        switch self {
-        case .white: return .white
-        case .black: return .black
-        case .red: return .red
-        case .blue: return .blue
-        case .green: return .green
-        case .yellow: return .yellow
-        case .orange: return .orange
-        case .purple: return .purple
-        }
-    }
-
-    var displayName: String {
-        return self.rawValue
-    }
-}
+// AvailableFont와 TextOverlayColor는 LiveStreamingCore 모듈에서 제공됨
 
 /// 텍스트 오버레이 고급 설정 팝업
 struct TextOverlaySettingsView: View {

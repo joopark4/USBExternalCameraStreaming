@@ -42,11 +42,12 @@ extension CameraPreviewUIView {
   /// 최근 카메라 프레임 (화면 캡처용)
   var latestCameraFrame: CVPixelBuffer? {
     get {
-      let object = objc_getAssociatedObject(self, &AssociatedKeys.latestCameraFrame)
-      if let buffer = object {
-        return buffer as! CVPixelBuffer
+      // objc_getAssociatedObject returns Any?, CVPixelBuffer is a CFType
+      guard let object = objc_getAssociatedObject(self, &AssociatedKeys.latestCameraFrame) else {
+        return nil
       }
-      return nil
+      // swiftlint:disable:next force_cast
+      return object as! CVPixelBuffer
     }
     set {
       objc_setAssociatedObject(

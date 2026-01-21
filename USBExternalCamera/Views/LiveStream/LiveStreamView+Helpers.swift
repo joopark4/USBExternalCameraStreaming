@@ -275,8 +275,8 @@ extension LiveStreamView {
         struct Helper: StatusColorMappable {}
         let helper = Helper()
 
-        // connected는 streaming과 동일하게 처리
-        if viewModel.status == .connected {
+        // connected와 streaming 상태 모두 green으로 표시하여 일관성 유지
+        if viewModel.status == .connected || viewModel.status == .streaming {
             return .green
         }
 

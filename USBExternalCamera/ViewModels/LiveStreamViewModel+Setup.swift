@@ -69,6 +69,7 @@ extension LiveStreamViewModel {
 
       // 스트리밍 상태도 바인딩
       haishinKitManager.$currentStatus
+        .receive(on: DispatchQueue.main)
         .sink { [weak self] status in
           self?.status = status
         }
@@ -76,12 +77,17 @@ extension LiveStreamViewModel {
 
       // 네트워크 품질 바인딩 (transmissionStats에서 추출)
       haishinKitManager.$transmissionStats
-        .compactMap { $0 }
-        .map { stats in
-          // Assume transmissionStats has some quality indicator
-          // For now, return a default value
-          NetworkQuality.good
+        .map(\.connectionQuality)
+        .map { connectionQuality -> NetworkQuality in
+          switch connectionQuality {
+          case .excellent: return .excellent
+          case .good: return .good
+          case .fair: return .fair
+          case .poor: return .poor
+          case .unknown: return .unknown
+          }
         }
+        .receive(on: DispatchQueue.main)
         .sink { [weak self] quality in
           self?.networkQuality = quality
         }

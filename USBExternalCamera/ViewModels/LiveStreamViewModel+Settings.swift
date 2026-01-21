@@ -93,6 +93,8 @@ extension LiveStreamViewModel {
     clearSavedSettings()
     // 즉시 기본 설정을 저장
     autoSaveSettings()
+    // 스트리밍 가능 여부 업데이트
+    updateStreamingAvailability()
     logDebug("✅ [SETTINGS] Reset to 720p preset successfully", category: .streaming)
   }
 
