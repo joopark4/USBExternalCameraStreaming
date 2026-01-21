@@ -115,3 +115,7 @@ buildServer.json
 # Backup Files
 *.bak
 *.backup
+
+# Claude AI
+.claude/
+CLAUDE.md
