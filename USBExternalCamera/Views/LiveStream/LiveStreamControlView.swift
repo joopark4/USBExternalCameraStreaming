@@ -631,8 +631,23 @@ struct YouTubeSetupPrompt: View {
 // MARK: - Preview
 
 #Preview {
-    let viewModel = LiveStreamViewModel(modelContext: try! ModelContainer(for: LiveStreamSettingsModel.self).mainContext)
+    // Preview용 ModelContainer 안전하게 생성
+    let container: ModelContainer
+    do {
+        container = try ModelContainer(for: LiveStreamSettingsModel.self)
+    } catch {
+        // Preview에서 실패할 경우 메모리 내 저장소 사용
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        do {
+            container = try ModelContainer(for: LiveStreamSettingsModel.self, configurations: configuration)
+        } catch {
+            // Preview에서만 사용되므로 실패 시 명확한 에러 메시지와 함께 종료
+            fatalError("Preview ModelContainer initialization failed: \(error)")
+        }
+    }
+
+    let viewModel = LiveStreamViewModel(modelContext: container.mainContext)
     let session = AVCaptureSession()
-    
+
     return LiveStreamControlView(viewModel: viewModel, captureSession: session)
 } 

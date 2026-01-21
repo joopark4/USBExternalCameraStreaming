@@ -1,8 +1,9 @@
 import SwiftUI
 
-// MARK: - 비디오 최적화 관련
-    
-    private func getVideoOptimizationLevel() -> String {
+extension LiveStreamSettingsView {
+    // MARK: - 비디오 최적화 관련
+
+    func getVideoOptimizationLevel() -> String {
         let pixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
         let fps = viewModel.settings.frameRate
         
@@ -32,7 +33,7 @@ import SwiftUI
         }
     }
     
-    private func getVideoOptimizationColor() -> Color {
+    func getVideoOptimizationColor() -> Color {
         let pixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
         
         if pixels >= 1920*1080 {
@@ -45,3 +46,4 @@ import SwiftUI
     }
     
     
+}

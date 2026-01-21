@@ -152,7 +152,80 @@ struct BasicSettingsSectionView: View {
 /// 비디오 설정 섹션
 struct VideoSettingsSectionView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
-    
+
+    enum Resolution {
+        case resolution480p
+        case resolution720p
+        case resolution1080p
+    }
+
+    var currentResolution: Resolution {
+        let width = viewModel.settings.videoWidth
+        let height = viewModel.settings.videoHeight
+
+        if width == 848 && height == 480 {
+            return .resolution480p
+        } else if width == 1280 && height == 720 {
+            return .resolution720p
+        } else if width == 1920 && height == 1080 {
+            return .resolution1080p
+        }
+        return .resolution720p // default
+    }
+
+    func setResolution(_ resolution: Resolution) {
+        switch resolution {
+        case .resolution480p:
+            viewModel.settings.videoWidth = 848
+            viewModel.settings.videoHeight = 480
+        case .resolution720p:
+            viewModel.settings.videoWidth = 1280
+            viewModel.settings.videoHeight = 720
+        case .resolution1080p:
+            viewModel.settings.videoWidth = 1920
+            viewModel.settings.videoHeight = 1080
+        }
+    }
+
+    func isFrameRateSupported(_ frameRate: Int) -> Bool {
+        // 30fps and below are supported
+        return frameRate <= 30
+    }
+
+    var bitrateColor: Color {
+        let bitrate = viewModel.settings.videoBitrate
+        if bitrate < 2500 {
+            return .orange
+        } else if bitrate > 8000 {
+            return .red
+        }
+        return .primary
+    }
+
+    var bitrateWarningView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if viewModel.settings.videoBitrate < 2500 {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    Text("YouTube Live는 최소 2500kbps를 권장합니다")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+            } else if viewModel.settings.videoBitrate > 8000 {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                        .font(.caption)
+                    Text("비트레이트가 너무 높으면 버퍼링이 발생할 수 있습니다")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+            }
+        }
+    }
+
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("video_settings", comment: ""), icon: "video") {
             VStack(spacing: 16) {

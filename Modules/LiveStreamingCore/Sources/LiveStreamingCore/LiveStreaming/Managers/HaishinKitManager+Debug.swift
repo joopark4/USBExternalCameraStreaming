@@ -130,7 +130,7 @@ extension HaishinKitManager {
     // 1. 프레임 유효성 사전 검증
     guard validatePixelBufferForEncoding(pixelBuffer) else {
       logger.error("❌ 프레임 유효성 검증 실패 - 프레임 스킵")
-      screenCaptureStats.failureCount += 1
+      screenCaptureStats.incrementFailureCount()
       return
     }
 
@@ -152,7 +152,7 @@ extension HaishinKitManager {
     // 2. 프레임 전처리 (포맷 변환 + 해상도 정렬)
     guard let processedPixelBuffer = preprocessPixelBufferSafely(frameToProcess) else {
       logger.error("❌ 프레임 전처리 실패 - 프레임 스킵")
-      screenCaptureStats.failureCount += 1
+      screenCaptureStats.incrementFailureCount()
       return
     }
 
@@ -165,7 +165,7 @@ extension HaishinKitManager {
     guard let sampleBuffer = createSampleBufferSafely(from: processedPixelBuffer) else {
       logger.error("❌ CMSampleBuffer 생성 실패 - VideoCodec 호환성 문제")
       frameTransmissionFailure += 1
-      screenCaptureStats.failureCount += 1
+      screenCaptureStats.incrementFailureCount()
 
       // VideoCodec 문제 디버깅 정보
       logVideoCodecDiagnostics(pixelBuffer: processedPixelBuffer)
@@ -183,7 +183,7 @@ extension HaishinKitManager {
       // logger.debug("✅ VideoCodec 워크어라운드 적용 프레임 전송") // 반복적인 로그 비활성화
 
       frameTransmissionSuccess += 1
-      screenCaptureStats.successCount += 1
+      screenCaptureStats.incrementSuccessCount()
       // logger.debug("✅ 프레임 전송 성공 #\(frameTransmissionSuccess)") // 반복적인 로그 비활성화
 
       // 전송 성공 통계 업데이트 (매 50프레임마다 - 더 자주 확인)
@@ -205,7 +205,7 @@ extension HaishinKitManager {
     } catch {
       logger.error("❌ 프레임 전송 중 오류: \(error)")
       frameTransmissionFailure += 1
-      screenCaptureStats.failureCount += 1
+      screenCaptureStats.incrementFailureCount()
 
       // 오류 세부 정보 로깅
       logger.error("🔍 에러 세부 정보: \(String(describing: error))")

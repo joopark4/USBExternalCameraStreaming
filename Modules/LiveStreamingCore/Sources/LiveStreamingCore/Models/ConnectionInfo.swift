@@ -9,68 +9,68 @@ import Foundation
 
 /// 연결 정보 모델
 @Observable
-final class ConnectionInfo {
-    
+public final class ConnectionInfo {
+
     // MARK: - Connection Details
-    
-    /// 서버 주소
-    var serverAddress: String
-    
-    /// 포트 번호
-    var port: Int
-    
+
+    /// 서버 주소 (초기화 후 변경 불가)
+    public let serverAddress: String
+
+    /// 포트 번호 (초기화 후 변경 불가)
+    public let port: Int
+
     /// 연결 상태
-    var status: ConnectionStatus
-    
+    public var status: ConnectionStatus
+
     /// 연결된 시간
-    var connectedAt: Date?
-    
+    public var connectedAt: Date?
+
     /// 마지막 활동 시간
-    var lastActivityAt: Date?
-    
+    public var lastActivityAt: Date?
+
     // MARK: - Network Information
-    
+
     /// IP 주소
-    var ipAddress: String?
-    
+    public var ipAddress: String?
+
     /// 네트워크 타입 (Wi-Fi, Cellular 등)
-    var networkType: String?
-    
+    public var networkType: String?
+
     /// 신호 강도 (0-100)
-    var signalStrength: Int = 0
-    
+    public var signalStrength: Int = 0
+
     // MARK: - Performance Metrics
-    
+
     /// 연결 지연시간 (ms)
-    var connectionLatency: Double = 0.0
-    
+    public var connectionLatency: Double = 0.0
+
     /// 대역폭 (kbps)
-    var bandwidth: Double = 0.0
-    
+    public var bandwidth: Double = 0.0
+
     /// 안정성 점수 (0-100)
-    var stabilityScore: Int = 100
-    
+    public var stabilityScore: Int = 100
+
     // MARK: - Error Information
-    
+
     /// 마지막 에러 메시지
-    var lastError: String?
-    
+    public var lastError: String?
+
     /// 에러 발생 시간
-    var lastErrorAt: Date?
-    
+    public var lastErrorAt: Date?
+
     /// 총 에러 발생 횟수
-    var totalErrorCount: Int = 0
-    
+    public var totalErrorCount: Int = 0
+
     // MARK: - Computed Properties
-    
+
     /// 연결 지속 시간
-    var connectionDuration: TimeInterval {
+    public var connectionDuration: TimeInterval {
         guard let connectedAt = connectedAt else { return 0 }
         return Date().timeIntervalSince(connectedAt)
     }
     
     /// 연결 지속 시간 문자열
-    var connectionDurationString: String {
+    public var connectionDurationString: String {
         let duration = connectionDuration
         let hours = Int(duration) / 3600
         let minutes = Int(duration) % 3600 / 60
@@ -86,12 +86,12 @@ final class ConnectionInfo {
     }
     
     /// 서버 주소 표시용
-    var displayServerAddress: String {
+    public var displayServerAddress: String {
         return "\(serverAddress):\(port)"
     }
     
     /// 연결 품질
-    var connectionQuality: ConnectionQuality {
+    public var connectionQuality: ConnectionQuality {
         if stabilityScore >= 90 && connectionLatency < 50 {
             return .excellent
         } else if stabilityScore >= 70 && connectionLatency < 100 {
@@ -104,8 +104,8 @@ final class ConnectionInfo {
     }
     
     // MARK: - Initialization
-    
-    init(
+
+    public init(
         serverAddress: String,
         port: Int,
         status: ConnectionStatus,
@@ -122,9 +122,9 @@ final class ConnectionInfo {
     }
     
     // MARK: - Update Methods
-    
+
     /// 연결 상태 업데이트
-    func updateStatus(_ newStatus: ConnectionStatus) {
+    public func updateStatus(_ newStatus: ConnectionStatus) {
         let previousStatus = status
         status = newStatus
         
@@ -145,7 +145,7 @@ final class ConnectionInfo {
     }
     
     /// 네트워크 정보 업데이트
-    func updateNetworkInfo(
+    public func updateNetworkInfo(
         ipAddress: String? = nil,
         networkType: String? = nil,
         signalStrength: Int? = nil
@@ -164,7 +164,7 @@ final class ConnectionInfo {
     }
     
     /// 성능 지표 업데이트
-    func updatePerformanceMetrics(
+    public func updatePerformanceMetrics(
         latency: Double? = nil,
         bandwidth: Double? = nil
     ) {
@@ -181,7 +181,7 @@ final class ConnectionInfo {
     }
     
     /// 에러 정보 기록
-    func recordError(_ error: String) {
+    public func recordError(_ error: String) {
         lastError = error
         lastErrorAt = Date()
         totalErrorCount += 1
@@ -218,7 +218,7 @@ final class ConnectionInfo {
     }
     
     /// 연결 정보 초기화
-    func reset() {
+    public func reset() {
         status = .disconnected
         connectedAt = nil
         lastActivityAt = nil
@@ -237,14 +237,14 @@ final class ConnectionInfo {
 // MARK: - Supporting Types
 
 /// 연결 상태
-enum ConnectionStatus: String, CaseIterable {
+public enum ConnectionStatus: String, CaseIterable {
     case disconnected = "disconnected"
     case connecting = "connecting"
     case connected = "connected"
     case reconnecting = "reconnecting"
     case failed = "failed"
-    
-    var displayName: String {
+
+    public var displayName: String {
         switch self {
         case .disconnected: return NSLocalizedString("disconnected", comment: "연결 해제")
         case .connecting: return NSLocalizedString("connecting", comment: "연결 중")
@@ -254,7 +254,7 @@ enum ConnectionStatus: String, CaseIterable {
         }
     }
     
-    var emoji: String {
+    public var emoji: String {
         switch self {
         case .disconnected: return "⚪"
         case .connecting: return "🟡"
@@ -263,24 +263,24 @@ enum ConnectionStatus: String, CaseIterable {
         case .failed: return "🔴"
         }
     }
-    
-    var isConnected: Bool {
+
+    public var isConnected: Bool {
         return self == .connected
     }
-    
-    var isConnecting: Bool {
+
+    public var isConnecting: Bool {
         return self == .connecting || self == .reconnecting
     }
 }
 
 /// 연결 품질
-enum ConnectionQuality: String, CaseIterable {
+public enum ConnectionQuality: String, CaseIterable {
     case excellent = "excellent"
     case good = "good"
     case fair = "fair"
     case poor = "poor"
     
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .excellent: return NSLocalizedString("excellent", comment: "우수")
         case .good: return NSLocalizedString("good", comment: "양호")
@@ -288,8 +288,8 @@ enum ConnectionQuality: String, CaseIterable {
         case .poor: return NSLocalizedString("poor", comment: "불량")
         }
     }
-    
-    var color: String {
+
+    public var color: String {
         switch self {
         case .excellent: return "green"
         case .good: return "blue"
@@ -297,13 +297,13 @@ enum ConnectionQuality: String, CaseIterable {
         case .poor: return "red"
         }
     }
-    
-    var emoji: String {
+
+    public var emoji: String {
         switch self {
         case .excellent: return "🟢"
         case .good: return "🔵"
         case .fair: return "🟡"
-        case .poor: return "��"
+        case .poor: return "🔴"
         }
     }
 } 

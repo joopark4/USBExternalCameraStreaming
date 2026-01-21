@@ -4,7 +4,7 @@ import AVFoundation
 extension LiveStreamView {
     // MARK: - Real-time Transmission Section
     
-    private var realTimeTransmissionSection: some View {
+    var realTimeTransmissionSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(NSLocalizedString("realtime_transmission_data", comment: "📡 실시간 송출 데이터"))
@@ -95,9 +95,7 @@ extension LiveStreamView {
         .background(Color(UIColor.tertiarySystemBackground))
         .cornerRadius(12)
     }
-    
-    @State private var pulseAnimation = false
-    
+
     // MARK: - Helper Methods for Real-time Data
     
     private func formatFrameCount(_ count: Int64) -> String {

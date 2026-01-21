@@ -1,26 +1,20 @@
 import AVFoundation
 import Combine
 import Foundation
+import LiveStreamingCore
 import SwiftData
 import SwiftUI
 
 extension LiveStreamViewModel {
   // MARK: - Public Methods - Data Monitoring
-
   /// 현재 스트리밍 데이터 송출 상태 확인
   @MainActor
   func checkCurrentDataTransmission() async {
     // getCurrentTransmissionStatus 메서드가 아직 구현되지 않음
     logDebug("ℹ️ [DATA CHECK] Transmission status check not yet implemented", category: .streaming)
   }
-
   /// 스트리밍 데이터 요약 정보 가져오기
-  @MainActor
   func getStreamingDataSummary() async -> String {
-    guard liveStreamService != nil else {
-      return "❌ LiveStreamService가 초기화되지 않음"
-    }
-
     // getStreamingDataSummary 메서드가 아직 구현되지 않음
     let statusText =
       switch status {
@@ -38,17 +32,14 @@ extension LiveStreamViewModel {
   }
 
   /// 실시간 데이터 모니터링 시작 (정기적 체크)
-  @MainActor
   func startDataMonitoring() {
     logDebug("🚀 [MONITOR] Starting data monitoring", category: .streaming)
-
     Timer.scheduledTimer(withTimeInterval: Constants.dataMonitoringInterval, repeats: true) {
       [weak self] timer in
       guard let self = self else {
         timer.invalidate()
         return
       }
-
       Task { @MainActor in
         if self.isStreaming {
           await self.checkCurrentDataTransmission()
@@ -59,5 +50,4 @@ extension LiveStreamViewModel {
       }
     }
   }
-
 }

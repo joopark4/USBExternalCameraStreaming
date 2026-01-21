@@ -4,7 +4,7 @@ import AVFoundation
 extension LiveStreamView {
     // MARK: - Camera Preview Section
     
-    private var cameraPreviewSection: some View {
+    var cameraPreviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(NSLocalizedString("camera_preview", comment: "카메라 프리뷰"))
                 .font(.headline)

@@ -5,6 +5,7 @@
 //  Created by EUN YEON on 5/25/25.
 //
 
+import LiveStreamingCore
 import SwiftUI
 import WebKit
 
@@ -249,13 +250,13 @@ struct YouTubeStudioWebView: UIViewRepresentable {
             // 페이지 로딩 완료 - 키보드 입력 추적 스크립트 주입
             webView.evaluateJavaScript(WebViewInputTrackingScript.defaultScript) { result, error in
                 if let error = error {
-                    print("⚠️ JavaScript 주입 실패: \(error.localizedDescription)")
+                    logWarning("JavaScript 주입 실패: \(error.localizedDescription)", category: .error)
                 }
             }
         }
-        
+
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ WebView 로딩 실패: \(error.localizedDescription)")
+            logError("WebView 로딩 실패: \(error.localizedDescription)", category: .error)
         }
     }
 }

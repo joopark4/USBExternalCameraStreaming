@@ -1,4 +1,8 @@
 import SwiftUI
+import LiveStreamingCore
+
+// MARK: - Supporting Types
+// AvailableFont와 TextOverlayColor는 LiveStreamingCore 모듈에서 제공됨
 
 /// 텍스트 오버레이 고급 설정 팝업
 struct TextOverlaySettingsView: View {

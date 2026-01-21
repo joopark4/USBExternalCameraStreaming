@@ -120,6 +120,35 @@ open USBExternalCamera.xcodeproj
 
 모든 종속성은 Xcode에서 자동으로 관리됩니다.
 
+### 모듈화 아키텍처
+
+이 프로젝트는 다른 프로젝트에서 재사용할 수 있는 **LiveStreamingCore** 모듈을 별도의 Swift Package로 포함합니다:
+
+```
+Modules/
+└── LiveStreamingCore/     # 재사용 가능한 RTMP 스트리밍 모듈
+    ├── Package.swift
+    └── Sources/
+        └── LiveStreamingCore/
+            ├── LiveStreamSettings.swift
+            ├── LoggingManager.swift
+            ├── Models/
+            ├── LiveStreaming/
+            │   ├── Managers/
+            │   ├── Types/
+            │   └── Utilities/
+            └── ...
+```
+
+**LiveStreamingCore** 모듈이 제공하는 기능:
+- HaishinKit 기반 RTMP 스트리밍 기능
+- YouTube Live 최적화 프리셋 및 설정
+- 스트리밍 통계 및 진단
+- 텍스트 오버레이 지원
+- 연결 관리 및 오류 처리
+
+자세한 사용 방법은 [LiveStreamingCore README](Modules/LiveStreamingCore/README.md)를 참조하세요.
+
 ## 🎯 빠른 시작
 
 ### 1. 하드웨어 설정
@@ -162,28 +191,40 @@ open USBExternalCamera.xcodeproj
 
 ## 🏗 아키텍처
 
-이 앱은 SwiftUI와 함께 MVVM 아키텍처를 따릅니다:
+이 앱은 SwiftUI와 MVVM 아키텍처, 그리고 모듈화된 설계를 따릅니다:
 
 ```
-USBExternalCamera/
-├── Views/                    # SwiftUI 뷰
-│   ├── LiveStream/          # 스트리밍 UI
-│   ├── Camera/              # 카메라 선택 및 프리뷰
-│   └── Settings/            # 설정 뷰
-├── ViewModels/              # MVVM 뷰모델
-├── Services/                # 비즈니스 로직
-│   └── LiveStreaming/       # 스트리밍 서비스
-├── Models/                  # 데이터 모델
-├── Managers/                # 시스템 매니저
-└── Utils/                   # 유틸리티 및 확장
+USBExternalCamera-iOS/
+├── USBExternalCamera/           # 메인 앱
+│   ├── Views/                   # SwiftUI 뷰
+│   │   ├── LiveStream/         # 스트리밍 UI
+│   │   ├── Camera/             # 카메라 선택 및 프리뷰
+│   │   └── Settings/           # 설정 뷰
+│   ├── ViewModels/             # MVVM 뷰모델
+│   ├── Services/               # 비즈니스 로직
+│   ├── Models/                 # 데이터 모델
+│   ├── Managers/               # 시스템 매니저
+│   └── Utils/                  # 유틸리티 및 확장
+│
+└── Modules/                     # 재사용 가능한 Swift Packages
+    └── LiveStreamingCore/       # RTMP 스트리밍 모듈
+        └── Sources/
+            └── LiveStreamingCore/
+                ├── Models/              # StreamStats, ConnectionInfo 등
+                ├── LiveStreaming/
+                │   ├── Managers/        # HaishinKitManager
+                │   ├── Types/           # StreamingModels, Validation
+                │   └── Utilities/       # 헬퍼
+                └── ...
 ```
 
 ### 주요 구성 요소
 
-- **HaishinKitManager**: 핵심 스트리밍 엔진 래퍼
+- **HaishinKitManager**: 핵심 스트리밍 엔진 래퍼 (LiveStreamingCore 모듈)
 - **CameraViewModel**: USB 카메라 관리
 - **LiveStreamViewModel**: 스트리밍 상태 관리
-- **LoggingManager**: 중앙화된 로깅 시스템
+- **LoggingManager**: 중앙화된 로깅 시스템 (LiveStreamingCore 모듈)
+- **LiveStreamSettingsModel**: SwiftData 기반 영구 저장 설정 (LiveStreamingCore 모듈)
 
 ## 🎬 스트리밍 품질 프리셋
 
@@ -228,7 +269,7 @@ USBExternalCamera/
 - iPad 기기의 최적 성능을 위해 720p 최대 사용
 
 **성능 최적화**
-- 1080p 설정은 자동으로 720p로 다운스케일됨
+- 1080p 옵션은 성능 최적화를 위해 현재 비활성화됨 (최대 720p)
 - 느린 기기나 제한된 대역폭에는 480p 권장
 - 사용 가능한 경우 하드웨어 가속 자동 활성화
 
@@ -289,6 +330,10 @@ xcodebuild -scheme USBExternalCamera -destination 'platform=iOS,name=Your-Device
 
 ## 📖 문서
 
+### 프로젝트 문서
+- [LiveStreamingCore 모듈 가이드](Modules/LiveStreamingCore/README.md) - 재사용 가능한 스트리밍 모듈 문서
+
+### 외부 참고자료
 - [HaishinKit 문서](https://github.com/HaishinKit/HaishinKit.swift)
 - [YouTube Live Streaming API](https://developers.google.com/youtube/v3/live)
 - [AVFoundation 가이드](https://developer.apple.com/documentation/avfoundation)

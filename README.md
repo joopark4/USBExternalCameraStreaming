@@ -122,6 +122,35 @@ The project uses Swift Package Manager with the following dependencies:
 
 All dependencies are managed automatically by Xcode.
 
+### Modular Architecture
+
+This project includes the **LiveStreamingCore** module as a separate Swift Package that can be reused in other projects:
+
+```
+Modules/
+└── LiveStreamingCore/     # Reusable RTMP streaming module
+    ├── Package.swift
+    └── Sources/
+        └── LiveStreamingCore/
+            ├── LiveStreamSettings.swift
+            ├── LoggingManager.swift
+            ├── Models/
+            ├── LiveStreaming/
+            │   ├── Managers/
+            │   ├── Types/
+            │   └── Utilities/
+            └── ...
+```
+
+The **LiveStreamingCore** module provides:
+- RTMP streaming functionality based on HaishinKit
+- YouTube Live optimized presets and settings
+- Streaming statistics and diagnostics
+- Text overlay support
+- Connection management and error handling
+
+See [LiveStreamingCore README](Modules/LiveStreamingCore/README.md) for detailed usage instructions.
+
 ## 🎯 Quick Start
 
 ### 1. Hardware Setup
@@ -174,28 +203,40 @@ The app features a built-in **YouTube Studio WebView** that allows you to manage
 
 ## 🏗 Architecture
 
-The app follows MVVM architecture with SwiftUI:
+The app follows MVVM architecture with SwiftUI and modular design:
 
 ```
-USBExternalCamera/
-├── Views/                    # SwiftUI Views
-│   ├── LiveStream/          # Streaming UI
-│   ├── Camera/              # Camera selection and preview
-│   └── Settings/            # Configuration views
-├── ViewModels/              # MVVM ViewModels
-├── Services/                # Business logic
-│   └── LiveStreaming/       # Streaming services
-├── Models/                  # Data models
-├── Managers/                # System managers
-└── Utils/                   # Utilities and extensions
+USBExternalCamera-iOS/
+├── USBExternalCamera/           # Main App
+│   ├── Views/                   # SwiftUI Views
+│   │   ├── LiveStream/         # Streaming UI
+│   │   ├── Camera/             # Camera selection and preview
+│   │   └── Settings/           # Configuration views
+│   ├── ViewModels/             # MVVM ViewModels
+│   ├── Services/               # Business logic
+│   ├── Models/                 # Data models
+│   ├── Managers/               # System managers
+│   └── Utils/                  # Utilities and extensions
+│
+└── Modules/                     # Reusable Swift Packages
+    └── LiveStreamingCore/       # RTMP Streaming Module
+        └── Sources/
+            └── LiveStreamingCore/
+                ├── Models/              # StreamStats, ConnectionInfo, etc.
+                ├── LiveStreaming/
+                │   ├── Managers/        # HaishinKitManager
+                │   ├── Types/           # StreamingModels, Validation
+                │   └── Utilities/       # Helpers
+                └── ...
 ```
 
 ### Key Components
 
-- **HaishinKitManager**: Core streaming engine wrapper
+- **HaishinKitManager**: Core streaming engine wrapper (in LiveStreamingCore module)
 - **CameraViewModel**: USB camera management
 - **LiveStreamViewModel**: Streaming state management
-- **LoggingManager**: Centralized logging system
+- **LoggingManager**: Centralized logging system (in LiveStreamingCore module)
+- **LiveStreamSettingsModel**: SwiftData-based persistent settings (in LiveStreamingCore module)
 
 ## 🎬 Streaming Quality Presets
 
@@ -241,7 +282,7 @@ USBExternalCamera/
 - Use 720p maximum for optimal performance on iPad devices
 
 **Performance optimization**
-- 1080p settings are automatically downscaled to 720p
+- 1080p option is currently disabled for performance optimization (720p maximum)
 - 480p recommended for slower devices or limited bandwidth
 - Hardware acceleration is automatically enabled when available
 
@@ -302,13 +343,17 @@ xcodebuild -scheme USBExternalCamera -destination 'platform=iOS,name=Your-Device
 
 ## 📖 Documentation
 
+### Project Documentation
+- [LiveStreamingCore Module Guide](Modules/LiveStreamingCore/README.md) - Reusable streaming module documentation
+
+### External References
 - [HaishinKit Documentation](https://github.com/HaishinKit/HaishinKit.swift)
 - [YouTube Live Streaming API](https://developers.google.com/youtube/v3/live)
 - [AVFoundation Guide](https://developer.apple.com/documentation/avfoundation)
 - [Apple - Support external cameras in your iPadOS app (WWDC23)](https://developer.apple.com/videos/play/wwdc2023/10106/)
-  - iPad에서 USB Video Class (UVC) 외부 카메라 지원에 대한 Apple 공식 가이드
+  - Apple's official guide for USB Video Class (UVC) external camera support on iPad
 - [Apple - Still and Video Media Capture](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/AVFoundationPG/Articles/04_MediaCapture.html)
-  - AVFoundation을 사용한 미디어 캡처에 대한 상세 가이드
+  - Detailed guide for media capture using AVFoundation
 
 ## 🙏 Acknowledgments
 

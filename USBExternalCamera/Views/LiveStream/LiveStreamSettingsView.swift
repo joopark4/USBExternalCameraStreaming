@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import AVFoundation
+import LiveStreamingCore
 import UIKit
 import Combine
 
@@ -500,6 +501,7 @@ struct LiveStreamSettingsView: View {
         case .hd720p: return (1280, 720)
         case .fhd1080p: return (1920, 1080)
         case .uhd4k: return (3840, 2160)
+        case .custom: return (1920, 1080) // Default for custom
         }
     }
     
@@ -562,10 +564,9 @@ struct LiveStreamSettingsView: View {
             .cornerRadius(8)
         }
     }
-}
 
-// MARK: - Helper Properties and Methods
-    
+    // MARK: - Helper Properties and Methods
+
     private enum Resolution {
         case resolution480p, resolution720p, resolution1080p
     }
@@ -616,134 +617,5 @@ struct LiveStreamSettingsView: View {
             // 720p, 1080p는 모든 프레임률 지원
             return true
         }
-    }
-    
-    /// 비트레이트 색상 (권장사항 기준)
-    private var bitrateColor: Color {
-        switch viewModel.settings.videoBitrate {
-        case 1500...4000: return .green      // YouTube Live 권장 범위
-        case 1000..<1500: return .orange     // 낮음
-        default: return .red                 // 너무 높음
-        }
-    }
-    
-    /// 비트레이트 경고 및 권장사항 뷰
-    @ViewBuilder
-    private var bitrateWarningView: some View {
-        if viewModel.settings.videoBitrate > 4000 {
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.red)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("⚠️ 비트레이트가 너무 높습니다")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.red)
-                    Text("YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(Color.red.opacity(0.1))
-            .cornerRadius(8)
-        } else if viewModel.settings.videoBitrate >= 1500 && viewModel.settings.videoBitrate <= 4000 {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                Text("✅ YouTube Live 1080p 권장 범위")
-                    .font(.caption)
-                    .foregroundColor(.green)
-                Spacer()
-            }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 12)
-            .background(Color.green.opacity(0.1))
-            .cornerRadius(8)
-        } else {
-            HStack {
-                Image(systemName: "info.circle.fill")
-                    .foregroundColor(.orange)
-                Text("📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-                Spacer()
-            }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 12)
-            .background(Color.orange.opacity(0.1))
-            .cornerRadius(8)
-        }
-    }
-/// 오디오 설정 섹션
-struct AudioSettingsSectionView: View {
-    @ObservedObject var viewModel: LiveStreamViewModel
-    
-    var body: some View {
-        SettingsSectionView(title: NSLocalizedString("audio_settings", comment: ""), icon: "speaker.wave.2") {
-            VStack(spacing: 16) {
-                HStack {
-                    Text(NSLocalizedString("audio_bitrate", comment: ""))
-                    Spacer()
-                    Text("\(viewModel.settings.audioBitrate) kbps")
-                        .foregroundColor(.secondary)
-                }
-                
-                Slider(value: Binding(
-                    get: { Double(viewModel.settings.audioBitrate) },
-                    set: { viewModel.settings.audioBitrate = Int($0) }
-                ), in: 64...320, step: 32)
-            }
-        }
-    }
-}
-
-/// 액션 버튼 섹션
-struct ActionButtonsView: View {
-    @ObservedObject var viewModel: LiveStreamViewModel
-    @Binding var showResetAlert: Bool
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            Button(NSLocalizedString("reset_settings", comment: "")) {
-                showResetAlert = true
-            }
-            .buttonStyle(DestructiveButtonStyle())
-        }
-    }
-}
-
-/// 설정 섹션 래퍼 뷰
-struct SettingsSectionView<Content: View>: View {
-    let title: String
-    let icon: String
-    let content: Content
-    
-    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.icon = icon
-        self.content = content()
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.blue)
-                    .frame(width: 20)
-                Text(title)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            
-            content
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }

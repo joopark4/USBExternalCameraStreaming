@@ -225,8 +225,8 @@ final class MainViewModel: ObservableObject {
     /// - Parameter camera: 선택할 카메라 디바이스
     func selectCamera(_ camera: CameraDevice) {
         logDebug("🔄 MainViewModel: Selecting camera \(camera.name) (ID: \(camera.id))", category: .ui)
-        print("🔄 MainViewModel: Current selected camera: \(cameraViewModel.selectedCamera?.name ?? "None")")
-        print("🔄 MainViewModel: Current selected camera ID: \(cameraViewModel.selectedCamera?.id ?? "None")")
+        logDebug("🔄 MainViewModel: Current selected camera: \(cameraViewModel.selectedCamera?.name ?? "None")", category: .ui)
+        logDebug("🔄 MainViewModel: Current selected camera ID: \(cameraViewModel.selectedCamera?.id ?? "None")", category: .ui)
         
         // 이미 선택된 카메라인지 확인
         if cameraViewModel.selectedCamera?.id == camera.id {
@@ -241,14 +241,14 @@ final class MainViewModel: ObservableObject {
         updateUIState()
         
         // 디버깅을 위한 상태 확인
-        print("🔄 MainViewModel: After selection - New selected camera: \(cameraViewModel.selectedCamera?.name ?? "None")")
-        print("🔄 MainViewModel: After selection - New selected camera ID: \(cameraViewModel.selectedCamera?.id ?? "None")")
+        logDebug("🔄 MainViewModel: After selection - New selected camera: \(cameraViewModel.selectedCamera?.name ?? "None")", category: .ui)
+        logDebug("🔄 MainViewModel: After selection - New selected camera ID: \(cameraViewModel.selectedCamera?.id ?? "None")", category: .ui)
         logDebug("🔄 MainViewModel: Selection match check: \(cameraViewModel.selectedCamera?.id == camera.id)", category: .ui)
         
         // 약간의 지연 후 다시 한 번 확인 (디버깅용)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            print("🔄 MainViewModel: [Delayed check] Selected camera: \(self.cameraViewModel.selectedCamera?.name ?? "None")")
-            print("🔄 MainViewModel: [Delayed check] Selected camera ID: \(self.cameraViewModel.selectedCamera?.id ?? "None")")
+            logDebug("🔄 MainViewModel: [Delayed check] Selected camera: \(self.cameraViewModel.selectedCamera?.name ?? "None")", category: .ui)
+            logDebug("🔄 MainViewModel: [Delayed check] Selected camera ID: \(self.cameraViewModel.selectedCamera?.id ?? "None")", category: .ui)
         }
     }
     

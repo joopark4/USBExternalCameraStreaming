@@ -72,8 +72,8 @@ struct OpenSourceLibraryCard: View {
                 .foregroundColor(.secondary)
             
             // GitHub 링크
-            if !library.url.isEmpty {
-                Link(destination: URL(string: library.url)!) {
+            if !library.url.isEmpty, let url = URL(string: library.url) {
+                Link(destination: url) {
                     HStack {
                         Image(systemName: "link")
                         Text("GitHub Repository")

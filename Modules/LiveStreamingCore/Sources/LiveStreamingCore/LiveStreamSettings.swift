@@ -315,6 +315,9 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
             videoHeight = 2160
             frameRate = 30
             videoBitrate = 15000
+        case .custom:
+            // 사용자 정의 해상도 - 현재 값 유지
+            break
         }
     }
     
@@ -416,13 +419,15 @@ public enum ResolutionPreset: String, CaseIterable {
     case hd720p = "720p"
     case fhd1080p = "1080p"
     case uhd4k = "4K"
-    
+    case custom = "custom"
+
     public var displayName: String {
         switch self {
         case .sd480p: return "480p (848×480)"
         case .hd720p: return "720p (1280×720)"
         case .fhd1080p: return "1080p (1920×1080)"
         case .uhd4k: return "4K (3840×2160)"
+        case .custom: return NSLocalizedString("custom_resolution", comment: "사용자 정의")
         }
     }
 }

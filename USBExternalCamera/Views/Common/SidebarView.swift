@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import LiveStreamingCore
 
 // MARK: - Sidebar Components
 

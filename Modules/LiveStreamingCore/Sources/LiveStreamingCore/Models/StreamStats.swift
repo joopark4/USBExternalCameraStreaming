@@ -9,69 +9,69 @@ import Foundation
 
 /// 스트리밍 통계 정보 모델
 @Observable
-final class StreamStats {
+public final class StreamStats {
     
     // MARK: - Basic Statistics
-    
+
     /// 스트리밍 시작 시간
-    var startTime: Date?
-    
+    public private(set) var startTime: Date?
+
     /// 현재 비디오 비트레이트 (kbps)
-    var videoBitrate: Double = 0.0
-    
+    public private(set) var videoBitrate: Double = 0.0
+
     /// 현재 오디오 비트레이트 (kbps)
-    var audioBitrate: Double = 0.0
-    
+    public private(set) var audioBitrate: Double = 0.0
+
     /// 현재 프레임 레이트 (fps)
-    var frameRate: Double = 0.0
-    
+    public private(set) var frameRate: Double = 0.0
+
     /// 드롭된 프레임 수
-    var droppedFrames: Int = 0
-    
+    public private(set) var droppedFrames: Int = 0
+
     /// 업로드 속도 (kbps)
-    var uploadSpeed: Double = 0.0
-    
+    public private(set) var uploadSpeed: Double = 0.0
+
     // MARK: - Network Statistics
-    
+
     /// 네트워크 지연시간 (ms)
-    var latency: Double = 0.0
-    
+    public private(set) var latency: Double = 0.0
+
     /// 패킷 손실률 (%)
-    var packetLoss: Double = 0.0
-    
+    public private(set) var packetLoss: Double = 0.0
+
     /// 재연결 횟수
-    var reconnectCount: Int = 0
-    
+    public private(set) var reconnectCount: Int = 0
+
     /// 총 전송된 데이터 (MB)
-    var totalDataSent: Double = 0.0
-    
+    public private(set) var totalDataSent: Double = 0.0
+
     /// 총 프레임 수
-    var totalFrames: Int = 0
-    
+    public private(set) var totalFrames: Int = 0
+
     /// 버퍼 상태 (%)
-    var bufferHealth: Double = 100.0
-    
+    public private(set) var bufferHealth: Double = 100.0
+
     // MARK: - Quality Metrics
-    
+
     /// 인코딩 품질 점수 (0-100)
-    var encodingQuality: Int = 100
-    
+    public private(set) var encodingQuality: Int = 100
+
     /// 네트워크 안정성 점수 (0-100)
-    var networkStability: Int = 100
-    
+    public private(set) var networkStability: Int = 100
+
     /// 전체 품질 점수 (0-100)
-    var overallQuality: Int = 100
+    public private(set) var overallQuality: Int = 100
     
     // MARK: - Computed Properties
-    
+
     /// 스트리밍 지속 시간 (초)
-    var duration: TimeInterval {
+    public var duration: TimeInterval {
         guard let startTime = startTime else { return 0 }
         return Date().timeIntervalSince(startTime)
     }
     
     /// 스트리밍 지속 시간 문자열
-    var durationString: String {
+    public var durationString: String {
         let duration = self.duration
         let hours = Int(duration) / 3600
         let minutes = Int(duration) % 3600 / 60
@@ -85,12 +85,12 @@ final class StreamStats {
     }
     
     /// 평균 비트레이트
-    var averageBitrate: Double {
+    public var averageBitrate: Double {
         return videoBitrate + audioBitrate
     }
     
     /// 데이터 사용량 문자열
-    var dataSentString: String {
+    public var dataSentString: String {
         if totalDataSent < 1024 {
             return String(format: "%.1f MB", totalDataSent)
         } else {
@@ -99,7 +99,7 @@ final class StreamStats {
     }
     
     /// 품질 상태
-    var qualityStatus: QualityStatus {
+    public var qualityStatus: QualityStatus {
         if overallQuality >= 90 {
             return .excellent
         } else if overallQuality >= 70 {
@@ -112,15 +112,15 @@ final class StreamStats {
     }
     
     // MARK: - Initialization
-    
-    init() {
+
+    public init() {
         // 기본값으로 초기화됨
     }
     
     // MARK: - Update Methods
     
     /// 통계 정보 업데이트
-    func updateStats(
+    public func updateStats(
         videoBitrate: Double? = nil,
         audioBitrate: Double? = nil,
         frameRate: Double? = nil,
@@ -170,17 +170,17 @@ final class StreamStats {
     }
     
     /// 재연결 카운트 증가
-    func incrementReconnectCount() {
+    public func incrementReconnectCount() {
         reconnectCount += 1
     }
     
     /// 전송 데이터 업데이트
-    func updateDataSent(_ bytes: Int64) {
+    public func updateDataSent(_ bytes: Int64) {
         totalDataSent = Double(bytes) / (1024 * 1024) // MB로 변환
     }
     
     /// 스트리밍 시작
-    func startStreaming() {
+    public func startStreaming() {
         startTime = Date()
         // 통계 초기화
         droppedFrames = 0
@@ -194,7 +194,7 @@ final class StreamStats {
     }
     
     /// 스트리밍 중지
-    func stopStreaming() {
+    public func stopStreaming() {
         // startTime은 유지하여 총 스트리밍 시간을 기록
         // 다른 실시간 통계들은 0으로 재설정
         videoBitrate = 0.0
@@ -207,7 +207,7 @@ final class StreamStats {
     }
     
     /// 통계 초기화
-    func reset() {
+    public func reset() {
         startTime = nil
         videoBitrate = 0.0
         audioBitrate = 0.0
@@ -229,13 +229,13 @@ final class StreamStats {
 // MARK: - Supporting Types
 
 /// 품질 상태
-enum QualityStatus: String, CaseIterable {
+public enum QualityStatus: String, CaseIterable {
     case excellent = "excellent"
     case good = "good"
     case fair = "fair"
     case poor = "poor"
     
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .excellent: return NSLocalizedString("quality_status_excellent", comment: "우수")
         case .good: return NSLocalizedString("quality_status_good", comment: "양호")
@@ -243,8 +243,8 @@ enum QualityStatus: String, CaseIterable {
         case .poor: return NSLocalizedString("quality_status_poor", comment: "불량")
         }
     }
-    
-    var color: String {
+
+    public var color: String {
         switch self {
         case .excellent: return "green"
         case .good: return "blue"
@@ -252,13 +252,13 @@ enum QualityStatus: String, CaseIterable {
         case .poor: return "red"
         }
     }
-    
-    var emoji: String {
+
+    public var emoji: String {
         switch self {
         case .excellent: return "🟢"
         case .good: return "🔵"
         case .fair: return "🟡"
-        case .poor: return "��"
+        case .poor: return "🔴"
         }
     }
 } 

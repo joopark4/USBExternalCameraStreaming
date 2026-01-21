@@ -6,23 +6,25 @@
 //
 import SwiftUI
 import AVFoundation
+import LiveStreamingCore
 // MARK: - Import from ViewModels
 struct LiveStreamView: View {
-    @Environment(\.modelContext) private var modelContext
-    @State private var showingSettings = false
-    @State private var showingConnectionTest = false
-    @State private var showingErrorDetails = false
-    @State private var showingRecoveryOptions = false
-    @State private var showingLogs = false
-    @State private var showingDiagnostics = false
-    @State private var showingQuickCheck = false
-    @State private var connectionTestResult: String = ""
-    @State private var diagnosticsReport = ""
-    @State private var quickCheckResult = ""
+    @Environment(\.modelContext) var modelContext
+    @State var showingSettings = false
+    @State var showingConnectionTest = false
+    @State var showingErrorDetails = false
+    @State var showingRecoveryOptions = false
+    @State var showingLogs = false
+    @State var showingDiagnostics = false
+    @State var showingQuickCheck = false
+    @State var connectionTestResult: String = ""
+    @State var diagnosticsReport = ""
+    @State var quickCheckResult = ""
+    @State var pulseAnimation = false
     // 실제 배포환경 ViewModel 사용 (MainViewModel에서 전달받음)
     @ObservedObject var viewModel: LiveStreamViewModel
     // 로깅 매니저
-    @ObservedObject private var logger = StreamingLogger.shared
+    @ObservedObject var logger = StreamingLogger.shared
     var body: some View {
         NavigationStack {
             ScrollView {

@@ -4,7 +4,7 @@ import AVFoundation
 extension LiveStreamView {
     // MARK: - Control Buttons
     
-    private var controlButtons: some View {
+    var controlButtons: some View {
         VStack(spacing: 16) {
             // 메인 제어 버튼
             Button(action: toggleStreaming) {

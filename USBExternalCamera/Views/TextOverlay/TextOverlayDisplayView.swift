@@ -1,4 +1,5 @@
 import SwiftUI
+import LiveStreamingCore
 
 /// 텍스트 오버레이 표시 View
 /// 

@@ -1,22 +1,20 @@
 import AVFoundation
 import Combine
 import Foundation
+import LiveStreamingCore
 import SwiftData
 import SwiftUI
-import LiveStreamingCore
 
 extension LiveStreamViewModel {
   // MARK: - Private Methods - Utilities
-
-  private func updateStatus(_ newStatus: LiveStreamStatus, message: String) async {
+  func updateStatus(_ newStatus: LiveStreamStatus, message: String) async {
     await MainActor.run {
       self.status = newStatus
       self.statusMessage = message
       logDebug("🎯 [STATUS] Updated to \(newStatus): \(message)", category: .streaming)
     }
   }
-
-  private func syncServiceStatus(_ isStreaming: Bool) {
+  func syncServiceStatus(_ isStreaming: Bool) {
     if isStreaming && status != .streaming {
       status = .streaming
       logDebug("🎥 [SYNC] Service → ViewModel: streaming", category: .streaming)
@@ -26,22 +24,23 @@ extension LiveStreamViewModel {
     }
   }
 
-  private func updateStreamingAvailability() {
+  func updateStreamingAvailability() {
     let hasValidRTMP = !settings.rtmpURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     let hasValidKey = !settings.streamKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     let isRTMPFormat =
       settings.rtmpURL.hasPrefix("rtmp://") || settings.rtmpURL.hasPrefix("rtmps://")
-
     canStartStreaming = hasValidRTMP && hasValidKey && isRTMPFormat
 
-    // 개발용 강제 활성화
+    #if DEBUG
+    // 개발용 강제 활성화 (릴리스 빌드에서는 제외됨)
     if !canStartStreaming {
       logWarning("Forcing canStartStreaming to true for development", category: .streaming)
       canStartStreaming = true
     }
+    #endif
   }
 
-  private func updateNetworkRecommendations() {
+  func updateNetworkRecommendations() {
     // getNetworkRecommendations 메서드가 아직 구현되지 않음
     // 기본값으로 설정
     networkRecommendations = StreamingRecommendations(
@@ -58,7 +57,7 @@ extension LiveStreamViewModel {
     showingErrorAlert = true
   }
 
-  private func logInitializationInfo() {
+  func logInitializationInfo() {
     logInfo("LiveStreamViewModel initialized", category: .streaming)
     logInfo("RTMP URL: \(settings.rtmpURL)", category: .streaming)
     logInfo("Stream Key: ***CONFIGURED***", category: .streaming)
@@ -72,7 +71,6 @@ extension LiveStreamViewModel {
   private func logTransmissionStats(_ stats: Any) {
     // 타입을 확인하고 적절한 속성들을 출력
     logInfo("Transmission statistics received", category: .data)
-
     // Reflection을 사용하여 안전하게 통계 출력
     let mirror = Mirror(reflecting: stats)
     for child in mirror.children {
@@ -81,5 +79,4 @@ extension LiveStreamViewModel {
       }
     }
   }
-
 }

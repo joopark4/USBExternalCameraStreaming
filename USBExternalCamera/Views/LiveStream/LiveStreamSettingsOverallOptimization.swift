@@ -3,7 +3,7 @@ import SwiftUI
 extension LiveStreamSettingsView {
   // MARK: - 전체 최적화 관련
 
-  private func getOverallOptimizationStatus() -> String {
+  func getOverallOptimizationStatus() -> String {
         let audioLevel = getAudioOptimizationLevel()
         let videoPixels = viewModel.settings.videoWidth * viewModel.settings.videoHeight
         
@@ -21,7 +21,7 @@ extension LiveStreamSettingsView {
         }
     }
 
-  private func getOverallOptimizationLevel() -> String {
+  func getOverallOptimizationLevel() -> String {
         let status = getOverallOptimizationStatus()
         
         if status.contains("최적") {
@@ -33,7 +33,7 @@ extension LiveStreamSettingsView {
         }
     }
 
-  private func getOverallOptimizationDescription() -> String {
+  func getOverallOptimizationDescription() -> String {
         let status = getOverallOptimizationStatus()
         
         if status.contains("최적") {
@@ -47,7 +47,7 @@ extension LiveStreamSettingsView {
         }
     }
 
-  private func getOverallOptimizationColor() -> Color {
+  func getOverallOptimizationColor() -> Color {
         let status = getOverallOptimizationStatus()
         
         if status.contains("최적") {

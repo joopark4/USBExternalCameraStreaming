@@ -1,8 +1,9 @@
 import SwiftUI
 
-// MARK: - 오디오 최적화 관련
-    
-    private func getAudioOptimizationLevel() -> String {
+extension LiveStreamSettingsView {
+    // MARK: - 오디오 최적화 관련
+
+    func getAudioOptimizationLevel() -> String {
         switch viewModel.settings.audioBitrate {
         case 0..<96:
             return NSLocalizedString("low_quality_mode", comment: "저품질 모드")
@@ -13,7 +14,7 @@ import SwiftUI
         }
     }
     
-    private func getAudioOptimizationDescription() -> String {
+    func getAudioOptimizationDescription() -> String {
         switch viewModel.settings.audioBitrate {
         case 0..<96:
             return "44.1kHz 샘플레이트 + 20ms 버퍼"
@@ -24,7 +25,7 @@ import SwiftUI
         }
     }
     
-    private func getAudioOptimizationColor() -> Color {
+    func getAudioOptimizationColor() -> Color {
         switch viewModel.settings.audioBitrate {
         case 0..<96:
             return .orange
@@ -36,3 +37,4 @@ import SwiftUI
     }
     
     
+}

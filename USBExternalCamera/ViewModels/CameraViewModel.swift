@@ -186,7 +186,7 @@ final class CameraViewModel: NSObject, ObservableObject {
     /// - Parameter skipSessionUpdate: 세션 업데이트를 건너뛸지 여부 (새로고침 시 사용)
     func switchToCamera(_ camera: CameraDevice, skipSessionUpdate: Bool = false) {
         logInfo("Switching to camera \(camera.name) (ID: \(camera.id))", category: .camera)
-        print("📹 CameraViewModel: Previous selected camera: \(selectedCamera?.name ?? "None") (ID: \(selectedCamera?.id ?? "None"))")
+        logDebug("📹 CameraViewModel: Previous selected camera: \(selectedCamera?.name ?? "None") (ID: \(selectedCamera?.id ?? "None"))", category: .camera)
         logInfo("Skip session update: \(skipSessionUpdate)", category: .camera)
         
         // 이미 선택된 카메라인지 확인 - ID와 객체 모두 비교
@@ -217,8 +217,8 @@ final class CameraViewModel: NSObject, ObservableObject {
         // @Published 속성 직접 업데이트 - SwiftUI가 자동으로 UI 업데이트
         selectedCamera = camera
         
-        print("📹 CameraViewModel: Selected camera updated to: \(selectedCamera?.name ?? "None")")
-        print("📹 CameraViewModel: Selected camera ID: \(selectedCamera?.id ?? "None")")
+        logDebug("📹 CameraViewModel: Selected camera updated to: \(selectedCamera?.name ?? "None")", category: .camera)
+        logDebug("📹 CameraViewModel: Selected camera ID: \(selectedCamera?.id ?? "None")", category: .camera)
         
         // 세션 업데이트를 건너뛰지 않는 경우에만 세션 매니저를 통해 실제 카메라 전환 처리
         if !skipSessionUpdate {
@@ -229,25 +229,18 @@ final class CameraViewModel: NSObject, ObservableObject {
         }
         
         logInfo("Camera switch completed for \(camera.name)", category: .camera)
-        
-        // UI 업데이트 강제 트리거 (즉시 + 지연)
-        objectWillChange.send()
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.objectWillChange.send()
-        }
-        
-        // 선택 상태 검증
+
+        // @Published 속성(selectedCamera)이 변경되면 자동으로 UI가 업데이트됩니다.
+        // 수동 objectWillChange.send() 호출은 불필요하며 성능 저하를 유발할 수 있습니다.
+
+        #if DEBUG
+        // 선택 상태 검증 (디버그 모드에서만)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             if let currentSelected = self.selectedCamera {
-                logInfo("[Verification] Currently selected: \(currentSelected.name) (ID: \(currentSelected.id))", category: .camera)
-                logInfo("[Verification] Selection match: \(currentSelected.id == camera.id)", category: .camera)
-            } else {
-                logInfo("[Verification] No camera selected!", category: .camera)
+                logDebug("[Verification] Currently selected: \(currentSelected.name) (ID: \(currentSelected.id))", category: .camera)
             }
         }
+        #endif
     }
 
     /// 카메라 세션 중지
@@ -270,9 +263,9 @@ final class CameraViewModel: NSObject, ObservableObject {
         let currentSelectedName = currentSelectedCamera?.name
         
         logInfo("Current selected camera before refresh:", category: .camera)
-        print("📹 CameraViewModel: - Name: \(currentSelectedName ?? "None")")
-        print("📹 CameraViewModel: - ID: \(currentSelectedId ?? "None")")
-        print("📹 CameraViewModel: - Device ID: \(currentSelectedDeviceId ?? "None")")
+        logDebug("📹 CameraViewModel: - Name: \(currentSelectedName ?? "None")", category: .camera)
+        logDebug("📹 CameraViewModel: - ID: \(currentSelectedId ?? "None")", category: .camera)
+        logDebug("📹 CameraViewModel: - Device ID: \(currentSelectedDeviceId ?? "None")", category: .camera)
         
         // 카메라 목록 새로고침
         await discoverCameras()
@@ -307,14 +300,12 @@ final class CameraViewModel: NSObject, ObservableObject {
             
             if let camera = restoredCamera {
                 logInfo("Restoring selected camera: \(camera.name) (ID: \(camera.id))", category: .camera)
-                
+
                 // 세션을 중지하지 않고 선택된 카메라만 업데이트
+                // @Published 속성 변경으로 UI가 자동 업데이트됨
                 await MainActor.run {
                     self.selectedCamera = camera
                     logInfo("Selected camera restored successfully", category: .camera)
-                    
-                    // UI 강제 업데이트
-                    self.objectWillChange.send()
                 }
             } else {
                 logInfo("Could not find previously selected camera, selecting fallback", category: .camera)
@@ -326,7 +317,7 @@ final class CameraViewModel: NSObject, ObservableObject {
         }
         
         logInfo("=== REFRESH CAMERA LIST END ===", category: .camera)
-        print("📹 CameraViewModel: Final selected camera: \(selectedCamera?.name ?? "None") (ID: \(selectedCamera?.id ?? "None"))")
+        logDebug("📹 CameraViewModel: Final selected camera: \(selectedCamera?.name ?? "None") (ID: \(selectedCamera?.id ?? "None"))", category: .camera)
     }
     
     /// 기본 카메라 선택 (이전 선택이 복원되지 않은 경우)
