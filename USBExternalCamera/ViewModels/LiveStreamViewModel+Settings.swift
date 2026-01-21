@@ -89,7 +89,7 @@ extension LiveStreamViewModel {
   /// 설정 초기화 (저장된 설정도 삭제)
   func resetToDefaults() {
     logDebug("🔄 [SETTINGS] Resetting to default settings...", category: .streaming)
-    settings = USBExternalCamera.LiveStreamSettings()
+    settings = LiveStreamSettings()
     // 기본값을 720p 프리셋으로 설정하여 프리셋과 동기화
     settings.applyYouTubeLivePreset(.hd720p)
     // 저장된 설정도 삭제

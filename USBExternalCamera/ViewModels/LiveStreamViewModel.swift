@@ -28,7 +28,7 @@ final class LiveStreamViewModel: ObservableObject {
   }
   // MARK: - Published Properties
   /// 현재 라이브 스트리밍 설정
-  @Published var settings: USBExternalCamera.LiveStreamSettings
+  @Published var settings: LiveStreamSettings
   /// 스트리밍 상태
   @Published var status: LiveStreamStatus = .idle
   /// 상태 메시지

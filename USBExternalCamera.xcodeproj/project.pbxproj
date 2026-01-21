@@ -232,7 +232,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				53AF02D92DE864F7006B527D /* XCRemoteSwiftPackageReference "HaishinKit" */,
-				53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "LiveStreamingCore" */,
+				53F0A0032DF2000000000001 /* XCRemoteSwiftPackageReference "LiveStreamingCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 537567A32DE32C9500946357 /* Products */;
@@ -629,14 +629,15 @@
 				minimumVersion = 2.0.8;
 			};
 		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "LiveStreamingCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Modules/LiveStreamingCore;
+		53F0A0032DF2000000000001 /* XCRemoteSwiftPackageReference "LiveStreamingCore" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/joopark4/LiveStreamingCore.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		53AF02DA2DE864F7006B527D /* HaishinKit */ = {
@@ -656,7 +657,7 @@
 		};
 		53F0A0022DF2000000000001 /* LiveStreamingCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "LiveStreamingCore" */;
+			package = 53F0A0032DF2000000000001 /* XCRemoteSwiftPackageReference "LiveStreamingCore" */;
 			productName = LiveStreamingCore;
 		};
 /* End XCSwiftPackageProductDependency section */

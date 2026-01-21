@@ -114,40 +114,29 @@ open USBExternalCamera.xcodeproj
 
 이 프로젝트는 다음 종속성과 함께 Swift Package Manager를 사용합니다:
 
+- [LiveStreamingCore](https://github.com/joopark4/LiveStreamingCore) (1.0.0) - 재사용 가능한 RTMP 스트리밍 모듈
 - [HaishinKit](https://github.com/HaishinKit/HaishinKit.swift) (2.0.8) - RTMP 스트리밍 엔진
-- [Inject](https://github.com/krzysztofzablocki/Inject) (1.5.2) - 개발용 핫 리로드
 - [Logboard](https://github.com/shogo4405/Logboard) (2.5.0) - 고급 로깅
 
 모든 종속성은 Xcode에서 자동으로 관리됩니다.
 
-### 모듈화 아키텍처
+### LiveStreamingCore 모듈
 
-이 프로젝트는 다른 프로젝트에서 재사용할 수 있는 **LiveStreamingCore** 모듈을 별도의 Swift Package로 포함합니다:
+**[LiveStreamingCore](https://github.com/joopark4/LiveStreamingCore)**는 재사용 가능한 RTMP 스트리밍 기능을 제공하는 별도의 Swift Package입니다:
 
-```
-Modules/
-└── LiveStreamingCore/     # 재사용 가능한 RTMP 스트리밍 모듈
-    ├── Package.swift
-    └── Sources/
-        └── LiveStreamingCore/
-            ├── LiveStreamSettings.swift
-            ├── LoggingManager.swift
-            ├── Models/
-            ├── LiveStreaming/
-            │   ├── Managers/
-            │   ├── Types/
-            │   └── Utilities/
-            └── ...
-```
-
-**LiveStreamingCore** 모듈이 제공하는 기능:
+**기능:**
 - HaishinKit 기반 RTMP 스트리밍 기능
 - YouTube Live 최적화 프리셋 및 설정
 - 스트리밍 통계 및 진단
 - 텍스트 오버레이 지원
 - 연결 관리 및 오류 처리
 
-자세한 사용 방법은 [LiveStreamingCore README](Modules/LiveStreamingCore/README.md)를 참조하세요.
+**SPM을 통한 설치:**
+```swift
+.package(url: "https://github.com/joopark4/LiveStreamingCore.git", from: "1.0.0")
+```
+
+자세한 사용 방법은 [LiveStreamingCore 저장소](https://github.com/joopark4/LiveStreamingCore)를 참조하세요.
 
 ## 🎯 빠른 시작
 
@@ -206,16 +195,16 @@ USBExternalCamera-iOS/
 │   ├── Managers/               # 시스템 매니저
 │   └── Utils/                  # 유틸리티 및 확장
 │
-└── Modules/                     # 재사용 가능한 Swift Packages
-    └── LiveStreamingCore/       # RTMP 스트리밍 모듈
-        └── Sources/
-            └── LiveStreamingCore/
-                ├── Models/              # StreamStats, ConnectionInfo 등
-                ├── LiveStreaming/
-                │   ├── Managers/        # HaishinKitManager
-                │   ├── Types/           # StreamingModels, Validation
-                │   └── Utilities/       # 헬퍼
-                └── ...
+└── [외부 패키지: LiveStreamingCore]
+    # https://github.com/joopark4/LiveStreamingCore
+    └── Sources/
+        └── LiveStreamingCore/
+            ├── Models/              # StreamStats, ConnectionInfo 등
+            ├── LiveStreaming/
+            │   ├── Managers/        # HaishinKitManager
+            │   ├── Types/           # StreamingModels, Validation
+            │   └── Utilities/       # 헬퍼
+            └── ...
 ```
 
 ### 주요 구성 요소
@@ -331,7 +320,7 @@ xcodebuild -scheme USBExternalCamera -destination 'platform=iOS,name=Your-Device
 ## 📖 문서
 
 ### 프로젝트 문서
-- [LiveStreamingCore 모듈 가이드](Modules/LiveStreamingCore/README.md) - 재사용 가능한 스트리밍 모듈 문서
+- [LiveStreamingCore 저장소](https://github.com/joopark4/LiveStreamingCore) - 재사용 가능한 스트리밍 모듈 (별도 GitHub 저장소)
 
 ### 외부 참고자료
 - [HaishinKit 문서](https://github.com/HaishinKit/HaishinKit.swift)

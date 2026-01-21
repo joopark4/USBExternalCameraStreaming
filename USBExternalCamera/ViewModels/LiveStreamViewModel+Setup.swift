@@ -7,8 +7,8 @@ import SwiftUI
 
 extension LiveStreamViewModel {
   // MARK: - Private Methods - Setup
-  static func createDefaultSettings() -> USBExternalCamera.LiveStreamSettings {
-    var settings = USBExternalCamera.LiveStreamSettings()
+  static func createDefaultSettings() -> LiveStreamSettings {
+    var settings = LiveStreamSettings()
     settings.rtmpURL = Constants.youtubeRTMPURL
     settings.streamKey = ""
     settings.videoBitrate = Constants.defaultVideoBitrate
@@ -19,9 +19,9 @@ extension LiveStreamViewModel {
     return settings
   }
   static func createPresetSettings(_ preset: StreamingPreset)
-    -> USBExternalCamera.LiveStreamSettings
+    -> LiveStreamSettings
   {
-    var settings = USBExternalCamera.LiveStreamSettings()
+    var settings = LiveStreamSettings()
     switch preset {
     case .low:
       settings.videoWidth = 1280
