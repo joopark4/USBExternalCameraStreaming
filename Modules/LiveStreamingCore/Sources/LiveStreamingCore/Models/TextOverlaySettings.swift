@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 /// 텍스트 오버레이 설정 모델
 public struct TextOverlaySettings: Equatable {
@@ -52,19 +53,19 @@ public struct TextOverlaySettings: Equatable {
 }
 
 /// 텍스트 히스토리 아이템
-struct TextHistoryItem: Identifiable, Codable {
-  let id = UUID()
-  var text: String
-  var usedDate: Date
+public struct TextHistoryItem: Identifiable, Codable {
+  public let id = UUID()
+  public var text: String
+  public var usedDate: Date
 
-  init(text: String) {
+  public init(text: String) {
     self.text = text
     self.usedDate = Date()
   }
 }
 
 /// 사용 가능한 폰트 목록
-enum AvailableFont: String, CaseIterable {
+public enum AvailableFont: String, CaseIterable {
   case system = "System"
   case systemBold = "System Bold"
   case helvetica = "Helvetica"
@@ -72,12 +73,12 @@ enum AvailableFont: String, CaseIterable {
   case arial = "Arial"
   case arialBold = "Arial Bold"
 
-  var displayName: String {
+  public var displayName: String {
     return self.rawValue
   }
 
   /// 미리보기용 폰트
-  var previewFont: Font {
+  public var previewFont: Font {
     switch self {
     case .system:
       return .system(size: 16, weight: .medium)
@@ -96,7 +97,7 @@ enum AvailableFont: String, CaseIterable {
 }
 
 /// 사전 정의된 텍스트 색상
-enum TextOverlayColor: String, CaseIterable {
+public enum TextOverlayColor: String, CaseIterable {
   case white = "White"
   case black = "Black"
   case red = "Red"
@@ -106,7 +107,7 @@ enum TextOverlayColor: String, CaseIterable {
   case orange = "Orange"
   case purple = "Purple"
 
-  var color: Color {
+  public var color: Color {
     switch self {
     case .white: return .white
     case .black: return .black
@@ -119,7 +120,7 @@ enum TextOverlayColor: String, CaseIterable {
     }
   }
 
-  var displayName: String {
+  public var displayName: String {
     switch self {
     case .white: return NSLocalizedString("color_white", comment: "흰색")
     case .black: return NSLocalizedString("color_black", comment: "검은색")

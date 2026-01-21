@@ -28,18 +28,18 @@ enum AudioQualityLevel: String {
 
 /// 종합 진단 보고서
 public struct StreamingDiagnosisReport {
-  var configValidation = ConfigValidationResult()
-  var mediaMixerStatus = MediaMixerValidationResult()
-  var rtmpStreamStatus = RTMPStreamValidationResult()
-  var screenCaptureStatus = ScreenCaptureValidationResult()
-  var networkStatus = NetworkValidationResult()
-  var deviceStatus = DeviceValidationResult()
-  var dataFlowStatus = DataFlowValidationResult()
+  public var configValidation = ConfigValidationResult()
+  public var mediaMixerStatus = MediaMixerValidationResult()
+  public var rtmpStreamStatus = RTMPStreamValidationResult()
+  public var screenCaptureStatus = ScreenCaptureValidationResult()
+  public var networkStatus = NetworkValidationResult()
+  public var deviceStatus = DeviceValidationResult()
+  public var dataFlowStatus = DataFlowValidationResult()
 
-  var overallScore: Int = 0
-  var overallGrade: String = "F"
+  public var overallScore: Int = 0
+  public var overallGrade: String = "F"
 
-  mutating func calculateOverallScore() {
+  public mutating func calculateOverallScore() {
     let results = [
       configValidation.isValid,
       mediaMixerStatus.isValid,
@@ -62,7 +62,7 @@ public struct StreamingDiagnosisReport {
     }
   }
 
-  func getRecommendation() -> String {
+  public func getRecommendation() -> String {
     switch overallGrade {
     case "A":
       return NSLocalizedString("diagnosis_recommendation_a", comment: "스트리밍 환경이 완벽합니다")
@@ -77,62 +77,71 @@ public struct StreamingDiagnosisReport {
       return NSLocalizedString("diagnosis_recommendation_f", comment: "스트리밍이 불가능한 상태입니다")
     }
   }
+
+  public init() {}
 }
 
 /// 설정 검증 결과
 public struct ConfigValidationResult {
-  var isValid: Bool = true
-  var validItems: [String] = []
-  var issues: [String] = []
-  var summary: String = ""
+  public var isValid: Bool = true
+  public var validItems: [String] = []
+  public var issues: [String] = []
+  public var summary: String = ""
+  public init() {}
 }
 
 /// MediaMixer 검증 결과
 public struct MediaMixerValidationResult {
-  var isValid: Bool = true
-  var validItems: [String] = []
-  var issues: [String] = []
-  var summary: String = ""
+  public var isValid: Bool = true
+  public var validItems: [String] = []
+  public var issues: [String] = []
+  public var summary: String = ""
+  public init() {}
 }
 
 /// RTMPStream 검증 결과
 public struct RTMPStreamValidationResult {
-  var isValid: Bool = true
-  var validItems: [String] = []
-  var issues: [String] = []
-  var summary: String = ""
+  public var isValid: Bool = true
+  public var validItems: [String] = []
+  public var issues: [String] = []
+  public var summary: String = ""
+  public init() {}
 }
 
 /// 화면 캡처 검증 결과
 public struct ScreenCaptureValidationResult {
-  var isValid: Bool = true
-  var validItems: [String] = []
-  var issues: [String] = []
-  var summary: String = ""
+  public var isValid: Bool = true
+  public var validItems: [String] = []
+  public var issues: [String] = []
+  public var summary: String = ""
+  public init() {}
 }
 
 /// 네트워크 검증 결과
 public struct NetworkValidationResult {
-  var isValid: Bool = true
-  var validItems: [String] = []
-  var issues: [String] = []
-  var summary: String = ""
+  public var isValid: Bool = true
+  public var validItems: [String] = []
+  public var issues: [String] = []
+  public var summary: String = ""
+  public init() {}
 }
 
 /// 디바이스 검증 결과
 public struct DeviceValidationResult {
-  var isValid: Bool = true
-  var validItems: [String] = []
-  var issues: [String] = []
-  var summary: String = ""
+  public var isValid: Bool = true
+  public var validItems: [String] = []
+  public var issues: [String] = []
+  public var summary: String = ""
+  public init() {}
 }
 
 /// 데이터 흐름 검증 결과
 public struct DataFlowValidationResult {
-  var isValid: Bool = true
-  var validItems: [String] = []
-  var issues: [String] = []
-  var summary: String = ""
+  public var isValid: Bool = true
+  public var validItems: [String] = []
+  public var issues: [String] = []
+  public var summary: String = ""
+  public init() {}
 }
 
 // MARK: - HaishinKit Manager Protocol
