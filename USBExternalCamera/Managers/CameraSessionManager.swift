@@ -66,7 +66,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     private var lastFrameTime: CFTimeInterval = 0
     
     /// 현재 적용된 스트리밍 설정 (하드웨어 최적화용)
-    private var currentStreamingSettings: USBExternalCamera.LiveStreamSettings?
+    private var currentStreamingSettings: LiveStreamSettings?
     
     /// 초기화 및 기본 세션 설정
     /// - 세션 프리셋과 비디오 출력을 초기화
@@ -116,7 +116,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     /// 스트리밍 설정에 맞춰 카메라 하드웨어 품질 최적화
     /// - 해상도, 프레임레이트를 스트리밍 설정에 맞춰 조정
     /// - 불필요한 업/다운스케일링 방지로 성능 향상
-    public func optimizeForStreamingSettings(_ settings: USBExternalCamera.LiveStreamSettings) {
+    public func optimizeForStreamingSettings(_ settings: LiveStreamSettings) {
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
             
@@ -148,7 +148,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     }
     
     /// 스트리밍 설정에 맞는 최적 세션 프리셋 선택
-    private func optimizeSessionPreset(for settings: USBExternalCamera.LiveStreamSettings) {
+    private func optimizeSessionPreset(for settings: LiveStreamSettings) {
         let targetResolution = (width: settings.videoWidth, height: settings.videoHeight)
         
         // 해상도별 최적 프리셋 선택
@@ -193,7 +193,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     }
     
     /// 카메라 디바이스 고급 포맷 최적화 (프레임레이트 등)
-    private func optimizeCameraFormat(for settings: USBExternalCamera.LiveStreamSettings) {
+    private func optimizeCameraFormat(for settings: LiveStreamSettings) {
         guard let device = self.videoInput?.device else {
             logWarning("⚠️ 비디오 입력 디바이스를 찾을 수 없음", category: .camera)
             return
@@ -245,7 +245,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     }
     
     /// 기타 카메라 설정 최적화
-    private func optimizeCameraSettings(device: AVCaptureDevice, settings: USBExternalCamera.LiveStreamSettings) {
+    private func optimizeCameraSettings(device: AVCaptureDevice, settings: LiveStreamSettings) {
         // 고해상도 스트리밍을 위한 카메라 최적화
         if settings.videoWidth >= 1920 && settings.videoHeight >= 1080 {
             // 1080p 이상: 안정성 우선 설정
