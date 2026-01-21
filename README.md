@@ -282,7 +282,7 @@ USBExternalCamera-iOS/
 - Use 720p maximum for optimal performance on iPad devices
 
 **Performance optimization**
-- 1080p settings are automatically downscaled to 720p
+- 1080p option is currently disabled for performance optimization (720p maximum)
 - 480p recommended for slower devices or limited bandwidth
 - Hardware acceleration is automatically enabled when available
 
