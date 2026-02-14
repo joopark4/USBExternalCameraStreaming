@@ -81,6 +81,7 @@ final class CameraPreviewUIView: UIView {
   /// 런타임 상태 관리를 위한 Associated Object 키
   private struct AssociatedKeys {
     static var captureOutputDelegate = "captureOutputDelegate"
+    static var captureOutputDelegateQueue = "captureOutputDelegateQueue"
     static var captureOutputIsOwned = "captureOutputIsOwned"
   }
 
@@ -285,12 +286,13 @@ final class CameraPreviewUIView: UIView {
       if let previousDelegate = existingOutput.sampleBufferDelegate,
          !(previousDelegate is CameraPreviewUIView)
       {
+        let previousQueue = existingOutput.trackedSampleBufferDelegateQueue
         logInfo("기존 비디오 출력 델리게이트 백업: \(type(of: previousDelegate))", category: .camera)
-        setCurrentCaptureOutput(previousDelegate)
+        setCurrentCaptureOutput(previousDelegate, queue: previousQueue)
       }
 
       session.beginConfiguration()
-      existingOutput.setSampleBufferDelegate(self, queue: videoOutputQueue)
+      existingOutput.setTrackedSampleBufferDelegate(self, queue: videoOutputQueue)
 
       // 비디오 설정 (가벼운 처리용)
       existingOutput.videoSettings = [
@@ -311,7 +313,7 @@ final class CameraPreviewUIView: UIView {
 
     // 세션에 비디오 출력이 없다면 새 출력 추가
     let newVideoOutput = AVCaptureVideoDataOutput()
-    newVideoOutput.setSampleBufferDelegate(self, queue: videoOutputQueue)
+    newVideoOutput.setTrackedSampleBufferDelegate(self, queue: videoOutputQueue)
 
     // 비디오 설정 (가벼운 처리용)
     newVideoOutput.videoSettings = [
@@ -348,10 +350,14 @@ final class CameraPreviewUIView: UIView {
       session.commitConfiguration()
       logInfo("화면 캡처 전용 비디오 출력 제거 완료", category: .camera)
     } else if let originalDelegate = currentCaptureOutputDelegate {
-      output.setSampleBufferDelegate(originalDelegate, queue: videoOutputQueue)
+      let originalQueue = currentCaptureOutputDelegateQueue ?? videoOutputQueue
+      output.setTrackedSampleBufferDelegate(originalDelegate, queue: originalQueue)
       logInfo("기존 비디오 출력 델리게이트 복원: \(type(of: originalDelegate))", category: .camera)
+      if currentCaptureOutputDelegateQueue == nil {
+        logWarning("기존 델리게이트 큐 정보가 없어 화면 캡처 큐로 복원했습니다.", category: .camera)
+      }
     } else {
-      output.setSampleBufferDelegate(nil, queue: nil)
+      output.setTrackedSampleBufferDelegate(nil, queue: nil)
       logWarning("기존 비디오 출력 델리게이트 복원 대상 없음", category: .camera)
     }
 
@@ -371,6 +377,17 @@ final class CameraPreviewUIView: UIView {
     set {
       objc_setAssociatedObject(
         self, &AssociatedKeys.captureOutputDelegate, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+  }
+
+  /// 기존 output 델리게이트 큐 백업
+  private var currentCaptureOutputDelegateQueue: DispatchQueue? {
+    get {
+      objc_getAssociatedObject(self, &AssociatedKeys.captureOutputDelegateQueue) as? DispatchQueue
+    }
+    set {
+      objc_setAssociatedObject(
+        self, &AssociatedKeys.captureOutputDelegateQueue, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
   }
 
@@ -396,14 +413,19 @@ final class CameraPreviewUIView: UIView {
     usesCapturedVideoOutputOwnerShip = false
   }
 
-  private func setCurrentCaptureOutput(_ delegate: AVCaptureVideoDataOutputSampleBufferDelegate) {
+  private func setCurrentCaptureOutput(
+    _ delegate: AVCaptureVideoDataOutputSampleBufferDelegate,
+    queue: DispatchQueue?
+  ) {
     if currentCaptureOutputDelegate == nil {
       currentCaptureOutputDelegate = delegate
+      currentCaptureOutputDelegateQueue = queue
     }
   }
 
   private func clearCaptureOutputOriginalDelegate() {
     currentCaptureOutputDelegate = nil
+    currentCaptureOutputDelegateQueue = nil
   }
 
   /// 스트리밍 상태 업데이트 (개선된 버전)
@@ -758,6 +780,31 @@ final class CameraPreviewUIView: UIView {
   func updateStreamingState(_ isStreaming: Bool) {
     self.isStreaming = isStreaming
     updatePreviewLayer()
+  }
+}
+
+// MARK: - AVCaptureVideoDataOutput Delegate Queue Tracking
+
+private struct VideoOutputAssociatedKeys {
+  static var delegateQueue = "trackedSampleBufferDelegateQueue"
+}
+
+extension AVCaptureVideoDataOutput {
+  var trackedSampleBufferDelegateQueue: DispatchQueue? {
+    objc_getAssociatedObject(self, &VideoOutputAssociatedKeys.delegateQueue) as? DispatchQueue
+  }
+
+  func setTrackedSampleBufferDelegate(
+    _ delegate: AVCaptureVideoDataOutputSampleBufferDelegate?,
+    queue: DispatchQueue?
+  ) {
+    setSampleBufferDelegate(delegate, queue: queue)
+    objc_setAssociatedObject(
+      self,
+      &VideoOutputAssociatedKeys.delegateQueue,
+      queue,
+      .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+    )
   }
 }
 

@@ -189,14 +189,29 @@ extension LiveStreamViewModel {
     case .notDetermined:
       let granted = await AVCaptureDevice.requestAccess(for: .audio)
       if !granted {
-        throw LiveStreamError.permissionDenied("마이크 권한이 없어 오디오 송출을 시작할 수 없습니다")
+        throw LiveStreamError.permissionDenied(
+          NSLocalizedString(
+            "mic_permission_not_granted_error",
+            comment: "Cannot start audio streaming without microphone permission."
+          )
+        )
       }
 
     case .denied, .restricted:
-      throw LiveStreamError.permissionDenied("마이크 권한이 필요합니다. 설정에서 마이크 권한을 허용해주세요")
+      throw LiveStreamError.permissionDenied(
+        NSLocalizedString(
+          "mic_permission_denied_error",
+          comment: "Microphone permission is required. Please enable it in Settings."
+        )
+      )
 
     @unknown default:
-      throw LiveStreamError.permissionDenied("마이크 권한 상태를 확인할 수 없습니다")
+      throw LiveStreamError.permissionDenied(
+        NSLocalizedString(
+          "mic_permission_unknown_status_error",
+          comment: "Could not determine microphone permission status."
+        )
+      )
     }
   }
 

@@ -741,10 +741,16 @@ extension CameraPreviewUIView {
         let destinationBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(clonedPixelBuffer, plane)
         let rowHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, plane)
 
+        if sourceBytesPerRow == destinationBytesPerRow {
+          memcpy(destinationPlane, sourcePlane, sourceBytesPerRow * rowHeight)
+          continue
+        }
+
+        let copyBytesPerRow = min(sourceBytesPerRow, destinationBytesPerRow)
         for row in 0..<rowHeight {
           let sourcePointer = sourcePlane.advanced(by: row * sourceBytesPerRow)
           let destinationPointer = destinationPlane.advanced(by: row * destinationBytesPerRow)
-          memcpy(destinationPointer, sourcePointer, min(sourceBytesPerRow, destinationBytesPerRow))
+          memcpy(destinationPointer, sourcePointer, copyBytesPerRow)
         }
       }
     } else if
@@ -753,10 +759,15 @@ extension CameraPreviewUIView {
     {
       let sourceBytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
       let destinationBytesPerRow = CVPixelBufferGetBytesPerRow(clonedPixelBuffer)
-      for row in 0..<height {
-        let sourcePointer = sourceBuffer.advanced(by: row * sourceBytesPerRow)
-        let destinationPointer = destinationBuffer.advanced(by: row * destinationBytesPerRow)
-        memcpy(destinationPointer, sourcePointer, min(sourceBytesPerRow, destinationBytesPerRow))
+      if sourceBytesPerRow == destinationBytesPerRow {
+        memcpy(destinationBuffer, sourceBuffer, sourceBytesPerRow * height)
+      } else {
+        let copyBytesPerRow = min(sourceBytesPerRow, destinationBytesPerRow)
+        for row in 0..<height {
+          let sourcePointer = sourceBuffer.advanced(by: row * sourceBytesPerRow)
+          let destinationPointer = destinationBuffer.advanced(by: row * destinationBytesPerRow)
+          memcpy(destinationPointer, sourcePointer, copyBytesPerRow)
+        }
       }
     } else {
       logWarning("카메라 프레임 버퍼 주소를 얻지 못해 복사 실패")

@@ -91,7 +91,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             }
             
             // 비디오 출력 설정
-            self.videoOutput.setSampleBufferDelegate(self, queue: self.sessionQueue)
+            self.videoOutput.setTrackedSampleBufferDelegate(self, queue: self.sessionQueue)
             
             // 비디오 출력 포맷 설정 (스트리밍에 최적화)
             self.videoOutput.videoSettings = [
