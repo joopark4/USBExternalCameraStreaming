@@ -15,7 +15,7 @@
 
 ## 🎥 Overview
 
-USB External Camera is a professional iOS application that enables iPad-optimized live streaming using UVC-compatible USB external cameras. Built with HaishinKit 2.0.8, it provides real-time RTMP streaming to YouTube Live with performance-optimized 480p/720p quality presets designed specifically for iPad devices.
+USB External Camera is a professional iOS application that enables iPad-optimized live streaming using UVC-compatible USB external cameras. Built with HaishinKit 2.0.8, it provides real-time RTMP streaming to YouTube Live with 480p/720p/1080p presets, screen-capture based compositing (camera + UI), and stability-focused frame pipeline controls.
 
 ### 💡 Development Motivation
 
@@ -27,6 +27,7 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - 🔌 **USB Camera Support** - Full support for UVC-compatible external cameras
 - 📡 **Real-time RTMP** - Professional streaming with HaishinKit 2.0.8
 - 🎛️ **Advanced Controls** - Video/audio quality, resolution, bitrate settings
+- 🎚️ **YouTube Presets** - 480p / 720p / 1080p quick presets with manual override
 - 📊 **Live Statistics** - Real-time monitoring of streaming performance
 - 🎬 **Integrated YouTube Studio** - Built-in YouTube Studio WebView for direct stream management
 - ⌨️ **Smart Keyboard Handling** - Optimized keyboard input for WebView interactions
@@ -40,18 +41,21 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - ✅ USB external camera integration with AVFoundation
 - ✅ Hardware-accelerated H.264 video encoding
 - ✅ Real-time audio mixing and processing with AAC encoding
+- ✅ Mic permission/audio-session preflight before live start (prevents audio 0 kbps cases)
+- ✅ Frame backpressure control in screen-capture pipeline (reduced buffering/stutter)
 
 ### Video & Audio
-- 🎬 **Resolutions**: 480p, 720p support
+- 🎬 **Resolutions**: 480p (848×480), 720p (1280×720), 1080p (1920×1080)
 - 🎵 **Audio**: AAC encoding with configurable bitrates
-- 📏 **Frame Rate**: 30fps
-- 🔧 **Bitrate Control**: Configurable bitrate settings
+- 📏 **Frame Rate**: 24/30/60 selectable in UI (effective capture is currently capped to 30fps, and 1080p is optimized to 24fps)
+- 🔧 **Bitrate Control**: Configurable 500-10000 kbps (video), 64-256 kbps (audio)
 
 ### Advanced Features
 - 📈 Real-time streaming statistics and monitoring
 - 🔄 Automatic reconnection and error recovery
-- ⚙️ YouTube Live optimized presets (480p/720p)
+- ⚙️ YouTube Live optimized presets (480p/720p/1080p)
 - 🎯 Network quality monitoring and bitrate adjustment
+- 🛡️ Black-frame mitigation with UI-only fallback and stale-frame reuse
 - 📱 iOS device orientation support
 - ⚡ Performance optimization for iPad devices
 - 🎬 **YouTube Studio Integration** - Native WebView with desktop browser compatibility
@@ -64,7 +68,8 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - **Xcode**: 16.3 or later
 - **Device**: iPad with USB-C port (iPhone not officially supported - not tested due to lack of test device)
 - **Camera**: UVC-compatible USB external camera
-- **Network**: Stable internet connection (minimum 2-5 Mbps upload for 480p/720p)
+- **Microphone**: Mic permission required for audio track output
+- **Network**: Stable upload bandwidth (recommended: 3+ Mbps for 480p, 6+ Mbps for 720p, 10+ Mbps for 1080p)
 - **Orientation**: **Landscape mode** (Portrait mode under development) - Currently optimized for landscape orientation
 
 ### 📷 Tested External Cameras
@@ -157,6 +162,7 @@ See [LiveStreamingCore Repository](https://github.com/joopark4/LiveStreamingCore
 3. Choose your streaming quality preset:
    - **480p**: Best for limited bandwidth or older devices
    - **720p**: Recommended for most streaming scenarios
+   - **1080p**: Use on high-performance iPads + stable uplink (recommended bitrate range: 4500-9000 kbps)
 
 ### 3. Start Streaming
 1. Select your USB camera from the camera list
@@ -233,6 +239,7 @@ USBExternalCamera-iOS/
 |--------|------------|---------------|---------------|------------|
 | Low (480p) | 480p | 1.5 Mbps | 128 kbps | 30 fps |
 | Standard (720p) | 720p | 2.5 Mbps | 128 kbps | 30 fps |
+| Full HD (1080p) | 1080p | 4.5 Mbps (recommended 4.5-9.0 Mbps) | 128 kbps | 30 fps target (24 fps capture optimized) |
 
 
 ## 🐛 Troubleshooting
@@ -268,10 +275,23 @@ USBExternalCamera-iOS/
 - Lower bitrate settings (use 480p for better stability)
 - Switch to more stable network connection
 - Close other apps to free memory and CPU resources
-- Use 720p maximum for optimal performance on iPad devices
+- For 1080p, start around 6000-6800 kbps and increase gradually based on YouTube health
+- If buffering persists, switch to 720p preset before increasing bitrate again
+
+**Black screen on YouTube output**
+- Confirm camera preview is visible in-app before pressing Start
+- Keep microphone permission enabled (audio track initialization is part of startup preflight)
+- Reconnect camera/hub if preview freezes; powered USB-C hubs are recommended for high-power devices
+- Stop/Start streaming once after changing major settings (resolution/bitrate)
+
+**YouTube warning: low current bitrate / audio 0 kbps**
+- Verify upload bandwidth with sustained tests (instant peak speed is not enough)
+- Ensure audio bitrate is set to at least **128 kbps**
+- Allow microphone permission in iPad Settings > Privacy & Security > Microphone
+- If video is stable but health warning remains, lower video bitrate first, then retest
 
 **Performance optimization**
-- 1080p option is currently disabled for performance optimization (720p maximum)
+- 1080p is supported; screen-capture pipeline uses 24fps capture optimization to reduce buffering
 - 480p recommended for slower devices or limited bandwidth
 - Hardware acceleration is automatically enabled when available
 

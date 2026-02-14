@@ -233,7 +233,7 @@ struct AdvancedSettingsSection: View {
                     .cornerRadius(8)
                 }
                 
-                // 설정 내보내기
+                // 설정 내보내기 (향후 구현 예정)
                 Button(action: {
                     logInfo("Settings export requested - feature not implemented", category: .general)
                 }) {

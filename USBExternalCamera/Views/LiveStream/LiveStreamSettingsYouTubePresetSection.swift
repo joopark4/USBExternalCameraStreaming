@@ -65,16 +65,18 @@ struct YouTubePresetSectionView: View {
                         }
                     )
                     
-                    // 1080p 프리셋 (비활성화 - 향후 지원 예정)
+                    // 1080p 프리셋 (고성능 iPad 권장)
                     YouTubePresetCard(
                         title: "1080p (Full HD)",
                         subtitle: "1920×1080 • 30fps • 4,500 kbps",
-                        description: "지원 예정",
+                        description: NSLocalizedString("high_quality_streaming", comment: "고화질 스트리밍"),
                         icon: "play.square.stack",
-                        color: .gray,
-                        isSelected: false,
-                        isEnabled: false,
-                        action: {}
+                        color: .purple,
+                        isSelected: isCurrentPreset(.fhd1080p),
+                        isEnabled: true,
+                        action: {
+                            applyYouTubePreset(.fhd1080p)
+                        }
                     )
                     
                     // 커스텀 설정 (현재 설정이 어떤 프리셋과도 일치하지 않을 때)

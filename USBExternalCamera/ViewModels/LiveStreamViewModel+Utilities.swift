@@ -40,9 +40,9 @@ extension LiveStreamViewModel {
     #endif
   }
 
+  /// 네트워크 권장 설정 업데이트
+  /// - Note: 현재는 기본값 반환 (향후 실시간 네트워크 상태 기반 동적 계산 구현 예정)
   func updateNetworkRecommendations() {
-    // getNetworkRecommendations 메서드가 아직 구현되지 않음
-    // 기본값으로 설정
     networkRecommendations = StreamingRecommendations(
       recommendedVideoBitrate: 2500,
       recommendedAudioBitrate: 128,

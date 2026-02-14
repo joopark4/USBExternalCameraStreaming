@@ -633,8 +633,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/joopark4/LiveStreamingCore.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				branch = RD;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

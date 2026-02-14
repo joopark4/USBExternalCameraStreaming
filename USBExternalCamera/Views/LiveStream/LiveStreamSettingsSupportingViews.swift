@@ -187,8 +187,10 @@ struct VideoSettingsSectionView: View {
         }
     }
 
+    /// 프레임레이트 지원 여부 확인 (일반 검사)
+    /// - 30fps 이하만 지원 (60fps 등 고프레임레이트 미지원)
+    /// - Note: 해상도별 세부 제한은 LiveStreamSettingsView.isFrameRateSupported에서 처리
     func isFrameRateSupported(_ frameRate: Int) -> Bool {
-        // 30fps and below are supported
         return frameRate <= 30
     }
 
@@ -256,13 +258,15 @@ struct VideoSettingsSectionView: View {
                             }
                         )
                         
-                        // 1080p 버튼 (비활성화 - 성능상 문제로 사용 금지)
+                        // 1080p 버튼 (고성능 iPad 권장)
                         ResolutionButton(
                             title: "1080p",
                             subtitle: "1920×1080",
-                            isSelected: false,
-                            isEnabled: false,
-                            action: {}
+                            isSelected: currentResolution == .resolution1080p,
+                            isEnabled: true,
+                            action: {
+                                setResolution(.resolution1080p)
+                            }
                         )
                     }
                 }

@@ -61,11 +61,11 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     /// - 스레드 안전성 보장을 위해 모든 세션 작업은 이 큐에서 실행
     private let sessionQueue = DispatchQueue(label: "com.heavyarm.sessionQueue")
     
-    /// 프레임 통계
+    /// 프레임 통계 (sessionQueue에서 단일 스레드로 갱신)
     private var frameCount: Int = 0
     private var lastFrameTime: CFTimeInterval = 0
     
-    /// 현재 적용된 스트리밍 설정 (하드웨어 최적화용)
+    /// 현재 적용된 스트리밍 설정 (중복 설정 방지용 캐시)
     private var currentStreamingSettings: LiveStreamSettings?
     
     /// 초기화 및 기본 세션 설정
@@ -147,11 +147,13 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
         }
     }
     
-    /// 스트리밍 설정에 맞는 최적 세션 프리셋 선택
+    /// 스트리밍 설정에 맞는 세션 프리셋 선택
+    /// - 지원 해상도: 480p, 720p, 1080p (정확한 해상도 매칭)
+    /// - 미지원 해상도는 .high 프리셋으로 폴백
     private func optimizeSessionPreset(for settings: LiveStreamSettings) {
         let targetResolution = (width: settings.videoWidth, height: settings.videoHeight)
-        
-        // 해상도별 최적 프리셋 선택
+
+        // 해상도별 프리셋 매핑 (정확한 매칭만 지원)
         let optimalPreset: AVCaptureSession.Preset
         switch targetResolution {
         case (854, 480), (848, 480), (640, 480):
@@ -403,11 +405,11 @@ extension CameraSessionManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         frameCount += 1
         let currentTime = CACurrentMediaTime()
         
-        // 🔧 개선: FPS 계산을 백그라운드에서 처리
+        // FPS 계산 (1초마다 갱신)
         if currentTime - lastFrameTime >= 1.0 {
             let fps = Double(frameCount) / (currentTime - lastFrameTime)
-            
-            // 백그라운드 큐에서 로깅 처리 (메인 스레드 부하 최소화)
+
+            // 로깅만 백그라운드 큐에서 처리 (캡처 콜백 부하 최소화)
             DispatchQueue.global(qos: .utility).async {
                 logDebug("📊 카메라 FPS: \(String(format: "%.1f", fps))", category: .camera)
             }
@@ -426,8 +428,9 @@ extension CameraSessionManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         didDrop sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
+        // 드롭 이벤트 자체는 흔하지 않다면 처리량 초과 또는 포맷 미스매치 의심 포인트
         Task { @Sendable in
             logWarning("⚠️ 비디오 프레임이 드랍되었습니다", category: .camera)
         }
     }
-} 
+}
