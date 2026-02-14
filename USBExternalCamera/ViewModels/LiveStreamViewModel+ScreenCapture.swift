@@ -46,9 +46,15 @@ extension LiveStreamViewModel {
       "요청 설정값: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.frameRate)fps, "
         + "\(settings.videoBitrate)kbps",
       category: .streaming)
+
+    var appliedVideoWidth = settings.videoWidth
+    var appliedVideoHeight = settings.videoHeight
+
     if let haishinKitManager = liveStreamService as? HaishinKitManager,
        let activeSettings = haishinKitManager.getCurrentSettings()
     {
+      appliedVideoWidth = activeSettings.videoWidth
+      appliedVideoHeight = activeSettings.videoHeight
       logInfo(
         "매니저 반영 설정값: \(activeSettings.videoWidth)×\(activeSettings.videoHeight) @ \(activeSettings.frameRate)fps, "
           + "\(activeSettings.videoBitrate)kbps",
@@ -65,10 +71,10 @@ extension LiveStreamViewModel {
     await updateStatus(.streaming, message: "화면 캡처 송출 중")
     // CameraPreviewView에 화면 캡처 시작 신호 전송
     // 이 알림을 받으면 CameraPreviewUIView에서 30fps 타이머 시작
-    DispatchQueue.main.async { [self] in
+    DispatchQueue.main.async {
       let userInfo: [String: Any] = [
-        "videoWidth": self.settings.videoWidth,
-        "videoHeight": self.settings.videoHeight,
+        "videoWidth": appliedVideoWidth,
+        "videoHeight": appliedVideoHeight,
       ]
       NotificationCenter.default.post(name: .startScreenCapture, object: nil, userInfo: userInfo)
     }
