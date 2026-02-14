@@ -51,11 +51,13 @@ extension LiveStreamViewModel {
     return (issues, solutions)
   }
 
+  /// 스트리밍 관련 이슈 확인
+  /// - Note: 상세 전송 상태 진단은 향후 구현 예정
   func checkStreamingIssues() async -> (issues: [String], solutions: [String]) {
     var issues: [String] = []
     var solutions: [String] = []
     if status == .streaming {
-      // getCurrentTransmissionStatus 메서드가 아직 구현되지 않음
+      // 스트리밍 중일 때는 기본 안내 메시지 표시 (상세 진단 미구현)
       issues.append("ℹ️ 스트리밍 상태 확인 기능은 구현 중입니다")
       solutions.append("💡 YouTube Studio에서 직접 스트림 상태를 확인하세요")
     } else {

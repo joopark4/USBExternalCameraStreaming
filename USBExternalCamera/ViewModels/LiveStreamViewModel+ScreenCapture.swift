@@ -22,6 +22,9 @@ extension LiveStreamViewModel {
     guard let haishinKitManager = liveStreamService as? HaishinKitManager else {
       throw LiveStreamError.configurationError("HaishinKitManager가 초기화되지 않았습니다")
     }
+
+    try await prepareAudioCapturePrerequisites()
+
     logDebug("🔄 [화면캡처] 화면 캡처 스트리밍 시작 중...", category: .streaming)
     // 화면 캡처 전용 스트리밍 시작 (일반 스트리밍과 다른 메서드 사용)
     try await haishinKitManager.startScreenCaptureStreaming(with: settings)
@@ -39,12 +42,41 @@ extension LiveStreamViewModel {
   /// 30fps 화면 캡처 타이머를 시작시킵니다.
   func handleScreenCaptureStreamingStartSuccess() async {
     logInfo("✅ [화면캡처] 스트리밍 시작 성공", category: .streaming)
+    logInfo(
+      "요청 설정값: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.frameRate)fps, "
+        + "\(settings.videoBitrate)kbps",
+      category: .streaming)
+
+    var appliedVideoWidth = settings.videoWidth
+    var appliedVideoHeight = settings.videoHeight
+
+    if let haishinKitManager = liveStreamService as? HaishinKitManager,
+       let activeSettings = haishinKitManager.getCurrentSettings()
+    {
+      appliedVideoWidth = activeSettings.videoWidth
+      appliedVideoHeight = activeSettings.videoHeight
+      logInfo(
+        "매니저 반영 설정값: \(activeSettings.videoWidth)×\(activeSettings.videoHeight) @ \(activeSettings.frameRate)fps, "
+          + "\(activeSettings.videoBitrate)kbps",
+        category: .streaming)
+      if activeSettings.videoWidth != settings.videoWidth || activeSettings.videoHeight != settings.videoHeight {
+        logWarning(
+          "요청 설정과 매니저 반영 설정이 다릅니다: 요청 \(settings.videoWidth)×\(settings.videoHeight) / 반영 \(activeSettings.videoWidth)×\(activeSettings.videoHeight)",
+          category: .streaming)
+      }
+    } else {
+      logWarning("매니저에서 현재 설정 조회 실패", category: .streaming)
+    }
     // 상태를 'streaming'으로 업데이트
     await updateStatus(.streaming, message: "화면 캡처 송출 중")
     // CameraPreviewView에 화면 캡처 시작 신호 전송
     // 이 알림을 받으면 CameraPreviewUIView에서 30fps 타이머 시작
     DispatchQueue.main.async {
-      NotificationCenter.default.post(name: .startScreenCapture, object: nil)
+      let userInfo: [String: Any] = [
+        "videoWidth": appliedVideoWidth,
+        "videoHeight": appliedVideoHeight,
+      ]
+      NotificationCenter.default.post(name: .startScreenCapture, object: nil, userInfo: userInfo)
     }
     logInfo("📡 [화면캡처] 화면 캡처 시작 신호 전송 완료", category: .streaming)
   }
@@ -146,5 +178,64 @@ extension LiveStreamViewModel {
     // 강제로 상태 초기화 (사용자가 다시 시도할 수 있도록)
     await updateStatus(.idle, message: "스트리밍 중지됨 (오류 복구)")
     logWarning("⚠️ [화면캡처] 강제 상태 초기화 완료", category: .streaming)
+  }
+
+  /// 화면 캡처 시작 전 오디오 캡처 사전 조건 준비
+  private func prepareAudioCapturePrerequisites() async throws {
+    try await ensureMicrophonePermission()
+    configureAudioSessionForStreamingIfPossible()
+  }
+
+  /// 마이크 권한을 확인하고 필요 시 요청
+  private func ensureMicrophonePermission() async throws {
+    switch AVCaptureDevice.authorizationStatus(for: .audio) {
+    case .authorized:
+      return
+
+    case .notDetermined:
+      let granted = await AVCaptureDevice.requestAccess(for: .audio)
+      if !granted {
+        throw LiveStreamError.permissionDenied(
+          NSLocalizedString(
+            "mic_permission_not_granted_error",
+            comment: "Cannot start audio streaming without microphone permission."
+          )
+        )
+      }
+
+    case .denied, .restricted:
+      throw LiveStreamError.permissionDenied(
+        NSLocalizedString(
+          "mic_permission_denied_error",
+          comment: "Microphone permission is required. Please enable it in Settings."
+        )
+      )
+
+    @unknown default:
+      throw LiveStreamError.permissionDenied(
+        NSLocalizedString(
+          "mic_permission_unknown_status_error",
+          comment: "Could not determine microphone permission status."
+        )
+      )
+    }
+  }
+
+  /// 오디오 세션을 스트리밍에 맞게 선제 구성 (실패 시 비디오 송출은 계속)
+  private func configureAudioSessionForStreamingIfPossible() {
+    do {
+      let audioSession = AVAudioSession.sharedInstance()
+      try audioSession.setCategory(
+        .playAndRecord,
+        mode: .videoRecording,
+        options: [.defaultToSpeaker, .allowBluetoothHFP]
+      )
+      try audioSession.setPreferredSampleRate(44_100)
+      try audioSession.setPreferredIOBufferDuration(0.01)
+      try audioSession.setActive(true)
+      logInfo("🎵 화면 캡처 전 오디오 세션 준비 완료", category: .streaming)
+    } catch {
+      logWarning("오디오 세션 선제 구성 실패: \(error.localizedDescription)", category: .streaming)
+    }
   }
 }

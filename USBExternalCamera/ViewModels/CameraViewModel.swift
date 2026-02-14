@@ -347,6 +347,14 @@ final class CameraViewModel: NSObject, ObservableObject {
         // 화면 캡처 모드에서는 카메라 전환 델리게이트가 불필요
         logInfo("🔗 카메라와 스트리밍 매니저가 연결되었습니다 (프레임 델리게이트만)", category: .camera)
     }
+
+    /// 스트리밍 시작 전 카메라 세션 하드웨어 최적화를 요청
+    ///
+    /// 화면 캡처/일반 스트리밍에서 선택된 해상도와 프레임률로
+    /// 카메라 캡처 파라미터를 맞춰 블러/스케일/프레임 이슈를 줄입니다.
+    func applyStreamingSettings(_ settings: LiveStreamSettings) {
+        sessionManager.optimizeForStreamingSettings(settings)
+    }
     
     /// 소멸자
     /// - 세션 정리는 명시적으로 호출해야 함

@@ -7,15 +7,17 @@ import SwiftUI
 
 extension LiveStreamViewModel {
   // MARK: - Public Methods - Data Monitoring
+
   /// 현재 스트리밍 데이터 송출 상태 확인
+  /// - Note: 현재는 로그만 출력 (향후 실제 전송 상태 조회 구현 예정)
   @MainActor
   func checkCurrentDataTransmission() async {
-    // getCurrentTransmissionStatus 메서드가 아직 구현되지 않음
     logDebug("ℹ️ [DATA CHECK] Transmission status check not yet implemented", category: .streaming)
   }
+
   /// 스트리밍 데이터 요약 정보 가져오기
+  /// - Returns: 현재 스트리밍 상태 및 연결 상태를 포함한 요약 문자열
   func getStreamingDataSummary() async -> String {
-    // getStreamingDataSummary 메서드가 아직 구현되지 않음
     let statusText =
       switch status {
       case .idle: NSLocalizedString("status_idle", comment: "대기 중")

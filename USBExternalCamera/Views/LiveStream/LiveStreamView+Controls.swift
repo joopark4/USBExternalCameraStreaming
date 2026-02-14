@@ -82,7 +82,7 @@ extension LiveStreamView {
                 }
                 
                 // 설정 버튼
-                NavigationLink(destination: LiveStreamSettingsView(viewModel: LiveStreamViewModel(modelContext: modelContext))) {
+                NavigationLink(destination: LiveStreamSettingsView(viewModel: viewModel)) {
                     HStack {
                         Image(systemName: "gearshape.fill")
                         Text(NSLocalizedString("settings", comment: "설정"))

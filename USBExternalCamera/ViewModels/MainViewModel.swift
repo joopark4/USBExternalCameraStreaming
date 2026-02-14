@@ -55,7 +55,7 @@ final class MainViewModel: ObservableObject {
     /// 텍스트 히스토리 목록
     @Published var textHistory: [TextHistoryItem] = []
     
-    /// 현재 편집 중인 텍스트 설정 (임시)
+    /// 현재 편집 중인 텍스트 설정 (TextOverlaySettingsView에서 수정, 적용 시 textOverlaySettings에 복사)
     @Published var editingTextSettings: TextOverlaySettings = TextOverlaySettings()
     
     // MARK: - Dependencies
@@ -151,6 +151,7 @@ final class MainViewModel: ObservableObject {
     /// 화면 캡처 스트리밍 토글
     func toggleScreenCaptureStreaming() {
         logDebug("🎮 [MainViewModel] 화면 캡처 스트리밍 토글 요청", category: .ui)
+        cameraViewModel.applyStreamingSettings(liveStreamViewModel.settings)
         liveStreamViewModel.toggleScreenCaptureStreaming()
         logDebug("✅ [MainViewModel] 화면 캡처 스트리밍 토글 요청 완료", category: .ui)
     }

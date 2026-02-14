@@ -1,12 +1,14 @@
 import SwiftUI
 
 /// 오디오 설정 섹션 뷰
-/// Note: sampleRate와 channels는 현재 UI 표시용으로만 사용됨
-/// AAC 인코더가 자동으로 최적 설정을 사용하며, audioBitrate만 실제로 적용됨
+/// - audioBitrate만 실제 스트리밍에 적용됨
+/// - sampleRate/channels는 UI 표시용 (AAC 인코더가 자동으로 48kHz/스테레오 사용)
 struct AudioSettingsSectionView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
-    // TODO: LiveStreamSettings에 sampleRate/channels 프로퍼티 추가 시 바인딩 연결 필요
+
+    /// UI 표시용 샘플레이트 (실제 인코딩에는 미적용 - AAC 인코더가 48kHz 자동 사용)
     @State private var selectedSampleRate: Int = 48000
+    /// UI 표시용 채널 수 (실제 인코딩에는 미적용 - AAC 인코더가 스테레오 자동 사용)
     @State private var selectedChannels: Int = 2
 
     var body: some View {

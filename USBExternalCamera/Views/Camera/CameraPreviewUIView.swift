@@ -22,7 +22,7 @@ final class CameraPreviewUIView: UIView {
   /// HaishinKit 미리보기 레이어 (스트리밍 중일 때 사용)
   private var hkPreviewLayer: UIView?
 
-  /// 비디오 출력 (통계 목적)
+  /// 비디오 출력 (화면 캡처 스트리밍용 프레임 수신 + 스트리밍 통계)
   private var videoOutput: AVCaptureVideoDataOutput?
   private let videoOutputQueue = DispatchQueue(
     label: "CameraPreviewView.VideoOutput", qos: .userInteractive)
@@ -64,13 +64,26 @@ final class CameraPreviewUIView: UIView {
     return overlay
   }()
 
-  // MARK: - Text Overlay Properties (Removed - handled by SwiftUI layer)
+  // MARK: - Text Overlay Properties (Deprecated - 호환성 유지용)
 
-  /// 텍스트 오버레이 표시 여부 (SwiftUI에서 관리하므로 더미 프로퍼티)
+  /// 텍스트 오버레이 표시 여부
+  /// - Note: 실제 기능은 SwiftUI의 TextOverlayDisplayView에서 처리
+  /// - 이 프로퍼티는 인터페이스 호환성을 위해 유지됨
   var showTextOverlay: Bool = false
 
-  /// 텍스트 오버레이 내용 (SwiftUI에서 관리하므로 더미 프로퍼티)
+  /// 텍스트 오버레이 내용
+  /// - Note: 실제 기능은 SwiftUI의 TextOverlayDisplayView에서 처리
+  /// - 이 프로퍼티는 인터페이스 호환성을 위해 유지됨
   var overlayText: String = ""
+
+  // MARK: - Internal Runtime Properties
+
+  /// 런타임 상태 관리를 위한 Associated Object 키
+  private struct AssociatedKeys {
+    static var captureOutputDelegate = "captureOutputDelegate"
+    static var captureOutputDelegateQueue = "captureOutputDelegateQueue"
+    static var captureOutputIsOwned = "captureOutputIsOwned"
+  }
 
   // MARK: - Initialization
 
@@ -101,26 +114,34 @@ final class CameraPreviewUIView: UIView {
     // 화면 캡처 제어 notification 구독
     NotificationCenter.default.addObserver(
       self,
-      selector: #selector(handleStartScreenCapture),
-      name: NSNotification.Name("startScreenCapture"),
+      selector: #selector(handleStartScreenCapture(_:)),
+      name: .startScreenCapture,
       object: nil
     )
 
     NotificationCenter.default.addObserver(
       self,
       selector: #selector(handleStopScreenCapture),
-      name: NSNotification.Name("stopScreenCapture"),
+      name: .stopScreenCapture,
       object: nil
     )
   }
 
-  @objc private func handleStartScreenCapture() {
-    logDebug("화면 캡처 시작 notification 수신", category: .streaming)
-    startScreenCapture()
+  @objc private func handleStartScreenCapture(_ notification: Notification) {
+    logInfo("화면 캡처 시작 notification 수신", category: .streaming)
+    if let userInfo = notification.userInfo,
+       let width = userInfo["videoWidth"] as? Int,
+       let height = userInfo["videoHeight"] as? Int {
+      logInfo("시작 해상도 전달값 수신: \(width)×\(height)", category: .streaming)
+    } else {
+      logWarning("시작 notification에 해상도 정보가 없어 기본 설정으로 시작합니다", category: .streaming)
+    }
+    startScreenCapture(notification)
   }
 
   @objc private func handleStopScreenCapture() {
     logDebug("화면 캡처 중지 notification 수신", category: .streaming)
+    clearStreamingTargetSize()
     stopScreenCapture()
   }
 
@@ -253,16 +274,46 @@ final class CameraPreviewUIView: UIView {
     logDebug("프리뷰 레이어 보호 완료", category: .camera)
   }
 
-  /// 비디오 프레임 모니터링 설정 (통계 목적)
-  private func setupVideoMonitoring(with session: AVCaptureSession) {
-    // 기존 비디오 출력 제거
-    if let existingOutput = videoOutput {
-      session.removeOutput(existingOutput)
+  /// 비디오 프레임 수신 설정 (화면 캡처 스트리밍 + 통계)
+  /// - 화면 캡처 모드: 수신된 프레임을 latestCameraFrame에 저장하여 UI와 합성
+  /// - 일반 스트리밍 모드: HaishinKit에 프레임 통계 전달
+  func setupVideoFrameCapture(with session: AVCaptureSession) {
+    let existingOutput = session.outputs.compactMap { $0 as? AVCaptureVideoDataOutput }.first
+
+    if let existingOutput {
+      // 현재 세션에 이미 연결된 AVCaptureVideoDataOutput이 있으면 재사용
+      // 새 아웃풋을 계속 추가/제거하면 프레임 전달이 끊길 수 있으므로 델리게이트만 교체
+      if let previousDelegate = existingOutput.sampleBufferDelegate,
+         !(previousDelegate is CameraPreviewUIView)
+      {
+        let previousQueue = existingOutput.trackedSampleBufferDelegateQueue
+        logInfo("기존 비디오 출력 델리게이트 백업: \(type(of: previousDelegate))", category: .camera)
+        setCurrentCaptureOutput(previousDelegate, queue: previousQueue)
+      }
+
+      session.beginConfiguration()
+      existingOutput.setTrackedSampleBufferDelegate(self, queue: videoOutputQueue)
+
+      // 비디오 설정 (가벼운 처리용)
+      existingOutput.videoSettings = [
+        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+      ]
+
+      // 프레임 드롭 허용 (성능 최적화)
+      existingOutput.alwaysDiscardsLateVideoFrames = true
+
+      session.commitConfiguration()
+
+      // 이 출력은 외부 소유이므로 제거하지 않음
+      setCaptureOutputReuseMode(false)
+      videoOutput = existingOutput
+      logInfo("기존 비디오 출력 델리게이트를 화면 캡처 모드로 전환", category: .camera)
+      return
     }
 
-    // 새로운 비디오 출력 생성 (통계 목적)
+    // 세션에 비디오 출력이 없다면 새 출력 추가
     let newVideoOutput = AVCaptureVideoDataOutput()
-    newVideoOutput.setSampleBufferDelegate(self, queue: videoOutputQueue)
+    newVideoOutput.setTrackedSampleBufferDelegate(self, queue: videoOutputQueue)
 
     // 비디오 설정 (가벼운 처리용)
     newVideoOutput.videoSettings = [
@@ -272,21 +323,109 @@ final class CameraPreviewUIView: UIView {
     // 프레임 드롭 허용 (성능 최적화)
     newVideoOutput.alwaysDiscardsLateVideoFrames = true
 
+    session.beginConfiguration()
+
     // 세션에 추가
     if session.canAddOutput(newVideoOutput) {
       session.addOutput(newVideoOutput)
       videoOutput = newVideoOutput
+      setCaptureOutputReuseMode(true)
+      clearCaptureOutputOriginalDelegate()
+      logInfo("화면 캡처 전용 비디오 출력 추가", category: .camera)
     } else {
-      logError("비디오 프레임 모니터링 설정 실패", category: .camera)
+      logError("비디오 프레임 수신 설정 실패", category: .camera)
+      clearCaptureOutputReuseMode()
+    }
+
+    session.commitConfiguration()
+  }
+
+  /// 비디오 프레임 수신 해제
+  func removeVideoFrameCapture() {
+    guard let session = captureSession, let output = videoOutput else { return }
+
+    if usesCapturedVideoOutputOwnerShip {
+      session.beginConfiguration()
+      session.removeOutput(output)
+      session.commitConfiguration()
+      logInfo("화면 캡처 전용 비디오 출력 제거 완료", category: .camera)
+    } else if let originalDelegate = currentCaptureOutputDelegate {
+      let originalQueue = currentCaptureOutputDelegateQueue ?? videoOutputQueue
+      output.setTrackedSampleBufferDelegate(originalDelegate, queue: originalQueue)
+      logInfo("기존 비디오 출력 델리게이트 복원: \(type(of: originalDelegate))", category: .camera)
+      if currentCaptureOutputDelegateQueue == nil {
+        logWarning("기존 델리게이트 큐 정보가 없어 화면 캡처 큐로 복원했습니다.", category: .camera)
+      }
+    } else {
+      output.setTrackedSampleBufferDelegate(nil, queue: nil)
+      logWarning("기존 비디오 출력 델리게이트 복원 대상 없음", category: .camera)
+    }
+
+    videoOutput = nil
+    usesCapturedVideoOutputOwnerShip = false
+    clearCaptureOutputOriginalDelegate()
+  }
+
+  // MARK: - Internal Camera Output State
+
+  /// 기존 output 델리게이트 백업
+  private var currentCaptureOutputDelegate: AVCaptureVideoDataOutputSampleBufferDelegate? {
+    get {
+      objc_getAssociatedObject(self, &AssociatedKeys.captureOutputDelegate) as?
+        AVCaptureVideoDataOutputSampleBufferDelegate
+    }
+    set {
+      objc_setAssociatedObject(
+        self, &AssociatedKeys.captureOutputDelegate, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
   }
 
-  /// 비디오 프레임 모니터링 해제
-  private func removeVideoMonitoring() {
-    guard let session = captureSession, let output = videoOutput else { return }
+  /// 기존 output 델리게이트 큐 백업
+  private var currentCaptureOutputDelegateQueue: DispatchQueue? {
+    get {
+      objc_getAssociatedObject(self, &AssociatedKeys.captureOutputDelegateQueue) as? DispatchQueue
+    }
+    set {
+      objc_setAssociatedObject(
+        self, &AssociatedKeys.captureOutputDelegateQueue, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+  }
 
-    session.removeOutput(output)
-    videoOutput = nil
+  /// 화면 캡처용 출력 소유 여부
+  private var usesCapturedVideoOutputOwnerShip: Bool {
+    get {
+      (objc_getAssociatedObject(self, &AssociatedKeys.captureOutputIsOwned) as? NSNumber)?.boolValue
+        ?? false
+    }
+    set {
+      objc_setAssociatedObject(
+        self, &AssociatedKeys.captureOutputIsOwned, NSNumber(value: newValue),
+        .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+  }
+
+  private func setCaptureOutputReuseMode(_ ownsOutput: Bool) {
+    usesCapturedVideoOutputOwnerShip = ownsOutput
+    logInfo("비디오 출력 소유 모드 변경: ownsOutput=\(ownsOutput)", category: .camera)
+  }
+
+  private func clearCaptureOutputReuseMode() {
+    usesCapturedVideoOutputOwnerShip = false
+  }
+
+  private func setCurrentCaptureOutput(
+    _ delegate: AVCaptureVideoDataOutputSampleBufferDelegate,
+    queue: DispatchQueue?
+  ) {
+    if currentCaptureOutputDelegate == nil {
+      currentCaptureOutputDelegate = delegate
+      currentCaptureOutputDelegateQueue = queue
+    }
+  }
+
+  private func clearCaptureOutputOriginalDelegate() {
+    currentCaptureOutputDelegate = nil
+    currentCaptureOutputDelegateQueue = nil
   }
 
   /// 스트리밍 상태 업데이트 (개선된 버전)
@@ -308,24 +447,24 @@ final class CameraPreviewUIView: UIView {
       if isStreaming {
         logInfo("스트리밍 시작됨 - 스트리밍 표시 추가 및 프리뷰 보호", category: .streaming)
 
-        // 스트리밍 표시 추가 및 비디오 모니터링 설정
+        // 스트리밍 표시 추가 및 비디오 프레임 수신 설정
         DispatchQueue.main.async { [weak self] in
           self?.addStreamingIndicatorOnly()
           // 프리뷰 레이어가 활성 상태인지 확인하고 필요시 복구
           self?.ensurePreviewLayerActive()
-          // 비디오 프레임 모니터링 설정 (통계 목적)
+          // 비디오 프레임 수신 설정 (화면 캡처 스트리밍 + 통계)
           if let session = self?.captureSession {
-            self?.setupVideoMonitoring(with: session)
+            self?.setupVideoFrameCapture(with: session)
           }
         }
       } else {
         logInfo("스트리밍 종료됨 - 스트리밍 표시 제거", category: .streaming)
 
-        // 스트리밍 표시 제거 및 비디오 모니터링 해제
+        // 스트리밍 표시 제거 및 비디오 프레임 수신 해제
         DispatchQueue.main.async { [weak self] in
           self?.removeStreamingIndicator()
-          // 비디오 프레임 모니터링 해제
-          self?.removeVideoMonitoring()
+          // 비디오 프레임 수신 해제
+          self?.removeVideoFrameCapture()
           // 프리뷰 레이어 복구
           self?.ensurePreviewLayerActive()
         }
@@ -366,6 +505,7 @@ final class CameraPreviewUIView: UIView {
   /// 정리 작업
   deinit {
     statusMonitorTimer?.invalidate()
+    NotificationCenter.default.removeObserver(self)
     // textOverlayLabel 제거됨 - SwiftUI에서 관리
   }
 
@@ -643,11 +783,37 @@ final class CameraPreviewUIView: UIView {
   }
 }
 
+// MARK: - AVCaptureVideoDataOutput Delegate Queue Tracking
+
+private struct VideoOutputAssociatedKeys {
+  static var delegateQueue = "trackedSampleBufferDelegateQueue"
+}
+
+extension AVCaptureVideoDataOutput {
+  var trackedSampleBufferDelegateQueue: DispatchQueue? {
+    objc_getAssociatedObject(self, &VideoOutputAssociatedKeys.delegateQueue) as? DispatchQueue
+  }
+
+  func setTrackedSampleBufferDelegate(
+    _ delegate: AVCaptureVideoDataOutputSampleBufferDelegate?,
+    queue: DispatchQueue?
+  ) {
+    setSampleBufferDelegate(delegate, queue: queue)
+    objc_setAssociatedObject(
+      self,
+      &VideoOutputAssociatedKeys.delegateQueue,
+      queue,
+      .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+    )
+  }
+}
+
 // MARK: - CameraControlOverlayDelegate
 
 extension CameraPreviewUIView: CameraControlOverlayDelegate {
+  /// 녹화 버튼 탭 처리
+  /// - Note: 녹화 기능은 현재 앱 범위에서 제외됨 (스트리밍 전용 앱)
   func didTapRecord() {
-    // 녹화 기능은 제외
     logInfo("Recording functionality not implemented", category: .general)
   }
 }
