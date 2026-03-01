@@ -15,11 +15,23 @@ import LiveStreamingCore
 struct SidebarView: View {
     /// MainViewModel 참조 (ObservedObject로 상태 변화 감지)
     @ObservedObject var viewModel: MainViewModel
+    let onPrimarySelection: () -> Void
+
+    init(
+        viewModel: MainViewModel,
+        onPrimarySelection: @escaping () -> Void = {}
+    ) {
+        self.viewModel = viewModel
+        self.onPrimarySelection = onPrimarySelection
+    }
     
     var body: some View {
         List {
             // 카메라 섹션: 카메라 관련 메뉴와 디바이스 목록
-            CameraSectionView(viewModel: viewModel)
+            CameraSectionView(
+                viewModel: viewModel,
+                onPrimarySelection: onPrimarySelection
+            )
             
             // 라이브 스트리밍 섹션: 라이브 스트리밍 관련 메뉴
             LiveStreamSectionView(

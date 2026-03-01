@@ -55,6 +55,22 @@ final class LiveStreamViewModel: ObservableObject {
   @Published var networkQuality: NetworkQuality = .unknown
   /// 로딩 상태 (스트리밍 시작/중지 중)
   @Published var isLoading: Bool = false
+  /// 실시간 마이크 피크 레벨(0.0~1.0)
+  @Published var microphonePeakLevel: Float = 0.0
+  /// 실시간 마이크 피크 dBFS 값(-80~0)
+  @Published var microphonePeakDecibels: Float = -80.0
+  /// 마이크 음소거 상태
+  @Published var isMicrophoneMuted: Bool = false
+  /// 사용 가능한 마이크 입력 목록 (자동 포함)
+  @Published var availableMicrophoneInputs: [MicrophoneInputOption] = []
+  /// 선택된 마이크 입력 ID
+  @Published var selectedMicrophoneInputID: String = MicrophoneInputOption.automaticID
+  /// 현재 활성화된 오디오 입력 이름
+  @Published var activeMicrophoneInputName: String = ""
+  /// 오디오 피크 샘플 수신 카운트 (진단용)
+  @Published var audioPeakSampleCount: Int = 0
+  /// 오디오 피크 진단 메시지
+  @Published var audioPeakDiagnosticMessage: String = ""
   /// 적응형 품질 조정 활성화 여부 (사용자 설정 보장을 위해 기본값: false)
   @Published var adaptiveQualityEnabled: Bool = false {
     didSet {
@@ -80,6 +96,20 @@ final class LiveStreamViewModel: ObservableObject {
   public var streamingService: HaishinKitManagerProtocol? {
     return liveStreamService
   }
+  /// 스트림 오디오 피크 분석용 출력 옵저버
+  var audioPeakObserver: StreamAudioPeakOutputObserver?
+  /// 피크 미터의 자연 감쇠 타이머
+  var audioPeakDecayTimer: Timer?
+  /// 오디오 피크 마지막 샘플 수신 시각
+  var audioPeakLastSampleAt: Date?
+  /// 오디오 피크 헬스체크 태스크
+  var audioPeakHealthCheckTask: Task<Void, Never>?
+  /// 대기 상태 오디오 피크 모니터(로컬 마이크 입력)
+  var idleMicrophonePeakMonitor: IdleMicrophonePeakMonitor?
+  /// 스트리밍 전환 중 대기 모니터 일시중지 플래그
+  var isIdleMicrophonePeakMonitoringSuspended: Bool = false
+  /// 오디오 라우트 변경 감지 옵저버
+  var audioRouteChangeObserver: NSObjectProtocol?
   /// Combine 구독 저장소
   var cancellables = Set<AnyCancellable>()
   // MARK: - Initialization
@@ -91,9 +121,26 @@ final class LiveStreamViewModel: ObservableObject {
     self.settings = Self.createDefaultSettings()
     self.liveStreamService = liveStreamService ?? HaishinKitManager()
     setupBindings()
+    startMicrophonePeakDecayTimerIfNeeded()
+    setupMicrophoneInputMonitoring()
     updateStreamingAvailability()
+    startIdleMicrophonePeakMonitoringIfNeeded()
     loadInitialSettings()
     logInitializationInfo()
+  }
+
+  deinit {
+    audioPeakDecayTimer?.invalidate()
+    audioPeakDecayTimer = nil
+    audioPeakHealthCheckTask?.cancel()
+    audioPeakHealthCheckTask = nil
+    idleMicrophonePeakMonitor?.stop()
+    idleMicrophonePeakMonitor = nil
+
+    if let audioRouteChangeObserver {
+      NotificationCenter.default.removeObserver(audioRouteChangeObserver)
+      self.audioRouteChangeObserver = nil
+    }
   }
   // MARK: - Public Methods - Streaming Control
   // 기존 일반 스트리밍 시작/중지 메서드들 제거 - 화면 캡처 스트리밍만 사용
@@ -130,6 +177,7 @@ final class LiveStreamViewModel: ObservableObject {
   /// - 네트워크 오류 시 사용자에게 알림 표시
   func startScreenCaptureStreaming() async {
     logInfo("🎬 Starting screen capture streaming mode...", category: .streaming)
+    suspendIdleMicrophonePeakMonitoringForStreaming()
     // UI 로딩 상태 시작
     isLoading = true
     await updateStatus(
@@ -209,6 +257,9 @@ final class LiveStreamViewModel: ObservableObject {
   }
   /// 화면 캡처 스트리밍이 활성 상태인지 확인
   var isScreenCaptureStreaming: Bool {
+    if status == .streaming {
+      return true
+    }
     guard let haishinKitManager = liveStreamService as? HaishinKitManager else { return false }
     return haishinKitManager.isScreenCaptureMode && haishinKitManager.isStreaming
   }

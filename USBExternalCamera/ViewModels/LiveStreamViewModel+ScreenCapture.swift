@@ -41,6 +41,8 @@ extension LiveStreamViewModel {
   /// NotificationCenter를 통해 CameraPreviewView와 통신하여
   /// 30fps 화면 캡처 타이머를 시작시킵니다.
   func handleScreenCaptureStreamingStartSuccess() async {
+    isIdleMicrophonePeakMonitoringSuspended = true
+    stopIdleMicrophonePeakMonitoring()
     logInfo("✅ [화면캡처] 스트리밍 시작 성공", category: .streaming)
     logInfo(
       "요청 설정값: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.frameRate)fps, "
@@ -78,6 +80,11 @@ extension LiveStreamViewModel {
       ]
       NotificationCenter.default.post(name: .startScreenCapture, object: nil, userInfo: userInfo)
     }
+
+    await attachAudioPeakObserverIfNeeded()
+    await applyMicrophoneMuteStateToStreamingPipeline()
+    _ = await applySelectedMicrophoneInputToAudioSession(reconnectIfStreaming: true)
+
     logInfo("📡 [화면캡처] 화면 캡처 시작 신호 전송 완료", category: .streaming)
   }
 
@@ -125,6 +132,7 @@ extension LiveStreamViewModel {
     }
     // 에러 상태로 변경 및 메시지 표시
     await updateStatus(.error(.streamingFailed(userMessage)), message: userMessage)
+    resumeIdleMicrophonePeakMonitoringAfterStreaming()
   }
 
   /// 화면 캡처 스트리밍 중지 실행 (내부 메서드)
@@ -158,6 +166,9 @@ extension LiveStreamViewModel {
     logInfo("✅ [화면캡처] 스트리밍 중지 성공", category: .streaming)
     // 상태를 'idle'로 초기화
     await updateStatus(.idle, message: "화면 캡처 스트리밍 준비 완료")
+    await detachAudioPeakObserver()
+    resetMicrophonePeakDisplay()
+    resumeIdleMicrophonePeakMonitoringAfterStreaming()
     logInfo("🏁 [화면캡처] 모든 리소스 정리 완료", category: .streaming)
   }
 
@@ -177,6 +188,9 @@ extension LiveStreamViewModel {
     }
     // 강제로 상태 초기화 (사용자가 다시 시도할 수 있도록)
     await updateStatus(.idle, message: "스트리밍 중지됨 (오류 복구)")
+    await detachAudioPeakObserver()
+    resetMicrophonePeakDisplay()
+    resumeIdleMicrophonePeakMonitoringAfterStreaming()
     logWarning("⚠️ [화면캡처] 강제 상태 초기화 완료", category: .streaming)
   }
 
@@ -184,6 +198,7 @@ extension LiveStreamViewModel {
   private func prepareAudioCapturePrerequisites() async throws {
     try await ensureMicrophonePermission()
     configureAudioSessionForStreamingIfPossible()
+    _ = await applySelectedMicrophoneInputToAudioSession(reconnectIfStreaming: false)
   }
 
   /// 마이크 권한을 확인하고 필요 시 요청

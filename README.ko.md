@@ -165,7 +165,7 @@ open USBExternalCamera.xcodeproj
 ### 3. 스트리밍 시작
 1. 카메라 목록에서 USB 카메라 선택
 2. **화면 캡처 스트리밍 시작** 버튼 터치
-3. 스트리밍 뷰에서 실시간 통계 모니터링
+3. 사이드바 상태와 YouTube Studio 패널에서 송출 상태 확인
 
 ### YouTube Live 설정
 1. [YouTube Studio](https://studio.youtube.com)로 이동
@@ -206,7 +206,6 @@ USBExternalCamera-iOS/
 │   │   ├── Camera/             # 카메라 선택 및 프리뷰
 │   │   └── Settings/           # 설정 뷰
 │   ├── ViewModels/             # MVVM 뷰모델
-│   ├── Services/               # 비즈니스 로직
 │   ├── Models/                 # 데이터 모델
 │   ├── Managers/               # 시스템 매니저
 │   └── Utils/                  # 유틸리티 및 확장

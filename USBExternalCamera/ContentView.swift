@@ -16,6 +16,9 @@ struct ContentView: View {
 
     @StateObject private var mainViewModel: MainViewModel
     @State private var modelContainerError: Bool = false
+    @State private var splitViewVisibility: NavigationSplitViewVisibility = .automatic
+    @State private var preferredCompactColumn: NavigationSplitViewColumn = .detail
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     // MARK: - Initialization
 
@@ -68,10 +71,19 @@ struct ContentView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationSplitView {
-            SidebarView(viewModel: mainViewModel)
+        NavigationSplitView(
+            columnVisibility: $splitViewVisibility,
+            preferredCompactColumn: $preferredCompactColumn
+        ) {
+            SidebarView(
+                viewModel: mainViewModel,
+                onPrimarySelection: showDetailColumnOnCompact
+            )
         } detail: {
-            DetailView(viewModel: mainViewModel)
+            DetailView(
+                viewModel: mainViewModel,
+                onShowSidebar: showSidebarOnCompact
+            )
         }
         .sheet(isPresented: $mainViewModel.showingPermissionAlert) {
             PermissionSettingsView(viewModel: mainViewModel.permissionViewModel)
@@ -91,6 +103,22 @@ struct ContentView: View {
             }
         } message: {
             Text("설정을 디스크에 저장할 수 없습니다. 앱이 종료되면 설정이 사라집니다.")
+        }
+    }
+
+    private func showDetailColumnOnCompact() {
+        guard horizontalSizeClass == .compact else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            splitViewVisibility = .detailOnly
+            preferredCompactColumn = .detail
+        }
+    }
+
+    private func showSidebarOnCompact() {
+        guard horizontalSizeClass == .compact else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            splitViewVisibility = .all
+            preferredCompactColumn = .sidebar
         }
     }
 }

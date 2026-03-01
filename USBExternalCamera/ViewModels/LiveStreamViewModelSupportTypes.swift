@@ -77,3 +77,27 @@ enum NetworkStatus: String, CaseIterable {
     }
   }
 }
+
+/// 사용 가능한 마이크 입력 옵션
+struct MicrophoneInputOption: Identifiable, Hashable {
+  static let automaticID = "automatic"
+
+  let id: String
+  let name: String
+  let portType: AVAudioSession.Port?
+  let uid: String?
+
+  var isAutomatic: Bool {
+    id == Self.automaticID
+  }
+
+  var isExternal: Bool {
+    guard let portType else { return false }
+    switch portType {
+    case .builtInMic:
+      return false
+    default:
+      return true
+    }
+  }
+}

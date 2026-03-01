@@ -167,7 +167,7 @@ See [LiveStreamingCore Repository](https://github.com/joopark4/LiveStreamingCore
 ### 3. Start Streaming
 1. Select your USB camera from the camera list
 2. Tap **Start Screen Capture Streaming**
-3. Monitor real-time statistics in the streaming view
+3. Check stream status from the sidebar state and the YouTube Studio panel
 
 ### YouTube Live Setup
 1. Go to [YouTube Studio](https://studio.youtube.com)
@@ -208,7 +208,6 @@ USBExternalCamera-iOS/
 │   │   ├── Camera/             # Camera selection and preview
 │   │   └── Settings/           # Configuration views
 │   ├── ViewModels/             # MVVM ViewModels
-│   ├── Services/               # Business logic
 │   ├── Models/                 # Data models
 │   ├── Managers/               # System managers
 │   └── Utils/                  # Utilities and extensions

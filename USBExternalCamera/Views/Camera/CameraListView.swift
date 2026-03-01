@@ -14,19 +14,32 @@ import LiveStreamingCore
 /// 카메라 메뉴와 디바이스 목록을 표시하는 재사용 가능한 컴포넌트입니다.
 struct CameraSectionView: View {
     @ObservedObject var viewModel: MainViewModel
+    let onPrimarySelection: () -> Void
+
+    init(
+        viewModel: MainViewModel,
+        onPrimarySelection: @escaping () -> Void = {}
+    ) {
+        self.viewModel = viewModel
+        self.onPrimarySelection = onPrimarySelection
+    }
     
     var body: some View {
         Section(header: Text(NSLocalizedString("camera_section", comment: "카메라 섹션"))) {
             // 카메라 메인 메뉴 아이템
             Button {
                 viewModel.selectSidebarItem(.cameras)
+                onPrimarySelection()
             } label: {
                 Label(NSLocalizedString("camera", comment: "카메라"), systemImage: "camera")
             }
             
             // 카메라가 선택된 경우 디바이스 목록 표시
             if viewModel.selectedSidebarItem == .cameras {
-                CameraListView(viewModel: viewModel)
+                CameraListView(
+                    viewModel: viewModel,
+                    onCameraSelected: onPrimarySelection
+                )
             }
         }
     }
@@ -36,6 +49,15 @@ struct CameraSectionView: View {
 /// 내장 카메라와 외장 카메라 목록을 표시하고 선택 기능을 제공합니다.
 struct CameraListView: View {
     @ObservedObject var viewModel: MainViewModel
+    let onCameraSelected: () -> Void
+
+    init(
+        viewModel: MainViewModel,
+        onCameraSelected: @escaping () -> Void = {}
+    ) {
+        self.viewModel = viewModel
+        self.onCameraSelected = onCameraSelected
+    }
     
     var body: some View {
         // 디버깅을 위한 카메라 목록 상태 로깅
@@ -99,6 +121,7 @@ struct CameraListView: View {
                         } else {
                             logDebug("Skipping selection - built-in camera already selected", category: .camera)
                         }
+                        onCameraSelected()
                     }
                 )
             }
@@ -136,6 +159,7 @@ struct CameraListView: View {
                         } else {
                             logDebug("Skipping selection - external camera already selected", category: .camera)
                         }
+                        onCameraSelected()
                     }
                 )
             }
