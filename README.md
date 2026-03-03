@@ -33,13 +33,6 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - ⌨️ **Smart Keyboard Handling** - Optimized keyboard input for WebView interactions
 - 🌍 **Multi-language** - Korean and English support
 
-### 📝 Recent Progress (2026-03-03)
-
-- Updated focus-mode control bar layout and removed elapsed-time chip.
-- Moved microphone mute button to the center position of the status row.
-- Microphone mute toggle is temporarily disabled in UI while stabilization is in progress.
-- Rebuilt and reinstalled app on connected iPad for latest UI verification.
-
 ## 🚀 Features
 
 ### Core Streaming Features

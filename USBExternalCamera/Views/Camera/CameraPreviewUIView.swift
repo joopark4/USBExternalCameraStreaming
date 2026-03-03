@@ -55,6 +55,9 @@ final class CameraPreviewUIView: UIView {
   /// 스트리밍 상태 모니터링 타이머
   private var statusMonitorTimer: Timer?
 
+  /// 비디오 출력 연결 설정 캐시 키 (카메라/방향 변화 시에만 재설정)
+  private var videoOutputConnectionConfigKey: String?
+
   /// 카메라 컨트롤 오버레이
   private lazy var controlOverlay: CameraControlOverlay = {
     let overlay = CameraControlOverlay()
@@ -302,16 +305,16 @@ final class CameraPreviewUIView: UIView {
       // 프레임 드롭 허용 (성능 최적화)
       existingOutput.alwaysDiscardsLateVideoFrames = true
 
+      videoOutput = existingOutput
+
       // 프리뷰와 동일한 회전/미러링을 적용해 송출 프레임 방향 불일치 방지
-      if let connection = existingOutput.connection(with: .video) {
-        configureVideoOutputConnection(connection)
-      }
+      invalidateVideoOutputConnectionConfigCache()
+      refreshVideoOutputConnectionIfNeeded(force: true)
 
       session.commitConfiguration()
 
       // 이 출력은 외부 소유이므로 제거하지 않음
       setCaptureOutputReuseMode(false)
-      videoOutput = existingOutput
       logInfo("기존 비디오 출력 델리게이트를 화면 캡처 모드로 전환", category: .camera)
       return
     }
@@ -333,10 +336,9 @@ final class CameraPreviewUIView: UIView {
     // 세션에 추가
     if session.canAddOutput(newVideoOutput) {
       session.addOutput(newVideoOutput)
-      if let connection = newVideoOutput.connection(with: .video) {
-        configureVideoOutputConnection(connection)
-      }
       videoOutput = newVideoOutput
+      invalidateVideoOutputConnectionConfigCache()
+      refreshVideoOutputConnectionIfNeeded(force: true)
       setCaptureOutputReuseMode(true)
       clearCaptureOutputOriginalDelegate()
       logInfo("화면 캡처 전용 비디오 출력 추가", category: .camera)
@@ -388,6 +390,54 @@ final class CameraPreviewUIView: UIView {
     }
   }
 
+  private func refreshVideoOutputConnectionIfNeeded(force: Bool = false) {
+    guard let connection = videoOutput?.connection(with: .video) else {
+      return
+    }
+
+    let configKey = makeVideoOutputConnectionConfigKey()
+    guard force || videoOutputConnectionConfigKey != configKey else {
+      return
+    }
+
+    configureVideoOutputConnection(connection)
+    videoOutputConnectionConfigKey = configKey
+  }
+
+  private func invalidateVideoOutputConnectionConfigCache() {
+    videoOutputConnectionConfigKey = nil
+  }
+
+  private func makeVideoOutputConnectionConfigKey() -> String {
+    var keyComponents: [String] = []
+
+    if let previewConnection = previewLayer?.connection {
+      if #available(iOS 17.0, *) {
+        keyComponents.append("angle:\(previewConnection.videoRotationAngle)")
+      } else {
+        keyComponents.append("orientation:\(previewConnection.videoOrientation.rawValue)")
+      }
+
+      if previewConnection.isVideoMirroringSupported {
+        keyComponents.append("mirrored:\(previewConnection.isVideoMirrored)")
+      } else {
+        keyComponents.append("mirrored:unsupported")
+      }
+    } else {
+      keyComponents.append("preview:none")
+    }
+
+    if let currentDevice = getCurrentCameraDevice() {
+      keyComponents.append("device:\(currentDevice.uniqueID)")
+      keyComponents.append("position:\(currentDevice.position.rawValue)")
+      keyComponents.append("external:\(currentDevice.deviceType == .external)")
+    } else {
+      keyComponents.append("device:none")
+    }
+
+    return keyComponents.joined(separator: "|")
+  }
+
   /// 비디오 프레임 수신 해제
   func removeVideoFrameCapture() {
     guard let session = captureSession, let output = videoOutput else { return }
@@ -412,6 +462,7 @@ final class CameraPreviewUIView: UIView {
     videoOutput = nil
     usesCapturedVideoOutputOwnerShip = false
     clearCaptureOutputOriginalDelegate()
+    invalidateVideoOutputConnectionConfigCache()
   }
 
   // MARK: - Internal Camera Output State
@@ -521,6 +572,7 @@ final class CameraPreviewUIView: UIView {
 
     // 연결 상태에 따른 상세 UI 업데이트
     DispatchQueue.main.async { [weak self] in
+      self?.refreshVideoOutputConnectionIfNeeded()
       self?.updateDetailedStreamingStatus(
         isStreaming: newStreamingState,
         connectionStatus: connectionStatus,
@@ -661,6 +713,8 @@ final class CameraPreviewUIView: UIView {
 
     layer.insertSublayer(newPreviewLayer, at: 0)
     previewLayer = newPreviewLayer
+    invalidateVideoOutputConnectionConfigCache()
+    refreshVideoOutputConnectionIfNeeded()
 
     logInfo("AVFoundation 프리뷰 레이어 설정 완료", category: .camera)
     logDebug("16:9 비율 프레임: \(previewFrame)", category: .camera)
@@ -702,6 +756,7 @@ final class CameraPreviewUIView: UIView {
         layer.layoutIfNeeded()
       }
 
+      self.refreshVideoOutputConnectionIfNeeded()
       logDebug("레이아웃 업데이트 - 16:9 프레임: \(previewFrame)", category: .camera)
     }
   }
@@ -874,12 +929,6 @@ extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
     _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
     from connection: AVCaptureConnection
   ) {
-    // 카메라 전환 이후에도 송출 프레임이 프리뷰와 동일한 방향을 유지하도록
-    // 수신 연결의 회전/미러링을 지속적으로 정렬한다.
-    if isScreenCapturing {
-      configureVideoOutputConnection(connection)
-    }
-
     // 🎬 화면 캡처 모드: 실시간 카메라 프레임 저장 (CameraScreenCapture.swift)
     processVideoFrameForScreenCapture(sampleBuffer)
 

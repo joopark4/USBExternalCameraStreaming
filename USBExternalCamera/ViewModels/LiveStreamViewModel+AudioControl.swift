@@ -269,7 +269,14 @@ extension LiveStreamViewModel {
     guard let haishinKitManager = liveStreamService as? HaishinKitManager else {
       return false
     }
-    return await haishinKitManager.codexSetMicrophoneMutedByAudioAttachment(muted)
+    let preferredInputUID =
+      selectedMicrophoneInputID == MicrophoneInputOption.automaticID
+      ? nil
+      : selectedMicrophoneInputID
+    return await haishinKitManager.codexSetMicrophoneMutedByAudioAttachment(
+      muted,
+      preferredInputUID: preferredInputUID
+    )
   }
 
   private func enforceStreamAudioBitrate() async -> Bool {
@@ -395,7 +402,10 @@ private extension HaishinKitManager {
   }
 
   @MainActor
-  func codexSetMicrophoneMutedByAudioAttachment(_ muted: Bool) async -> Bool {
+  func codexSetMicrophoneMutedByAudioAttachment(
+    _ muted: Bool,
+    preferredInputUID: String?
+  ) async -> Bool {
     guard let mixer = codexResolveMediaMixer() else {
       return false
     }
@@ -416,8 +426,16 @@ private extension HaishinKitManager {
       return applied
     }
 
-    // 음소거 해제 시에는 먼저 오디오 디바이스를 확보한 뒤 재연결한다.
-    guard let audioDevice = AVCaptureDevice.default(for: .audio) else {
+    // 음소거 해제 시에는 사용자가 선택한 입력 장치를 우선 재연결한다.
+    // 선택 장치를 찾지 못한 경우에만 시스템 기본 마이크로 fallback 한다.
+    let preferredAudioDevice = codexResolveAudioCaptureDevice(preferredInputUID: preferredInputUID)
+    if preferredInputUID != nil && preferredAudioDevice == nil {
+      logWarning(
+        "선택된 마이크(uid=\(preferredInputUID ?? "nil"))를 캡처 디바이스로 찾지 못해 기본 마이크로 fallback 합니다.",
+        category: .streaming)
+    }
+
+    guard let audioDevice = preferredAudioDevice ?? AVCaptureDevice.default(for: .audio) else {
       logWarning("오디오 attach 기반 음소거 해제 실패: 기본 오디오 디바이스를 찾을 수 없음", category: .streaming)
       return false
     }
@@ -434,7 +452,51 @@ private extension HaishinKitManager {
     return applied
   }
 
+  private func codexResolveAudioCaptureDevice(preferredInputUID: String?) -> AVCaptureDevice? {
+    guard let preferredInputUID, !preferredInputUID.isEmpty else {
+      return nil
+    }
+
+    let availableDevices = codexDiscoverAudioCaptureDevices()
+    if let exactMatch = availableDevices.first(where: { $0.uniqueID == preferredInputUID }) {
+      return exactMatch
+    }
+
+    let audioSession = AVAudioSession.sharedInstance()
+    let selectedPort =
+      (audioSession.availableInputs ?? []).first(where: { $0.uid == preferredInputUID })
+      ?? audioSession.currentRoute.inputs.first(where: { $0.uid == preferredInputUID })
+
+    guard let selectedPort else {
+      return nil
+    }
+
+    return availableDevices.first(where: {
+      $0.localizedName == selectedPort.portName
+    })
+  }
+
+  private func codexDiscoverAudioCaptureDevices() -> [AVCaptureDevice] {
+    let deviceTypes: [AVCaptureDevice.DeviceType]
+    if #available(iOS 17.0, *) {
+      deviceTypes = [.microphone]
+    } else {
+      deviceTypes = [.builtInMicrophone]
+    }
+
+    let discoverySession = AVCaptureDevice.DiscoverySession(
+      deviceTypes: deviceTypes,
+      mediaType: .audio,
+      position: .unspecified
+    )
+    return discoverySession.devices
+  }
+
   @MainActor
+  // WARNING:
+  // LiveStreamingCore(HaishinKitManager)는 현재 `mixer` 접근용 공개 API를 제공하지 않습니다.
+  // 이 reflection 기반 우회는 내부 구현에 의존하므로, LiveStreamingCore/HaishinKit 업데이트 시
+  // 반드시 재검증해야 합니다.
   private func codexResolveMediaMixer() -> MediaMixer? {
     let mirror = Mirror(reflecting: self)
 
