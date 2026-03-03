@@ -217,11 +217,45 @@ extension LiveStreamViewModel {
   func applyMicrophoneMuteStateToStreamingPipeline() async {
     let muted = isMicrophoneMuted
 
-    if await applyMicrophoneMuteViaMixer(muted) {
-      return
+    let attachmentApplied = await applyMicrophoneMuteViaAudioTrackAttachment(muted)
+    let mixerApplied = await applyMicrophoneMuteViaMixer(muted)
+    let bitrateApplied = await enforceStreamAudioBitrate()
+
+    // 믹서 반영이 실패한 경우에만 오디오 세션 카테고리 fallback 적용
+    // (playback/playAndRecord 강제 전환은 라우트 불안정의 부작용이 있어 최후 수단으로만 사용)
+    if !(attachmentApplied || mixerApplied) {
+      _ = applyMicrophoneMuteViaAudioSessionCategory(muted)
     }
 
-    _ = await applyMicrophoneMuteViaAudioBitrate(muted)
+    logDebug(
+      "🎚️ [AUDIO MUTE] requested=\(muted), attachment=\(attachmentApplied), mixer=\(mixerApplied), bitrate=\(bitrateApplied)",
+      category: .streaming)
+  }
+
+  private func applyMicrophoneMuteViaAudioSessionCategory(_ muted: Bool) -> Bool {
+    let session = AVAudioSession.sharedInstance()
+
+    do {
+      if muted {
+        try session.setCategory(
+          .playback,
+          mode: .default,
+          options: [.defaultToSpeaker, .allowBluetoothA2DP]
+        )
+      } else {
+        try session.setCategory(
+          .playAndRecord,
+          mode: status == .streaming ? .videoRecording : .measurement,
+          options: [.defaultToSpeaker, .allowBluetoothHFP]
+        )
+      }
+
+      try session.setActive(true)
+      return true
+    } catch {
+      logWarning("오디오 세션 기반 음소거 반영 실패: \(error.localizedDescription)", category: .streaming)
+      return false
+    }
   }
 
   private func applyMicrophoneMuteViaMixer(_ muted: Bool) async -> Bool {
@@ -231,13 +265,20 @@ extension LiveStreamViewModel {
     return await haishinKitManager.codexSetMicrophoneMutedWithMixer(muted)
   }
 
-  private func applyMicrophoneMuteViaAudioBitrate(_ muted: Bool) async -> Bool {
+  private func applyMicrophoneMuteViaAudioTrackAttachment(_ muted: Bool) async -> Bool {
+    guard let haishinKitManager = liveStreamService as? HaishinKitManager else {
+      return false
+    }
+    return await haishinKitManager.codexSetMicrophoneMutedByAudioAttachment(muted)
+  }
+
+  private func enforceStreamAudioBitrate() async -> Bool {
     guard let stream = liveStreamService.getRTMPStream() else {
       return false
     }
 
     var audioSettings = await stream.audioSettings
-    let targetBitrate = muted ? 8_000 : max(64_000, settings.audioBitrate * 1_000)
+    let targetBitrate = max(64_000, settings.audioBitrate * 1_000)
 
     if audioSettings.bitRate != targetBitrate {
       audioSettings.bitRate = targetBitrate
@@ -318,16 +359,119 @@ extension LiveStreamViewModel {
 private extension HaishinKitManager {
   @MainActor
   func codexSetMicrophoneMutedWithMixer(_ muted: Bool) async -> Bool {
-    guard let mixer = Mirror(reflecting: self).descendant("mixer") as? MediaMixer else {
+    guard let mixer = codexResolveMediaMixer() else {
+      logWarning("마이크 음소거 실패: MediaMixer 접근 불가", category: .streaming)
       return false
     }
 
     var settings = await mixer.audioMixerSettings
+    let targetTracks = Set<UInt8>([0, settings.mainTrack])
+    for track in targetTracks {
+      var trackSettings = settings.tracks[track] ?? .default
+      trackSettings.isMuted = muted
+      trackSettings.volume = muted ? 0 : 1
+      settings.tracks[track] = trackSettings
+    }
+
     if settings.isMuted != muted {
       settings.isMuted = muted
-      await mixer.setAudioMixerSettings(settings)
     }
-    return true
+    await mixer.setAudioMixerSettings(settings)
+
+    let applied = await mixer.audioMixerSettings
+    let appliedOnAllTracks = targetTracks.allSatisfy { track in
+      (applied.tracks[track] ?? .default).isMuted == muted
+    }
+    let isApplied = applied.isMuted == muted && appliedOnAllTracks
+    if !isApplied {
+      let trackStateSummary = targetTracks
+        .map { track in "\(track):\((applied.tracks[track] ?? .default).isMuted)" }
+        .joined(separator: ",")
+      logWarning(
+        "마이크 음소거 상태 반영 실패: requested=\(muted), applied=\(applied.isMuted), tracks=\(trackStateSummary)",
+        category: .streaming)
+    }
+    return isApplied
+  }
+
+  @MainActor
+  func codexSetMicrophoneMutedByAudioAttachment(_ muted: Bool) async -> Bool {
+    guard let mixer = codexResolveMediaMixer() else {
+      return false
+    }
+
+    let settings = await mixer.audioMixerSettings
+    let targetTracks = Set<UInt8>([0, settings.mainTrack]).sorted()
+
+    if muted {
+      var applied = false
+      for track in targetTracks {
+        do {
+          try await mixer.attachAudio(nil, track: track)
+          applied = true
+        } catch {
+          logWarning("오디오 attach 기반 음소거 처리 실패(track=\(track)): \(error.localizedDescription)", category: .streaming)
+        }
+      }
+      return applied
+    }
+
+    // 음소거 해제 시에는 먼저 오디오 디바이스를 확보한 뒤 재연결한다.
+    guard let audioDevice = AVCaptureDevice.default(for: .audio) else {
+      logWarning("오디오 attach 기반 음소거 해제 실패: 기본 오디오 디바이스를 찾을 수 없음", category: .streaming)
+      return false
+    }
+
+    var applied = false
+    for track in targetTracks {
+      do {
+        try await mixer.attachAudio(audioDevice, track: track)
+        applied = true
+      } catch {
+        logWarning("오디오 attach 기반 음소거 해제 실패(track=\(track)): \(error.localizedDescription)", category: .streaming)
+      }
+    }
+    return applied
+  }
+
+  @MainActor
+  private func codexResolveMediaMixer() -> MediaMixer? {
+    let mirror = Mirror(reflecting: self)
+
+    if let mixer = mirror.descendant("mixer") as? MediaMixer {
+      return mixer
+    }
+
+    if let lazyStorage = mirror.descendant("$__lazy_storage_$_mixer"),
+       let mixer = codexUnwrapMediaMixer(from: lazyStorage)
+    {
+      return mixer
+    }
+
+    for child in mirror.children {
+      guard let label = child.label else { continue }
+      guard label.contains("mixer") else { continue }
+      if let mixer = codexUnwrapMediaMixer(from: child.value) {
+        return mixer
+      }
+    }
+
+    return nil
+  }
+
+  private func codexUnwrapMediaMixer(from value: Any) -> MediaMixer? {
+    if let mixer = value as? MediaMixer {
+      return mixer
+    }
+
+    let mirror = Mirror(reflecting: value)
+    if mirror.displayStyle == .optional,
+       let child = mirror.children.first
+    {
+      return codexUnwrapMediaMixer(from: child.value)
+    }
+
+    return nil
   }
 }
 

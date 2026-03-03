@@ -874,6 +874,12 @@ extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
     _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
     from connection: AVCaptureConnection
   ) {
+    // 카메라 전환 이후에도 송출 프레임이 프리뷰와 동일한 방향을 유지하도록
+    // 수신 연결의 회전/미러링을 지속적으로 정렬한다.
+    if isScreenCapturing {
+      configureVideoOutputConnection(connection)
+    }
+
     // 🎬 화면 캡처 모드: 실시간 카메라 프레임 저장 (CameraScreenCapture.swift)
     processVideoFrameForScreenCapture(sampleBuffer)
 

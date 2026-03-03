@@ -43,6 +43,7 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - ✅ Real-time audio mixing and processing with AAC encoding
 - ✅ Mic permission/audio-session preflight before live start (prevents audio 0 kbps cases)
 - ✅ Frame backpressure control in screen-capture pipeline (reduced buffering/stutter)
+- 🚧 Microphone mute toggle is currently under development (temporarily disabled in UI)
 
 ### Video & Audio
 - 🎬 **Resolutions**: 480p (848×480), 720p (1280×720), 1080p (1920×1080)

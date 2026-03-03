@@ -116,11 +116,14 @@ extension LiveStreamViewModel {
       }
 
       try session.setPreferredInput(targetPort)
+      try session.setPreferredSampleRate(48_000)
+      try session.setPreferredIOBufferDuration(0.005)
       try session.setActive(true)
       updateActiveMicrophoneInputName()
 
       if reconnectIfStreaming {
-        _ = await reattachAudioInputForCurrentRouteIfNeeded()
+        // 라우트/입력 재설정 이후에도 현재 음소거 상태를 그대로 유지한다.
+        await applyMicrophoneMuteStateToStreamingPipeline()
       } else {
         restartIdleMicrophonePeakMonitoringIfNeeded()
       }
@@ -157,30 +160,5 @@ extension LiveStreamViewModel {
     let currentInputName = AVAudioSession.sharedInstance().currentRoute.inputs.first?.portName
     activeMicrophoneInputName =
       currentInputName ?? NSLocalizedString("microphone_input_none", comment: "입력 없음")
-  }
-
-  private func reattachAudioInputForCurrentRouteIfNeeded() async -> Bool {
-    guard status == .streaming else { return true }
-    guard let haishinKitManager = liveStreamService as? HaishinKitManager else { return false }
-    return await haishinKitManager.codexReattachAudioInputForCurrentRoute()
-  }
-}
-
-private extension HaishinKitManager {
-  @MainActor
-  func codexReattachAudioInputForCurrentRoute() async -> Bool {
-    guard let mixer = Mirror(reflecting: self).descendant("mixer") as? MediaMixer else {
-      return false
-    }
-
-    do {
-      try await mixer.attachAudio(nil, track: 0)
-      if let audioDevice = AVCaptureDevice.default(for: .audio) {
-        try await mixer.attachAudio(audioDevice, track: 0)
-      }
-      return true
-    } catch {
-      return false
-    }
   }
 }

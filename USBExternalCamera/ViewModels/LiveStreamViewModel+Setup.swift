@@ -73,7 +73,13 @@ extension LiveStreamViewModel {
       haishinKitManager.$currentStatus
         .receive(on: DispatchQueue.main)
         .sink { [weak self] status in
-          self?.status = status
+          guard let self else { return }
+          self.status = status
+          if status == .streaming, self.screenCaptureStreamingStartedAt == nil {
+            self.screenCaptureStreamingStartedAt = .now
+          } else if status == .idle {
+            self.screenCaptureStreamingStartedAt = nil
+          }
         }
         .store(in: &cancellables)
 
