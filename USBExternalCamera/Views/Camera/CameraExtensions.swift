@@ -9,6 +9,10 @@ import Foundation
 import LiveStreamingCore
 import UIKit
 
+private enum CameraImageConversionContext {
+  static let shared = CIContext(options: nil)
+}
+
 // MARK: - String Extension for Regex
 
 extension String {
@@ -45,8 +49,7 @@ extension CVPixelBuffer {
   /// 이 과정은 GPU 가속을 활용하여 효율적으로 수행됩니다.
   ///
   /// **성능 고려사항:**
-  /// - CIContext는 GPU 리소스를 사용하므로 재사용 권장
-  /// - 현재는 매번 새로 생성하지만, 향후 캐싱 최적화 가능
+  /// - CIContext는 GPU 리소스를 사용하므로 재사용
   ///
   /// - Returns: 변환된 UIImage 또는 변환 실패 시 nil
   func toUIImage() -> UIImage? {
@@ -54,9 +57,8 @@ extension CVPixelBuffer {
     // Core Image가 픽셀 버퍼를 직접 처리할 수 있는 형태로 변환
     let ciImage = CIImage(cvPixelBuffer: self)
 
-    // Step 2: CIContext 생성 (GPU 가속 활용)
-    // Note: 현재는 매번 생성하지만, 향후 성능 최적화를 위해 전역 CIContext 캐싱 고려 가능
-    let context = CIContext()
+    // Step 2: CIContext 재사용 (프레임 단위 생성 비용 제거)
+    let context = CameraImageConversionContext.shared
 
     // Step 3: CIImage를 CGImage로 변환
     // extent: 이미지의 전체 영역을 의미 (원본 크기 유지)
@@ -132,7 +134,6 @@ extension UIImage {
     draw(in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
     UIGraphicsPopContext()
 
-    logDebug("[CVPixelBuffer] 생성 성공: \(Int(size.width))x\(Int(size.height)) BGRA", category: .camera)
     return buffer
   }
 }

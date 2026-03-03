@@ -254,7 +254,8 @@ extension CameraPreviewUIView {
     let timer = Timer(timeInterval: captureInterval, repeats: true) { [weak self] _ in
       self?.captureCurrentFrame()
     }
-    timer.tolerance = captureInterval * 0.2
+    // 프레임 간격 변동을 줄여 재생 체감 부드러움 개선
+    timer.tolerance = captureInterval * 0.05
     RunLoop.main.add(timer, forMode: .common)
     screenCaptureTimer = timer
   }
@@ -311,6 +312,12 @@ extension CameraPreviewUIView {
     // 렌더링이 이전 프레임 처리 중이면 이번 프레임은 드랍
     guard !isFrameRenderInProgress else {
       logFrameDropIfNeeded(reason: "렌더링 작업이 밀려 현재 프레임을 드랍합니다.")
+      return
+    }
+
+    // 전송이 아직 완료되지 않았다면 큐 적체를 피하기 위해 현재 프레임 드랍
+    guard !isFrameSendInProgress else {
+      logFrameDropIfNeeded(reason: "프레임 전송이 밀려 현재 프레임을 드랍합니다.")
       return
     }
 
@@ -385,8 +392,6 @@ extension CameraPreviewUIView {
   private func renderToImageForStreaming() -> UIImage? {
     // HaishinKitManager에서 현재 스트리밍 설정 가져오기
     let streamingSize = getOptimalCaptureSize()
-
-    logDebug("송출용 UI 렌더링 시작: \(streamingSize)", category: .performance)
 
     // 카메라 프레임이 있으면 우선 카메라 합성 사용
     if let cameraFrame = latestCameraFrame {
@@ -470,20 +475,10 @@ extension CameraPreviewUIView {
   private func sendFrameToHaishinKit(_ pixelBuffer: CVPixelBuffer) {
     // HaishinKitManager를 통한 실제 프레임 전송
     if let manager = haishinKitManager {
-      let sourceWidth = CVPixelBufferGetWidth(pixelBuffer)
-      let sourceHeight = CVPixelBufferGetHeight(pixelBuffer)
-      if let settings = manager.getCurrentSettings() {
-        logDebug(
-          "프레임 전송: source=\(sourceWidth)×\(sourceHeight) / target=\(settings.videoWidth)×\(settings.videoHeight)",
-          category: .streaming)
-      } else {
-        logDebug("프레임 전송: source=\(sourceWidth)×\(sourceHeight) / target=unknown", category: .streaming)
-      }
-
       performFrameSendWithBackpressure(manager: manager, pixelBuffer: pixelBuffer)
 
-      // 성능 모니터링: 5초마다 전송 통계 출력 (25fps 기준)
-      if frameCounter % 125 == 0 {  // 25fps 기준 5초마다 = 125프레임마다
+      // 성능 모니터링: 10초마다 전송 통계 출력 (로그 부하 완화)
+      if frameCounter % 300 == 0 {
         let stats = manager.getScreenCaptureStats()
         let successRate =
           stats.frameCount > 0 ? (Double(stats.successCount) / Double(stats.frameCount)) * 100 : 0
@@ -574,8 +569,9 @@ extension CameraPreviewUIView {
       return 1.0 / Double(clampedFrameRate)
 
     case (1920, 1080):
-      let optimizedFrameRate = min(clampedFrameRate, 24)
-      logInfo("1080p 특화 캡처: \(optimizedFrameRate)fps 적용 (버퍼 안정화)", category: .streaming)
+      // 1080p에서도 설정 FPS를 우선 적용해 스톱모션 체감 완화
+      let optimizedFrameRate = clampedFrameRate
+      logInfo("1080p 특화 캡처: \(optimizedFrameRate)fps 적용", category: .streaming)
       return 1.0 / Double(optimizedFrameRate)
 
     case (640...854, 360...480):
@@ -774,7 +770,6 @@ extension CameraPreviewUIView {
       return nil
     }
 
-    logDebug("카메라 프레임 복사 완료: \(width)x\(height), format=\(pixelFormat)")
     return clonedPixelBuffer
   }
 

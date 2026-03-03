@@ -94,12 +94,9 @@ struct CameraDetailContentView: View {
 struct CameraPreviewContainerView: View {
   @ObservedObject var viewModel: MainViewModel
   @State private var isAdvancedPanelExpanded = false
-  @State private var streamStartDate: Date?
-  @State private var currentTime: Date = .now
-  private let elapsedTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
   private var isFocusModeActive: Bool {
-    viewModel.liveStreamViewModel.status == .streaming
+    viewModel.liveStreamViewModel.isScreenCaptureStreaming
   }
 
   private var shouldShowAdvancedPanels: Bool {
@@ -115,21 +112,6 @@ struct CameraPreviewContainerView: View {
   private var selectedCameraTitle: String {
     viewModel.cameraViewModel.selectedCamera?.name
       ?? NSLocalizedString("select_camera", comment: "카메라 선택")
-  }
-
-  private var elapsedStreamingText: String {
-    guard isFocusModeActive, let startDate = streamStartDate else {
-      return "00:00"
-    }
-    let interval = max(0, Int(currentTime.timeIntervalSince(startDate)))
-    let hours = interval / 3600
-    let minutes = (interval % 3600) / 60
-    let seconds = interval % 60
-
-    if hours > 0 {
-      return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-    }
-    return String(format: "%02d:%02d", minutes, seconds)
   }
 
   private func isCompactDetailWidth(_ containerSize: CGSize) -> Bool {
@@ -184,22 +166,14 @@ struct CameraPreviewContainerView: View {
       UIApplication.shared.sendAction(
         #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-    .onAppear {
-      if isFocusModeActive, streamStartDate == nil {
-        streamStartDate = .now
-      }
-    }
-    .onReceive(elapsedTimer) { tick in
-      currentTime = tick
-    }
     .onChange(of: viewModel.liveStreamViewModel.status) { oldStatus, newStatus in
       if newStatus == .streaming, oldStatus != .streaming {
-        streamStartDate = .now
         withAnimation(.easeInOut(duration: 0.2)) {
           isAdvancedPanelExpanded = false
         }
-      } else if newStatus != .streaming {
-        streamStartDate = nil
+      } else if newStatus == .idle && oldStatus == .disconnecting {
+        isAdvancedPanelExpanded = false
+      } else if case .error = newStatus {
         isAdvancedPanelExpanded = false
       }
     }
@@ -236,9 +210,17 @@ struct CameraPreviewContainerView: View {
         .disabled(isActionLocked || !viewModel.canSwitchCameraQuickly)
       }
 
-      HStack(spacing: 10) {
+      HStack(spacing: 8) {
+        FocusMetricChip(
+          title: NSLocalizedString("status", comment: "상태"),
+          value: viewModel.liveStreamViewModel.status.description,
+          icon: "dot.radiowaves.left.and.right",
+          tint: isFocusModeActive ? .red : .gray
+        )
+        .frame(maxWidth: .infinity)
+
         Button {
-          viewModel.liveStreamViewModel.toggleMicrophoneMute()
+          // 음소거 기능 안정화 전까지 비활성화
         } label: {
           Label(
             viewModel.liveStreamViewModel.isMicrophoneMuted
@@ -251,25 +233,7 @@ struct CameraPreviewContainerView: View {
         .buttonStyle(
           FocusActionButtonStyle(
             tint: viewModel.liveStreamViewModel.isMicrophoneMuted ? .orange : .teal))
-        .disabled(isActionLocked)
-      }
-
-      HStack(spacing: 8) {
-        FocusMetricChip(
-          title: NSLocalizedString("status", comment: "상태"),
-          value: viewModel.liveStreamViewModel.status.description,
-          icon: "dot.radiowaves.left.and.right",
-          tint: isFocusModeActive ? .red : .gray
-        )
-        .frame(maxWidth: .infinity)
-
-        FocusMetricChip(
-          title: NSLocalizedString("elapsed_time", comment: "경과 시간"),
-          value: elapsedStreamingText,
-          icon: "clock.fill",
-          tint: .orange
-        )
-        .frame(maxWidth: .infinity)
+        .disabled(true)
 
         FocusMetricChip(
           title: NSLocalizedString("video_bitrate", comment: "비디오 비트레이트"),

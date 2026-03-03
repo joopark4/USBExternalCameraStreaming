@@ -243,7 +243,7 @@ struct LiveStreamSettingsView: View {
                     Slider(value: Binding(
                         get: { Double(viewModel.settings.videoBitrate) },
                         set: { viewModel.settings.videoBitrate = Int($0) }
-                    ), in: 500...10000, step: 100)
+                    ), in: 500...20000, step: 100)
                     
                     // YouTube Live 권장사항 및 경고
                     bitrateWarningView
@@ -507,17 +507,17 @@ struct LiveStreamSettingsView: View {
     
     /// 비트레이트 색상 (권장사항 기준)
     private var bitrateColor: Color {
-        switch viewModel.settings.videoBitrate {
-        case 1500...4000: return .green      // YouTube Live 권장 범위
-        case 1000..<1500: return .orange     // 낮음
-        default: return .red                 // 너무 높음
+        let bitrate = viewModel.settings.videoBitrate
+        if recommendedBitrateRange.contains(bitrate) {
+            return .green
         }
+        return bitrate < recommendedBitrateRange.lowerBound ? .orange : .red
     }
     
     /// 비트레이트 경고 및 권장사항 뷰
     @ViewBuilder
     private var bitrateWarningView: some View {
-        if viewModel.settings.videoBitrate > 4000 {
+        if viewModel.settings.videoBitrate > recommendedBitrateRange.upperBound {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.red)
@@ -526,7 +526,10 @@ struct LiveStreamSettingsView: View {
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.red)
-                    Text(NSLocalizedString("youtube_bitrate_warning", comment: "YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps"))
+                    Text(NSLocalizedString("youtube_bitrate_warning", comment: "YouTube Live 권장 비트레이트 범위를 벗어났습니다."))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text(String(format: NSLocalizedString("youtube_recommended_bitrate_format", comment: "권장 비트레이트 범위"), recommendedBitrateRange.lowerBound, recommendedBitrateRange.upperBound))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -536,13 +539,18 @@ struct LiveStreamSettingsView: View {
             .padding(.horizontal, 12)
             .background(Color.red.opacity(0.1))
             .cornerRadius(8)
-        } else if viewModel.settings.videoBitrate >= 1500 && viewModel.settings.videoBitrate <= 4000 {
+        } else if recommendedBitrateRange.contains(viewModel.settings.videoBitrate) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text(NSLocalizedString("youtube_recommended_range", comment: "✅ YouTube Live 1080p 권장 범위"))
-                    .font(.caption)
-                    .foregroundColor(.green)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(NSLocalizedString("youtube_recommended_range", comment: "✅ YouTube Live H.264 권장 범위"))
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    Text(String(format: NSLocalizedString("youtube_recommended_bitrate_format", comment: "권장 비트레이트 범위"), recommendedBitrateRange.lowerBound, recommendedBitrateRange.upperBound))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
             }
             .padding(.vertical, 6)
@@ -553,15 +561,43 @@ struct LiveStreamSettingsView: View {
             HStack {
                 Image(systemName: "info.circle.fill")
                     .foregroundColor(.orange)
-                Text(NSLocalizedString("low_bitrate_warning", comment: "📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다"))
-                    .font(.caption)
-                    .foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(NSLocalizedString("low_bitrate_warning", comment: "📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다"))
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Text(String(format: NSLocalizedString("youtube_recommended_bitrate_format", comment: "권장 비트레이트 범위"), recommendedBitrateRange.lowerBound, recommendedBitrateRange.upperBound))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 12)
             .background(Color.orange.opacity(0.1))
             .cornerRadius(8)
+        }
+    }
+
+    private var recommendedBitrateRange: ClosedRange<Int> {
+        let recommended = youtubeH264RecommendedBitrate
+        let minBitrate = max(500, Int(Double(recommended) * 0.8))
+        let maxBitrate = Int(Double(recommended) * 1.2)
+        return minBitrate...maxBitrate
+    }
+
+    private var youtubeH264RecommendedBitrate: Int {
+        let width = viewModel.settings.videoWidth
+        let height = viewModel.settings.videoHeight
+        let is60fps = viewModel.settings.frameRate >= 50
+
+        if width >= 3840 && height >= 2160 {
+            return is60fps ? 51_000 : 35_000
+        } else if width >= 2560 && height >= 1440 {
+            return is60fps ? 24_000 : 16_000
+        } else if width >= 1920 && height >= 1080 {
+            return is60fps ? 12_000 : 10_000
+        } else {
+            return is60fps ? 6_000 : 4_000
         }
     }
 
@@ -592,7 +628,7 @@ struct LiveStreamSettingsView: View {
         case .resolution480p:
             viewModel.settings.videoWidth = 848  // 16의 배수 (854 → 848)
             viewModel.settings.videoHeight = 480
-            viewModel.settings.videoBitrate = 1500
+            viewModel.settings.videoBitrate = 4000
             // 480p는 60fps 지원하지 않음
             if viewModel.settings.frameRate == 60 {
                 viewModel.settings.frameRate = 30
@@ -600,11 +636,11 @@ struct LiveStreamSettingsView: View {
         case .resolution720p:
             viewModel.settings.videoWidth = 1280
             viewModel.settings.videoHeight = 720
-            viewModel.settings.videoBitrate = 2500
+            viewModel.settings.videoBitrate = 4000
         case .resolution1080p:
             viewModel.settings.videoWidth = 1920
             viewModel.settings.videoHeight = 1080
-            viewModel.settings.videoBitrate = 4500
+            viewModel.settings.videoBitrate = 10_000
         }
     }
     

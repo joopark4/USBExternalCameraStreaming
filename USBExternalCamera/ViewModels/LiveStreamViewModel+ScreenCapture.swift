@@ -43,6 +43,9 @@ extension LiveStreamViewModel {
   func handleScreenCaptureStreamingStartSuccess() async {
     isIdleMicrophonePeakMonitoringSuspended = true
     stopIdleMicrophonePeakMonitoring()
+    if screenCaptureStreamingStartedAt == nil {
+      screenCaptureStreamingStartedAt = .now
+    }
     logInfo("✅ [화면캡처] 스트리밍 시작 성공", category: .streaming)
     logInfo(
       "요청 설정값: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.frameRate)fps, "
@@ -132,6 +135,7 @@ extension LiveStreamViewModel {
     }
     // 에러 상태로 변경 및 메시지 표시
     await updateStatus(.error(.streamingFailed(userMessage)), message: userMessage)
+    screenCaptureStreamingStartedAt = nil
     resumeIdleMicrophonePeakMonitoringAfterStreaming()
   }
 
@@ -166,6 +170,7 @@ extension LiveStreamViewModel {
     logInfo("✅ [화면캡처] 스트리밍 중지 성공", category: .streaming)
     // 상태를 'idle'로 초기화
     await updateStatus(.idle, message: "화면 캡처 스트리밍 준비 완료")
+    screenCaptureStreamingStartedAt = nil
     await detachAudioPeakObserver()
     resetMicrophonePeakDisplay()
     resumeIdleMicrophonePeakMonitoringAfterStreaming()
@@ -188,6 +193,7 @@ extension LiveStreamViewModel {
     }
     // 강제로 상태 초기화 (사용자가 다시 시도할 수 있도록)
     await updateStatus(.idle, message: "스트리밍 중지됨 (오류 복구)")
+    screenCaptureStreamingStartedAt = nil
     await detachAudioPeakObserver()
     resetMicrophonePeakDisplay()
     resumeIdleMicrophonePeakMonitoringAfterStreaming()
@@ -245,8 +251,8 @@ extension LiveStreamViewModel {
         mode: .videoRecording,
         options: [.defaultToSpeaker, .allowBluetoothHFP]
       )
-      try audioSession.setPreferredSampleRate(44_100)
-      try audioSession.setPreferredIOBufferDuration(0.01)
+      try audioSession.setPreferredSampleRate(48_000)
+      try audioSession.setPreferredIOBufferDuration(0.005)
       try audioSession.setActive(true)
       logInfo("🎵 화면 캡처 전 오디오 세션 준비 완료", category: .streaming)
     } catch {

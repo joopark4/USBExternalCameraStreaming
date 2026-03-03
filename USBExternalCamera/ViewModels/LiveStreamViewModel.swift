@@ -20,10 +20,10 @@ final class LiveStreamViewModel: ObservableObject {
     static let statusTransitionDelay: UInt64 = 500_000_000  // 0.5초
     static let minimumStreamKeyLength = 16
     static let youtubeRTMPURL = "rtmp://a.rtmp.youtube.com/live2/"
-    static let defaultVideoBitrate = 2500
+    static let defaultVideoBitrate = 10_000
     static let defaultAudioBitrate = 128
-    static let defaultVideoWidth = 1280
-    static let defaultVideoHeight = 720
+    static let defaultVideoWidth = 1920
+    static let defaultVideoHeight = 1080
     static let defaultFrameRate = 30
   }
   // MARK: - Published Properties
@@ -71,6 +71,8 @@ final class LiveStreamViewModel: ObservableObject {
   @Published var audioPeakSampleCount: Int = 0
   /// 오디오 피크 진단 메시지
   @Published var audioPeakDiagnosticMessage: String = ""
+  /// 화면 캡처 스트리밍 세션 시작 시각 (경과시간 표시용)
+  @Published var screenCaptureStreamingStartedAt: Date?
   /// 적응형 품질 조정 활성화 여부 (사용자 설정 보장을 위해 기본값: false)
   @Published var adaptiveQualityEnabled: Bool = false {
     didSet {
@@ -214,9 +216,13 @@ final class LiveStreamViewModel: ObservableObject {
     switch status {
     case .idle, .error:
       // 화면 캡처 스트리밍 시작
+      if screenCaptureStreamingStartedAt == nil {
+        screenCaptureStreamingStartedAt = .now
+      }
       Task { await startScreenCaptureStreaming() }
     case .connected, .streaming:
       // 화면 캡처 스트리밍 중지
+      screenCaptureStreamingStartedAt = nil
       Task { await stopScreenCaptureStreaming() }
     case .connecting, .disconnecting:
       // 이미 상태 변경 중이므로 무시
@@ -281,11 +287,9 @@ final class LiveStreamViewModel: ObservableObject {
   }
   /// 스트리밍 버튼 텍스트
   var streamingButtonText: String {
-    if isScreenCaptureStreaming {
-      return NSLocalizedString("screen_capture_stop", comment: "화면 캡처 중지")
-    } else {
-      return StreamingButtonHelper.streamingButtonText(for: status)
-    }
+    isScreenCaptureStreaming
+      ? NSLocalizedString("live_end", comment: "라이브 종료")
+      : NSLocalizedString("live_start", comment: "라이브 시작")
   }
   /// 스트리밍 버튼 색상
   var streamingButtonColor: Color {
