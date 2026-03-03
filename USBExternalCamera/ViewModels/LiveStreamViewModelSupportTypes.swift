@@ -25,10 +25,10 @@ enum StreamingPreset: String, CaseIterable {
 
   var description: String {
     switch self {
-    case .low: return "720p • 1.5Mbps"
-    case .standard: return "1080p • 2.5Mbps"
-    case .high: return "1080p • 4.5Mbps"
-    case .ultra: return "4K • 8Mbps"
+    case .low: return "720p • 4.0Mbps"
+    case .standard: return "1080p • 10.0Mbps"
+    case .high: return "1080p60 • 12.0Mbps"
+    case .ultra: return "4K • 35.0Mbps"
     }
   }
 

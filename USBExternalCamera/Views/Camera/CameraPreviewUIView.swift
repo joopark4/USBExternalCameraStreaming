@@ -302,6 +302,11 @@ final class CameraPreviewUIView: UIView {
       // 프레임 드롭 허용 (성능 최적화)
       existingOutput.alwaysDiscardsLateVideoFrames = true
 
+      // 프리뷰와 동일한 회전/미러링을 적용해 송출 프레임 방향 불일치 방지
+      if let connection = existingOutput.connection(with: .video) {
+        configureVideoOutputConnection(connection)
+      }
+
       session.commitConfiguration()
 
       // 이 출력은 외부 소유이므로 제거하지 않음
@@ -328,6 +333,9 @@ final class CameraPreviewUIView: UIView {
     // 세션에 추가
     if session.canAddOutput(newVideoOutput) {
       session.addOutput(newVideoOutput)
+      if let connection = newVideoOutput.connection(with: .video) {
+        configureVideoOutputConnection(connection)
+      }
       videoOutput = newVideoOutput
       setCaptureOutputReuseMode(true)
       clearCaptureOutputOriginalDelegate()
@@ -338,6 +346,46 @@ final class CameraPreviewUIView: UIView {
     }
 
     session.commitConfiguration()
+  }
+
+  /// 화면 캡처용 비디오 출력 연결을 프리뷰와 동일한 방향으로 정렬
+  private func configureVideoOutputConnection(_ connection: AVCaptureConnection) {
+    if let previewConnection = previewLayer?.connection {
+      if #available(iOS 17.0, *) {
+        let angle = previewConnection.videoRotationAngle
+        if connection.isVideoRotationAngleSupported(angle) {
+          connection.videoRotationAngle = angle
+        } else if connection.isVideoRotationAngleSupported(0) {
+          connection.videoRotationAngle = 0
+        }
+      } else if connection.isVideoOrientationSupported {
+        connection.videoOrientation = previewConnection.videoOrientation
+      }
+
+      if connection.isVideoMirroringSupported {
+        connection.automaticallyAdjustsVideoMirroring = false
+        if previewConnection.isVideoMirroringSupported {
+          connection.isVideoMirrored = previewConnection.isVideoMirrored
+        }
+      }
+      return
+    }
+
+    if #available(iOS 17.0, *) {
+      if connection.isVideoRotationAngleSupported(0) {
+        connection.videoRotationAngle = 0
+      }
+    } else if connection.isVideoOrientationSupported {
+      connection.videoOrientation = .portrait
+    }
+
+    if connection.isVideoMirroringSupported {
+      connection.automaticallyAdjustsVideoMirroring = false
+      let currentDevice = getCurrentCameraDevice()
+      let isExternalCamera = currentDevice?.deviceType == .external
+      let isFrontCamera = currentDevice?.position == .front
+      connection.isVideoMirrored = !isExternalCamera && isFrontCamera
+    }
   }
 
   /// 비디오 프레임 수신 해제

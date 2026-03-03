@@ -242,9 +242,11 @@
 
 // Stream Control Buttons
 "start_streaming" = "Start Streaming";
+"live_start" = "Go Live";
 "connecting" = "Connecting...";
 "ready" = "Ready";
 "stop_streaming" = "Stop Streaming";
+"live_end" = "End Live";
 "stopping" = "Stopping...";
 "retry" = "Retry";
 
@@ -395,7 +397,7 @@
 "help_video_bitrate_tip_find_optimal" = "Find the optimal value through testing";
 "help_video_bitrate_warning_buffering" = "Setting too high may cause buffering or disconnections";
 "help_video_bitrate_warning_platform_limit" = "Each platform has maximum bitrate limitations";
-"help_video_bitrate_example_hd" = "HD Streaming: 2500 kbps";
+"help_video_bitrate_example_hd" = "Full HD (1080p) Streaming: 10000 kbps";
 "help_video_bitrate_example_mobile" = "Mobile Optimized: 1000 kbps";
 
 // MARK: - Help Details for Audio Bitrate
@@ -609,8 +611,9 @@
 // MARK: - Views - Live Stream Settings
 "streaming_settings_limited" = "Some settings cannot be changed while streaming";
 "bitrate_too_high_warning" = "⚠️ Bitrate is too high";
-"youtube_bitrate_warning" = "YouTube Live may disconnect. Recommended: 1500-4000 kbps";
-"youtube_recommended_range" = "✅ YouTube Live 1080p recommended range";
+"youtube_bitrate_warning" = "Outside the recommended YouTube Live H.264 bitrate range.";
+"youtube_recommended_range" = "✅ YouTube Live H.264 recommended range";
+"youtube_recommended_bitrate_format" = "Recommended bitrate range: %d-%d kbps";
 "low_bitrate_warning" = "📹 Low bitrate - Quality may be poor";
 "reset_settings_confirmation" = "Reset Settings Confirmation";
 "reset_settings_message" = "All settings will be reset to default values. Do you want to continue?";

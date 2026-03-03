@@ -31,31 +31,13 @@ extension CameraPreviewUIView {
       logError("카메라 프레임 → UIImage 변환 실패", category: .performance)
       return nil
     }
-    logDebug("카메라 이미지 변환 성공: \(cameraImage.size)", category: .performance)
-
     // Step 2: UI 오버레이를 고해상도로 생성 (1:1 → 16:9 비율 강제 변환)
     // 단말 크기에서 송출 크기로 스케일링 비율 계산
     let currentSize = bounds.size
-    let originalAspectRatio = currentSize.width / currentSize.height
-    let targetAspectRatio = streamingSize.width / streamingSize.height
 
     let scaleX = streamingSize.width / currentSize.width
     let scaleY = streamingSize.height / currentSize.height
     let scale = max(scaleX, scaleY)  // **Aspect Fill**: 화면 꽉 채우기 (1:1 문제 해결)
-
-    logDebug("비율 분석:", category: .performance)
-    logDebug(
-      "  • 원본 UI: \(currentSize) (비율: \(String(format: "%.2f", originalAspectRatio)))",
-      category: .performance)
-    logDebug(
-      "  • 목표 송출: \(streamingSize) (비율: \(String(format: "%.2f", targetAspectRatio)))",
-      category: .performance)
-    logDebug("  • Aspect Fill 스케일: \(String(format: "%.2f", scale))x", category: .performance)
-
-    // 1:1 비율 문제 감지
-    if abs(originalAspectRatio - 1.0) < 0.2 {
-      logWarning("1:1 문제 감지 - 카메라+UI 합성에서 정사각형 UI 감지 → Aspect Fill 적용", category: .performance)
-    }
 
     let uiRenderer = UIGraphicsImageRenderer(size: streamingSize)
     let uiOverlay = uiRenderer.image { context in
@@ -76,7 +58,6 @@ extension CameraPreviewUIView {
         }
       }
     }
-    logDebug("UI 오버레이 생성 완료: \(streamingSize)", category: .performance)
 
     // Step 3: 카메라 이미지와 UI 오버레이를 고해상도로 합성
     let finalRenderer = UIGraphicsImageRenderer(size: streamingSize)
@@ -89,8 +70,6 @@ extension CameraPreviewUIView {
 
     // UI와 카메라를 동일한 Aspect Fill 변환으로 맞춤
     let scaledCameraRect = mapRectToStreamingSpace(cameraPreviewRect, from: currentSize, to: streamingSize)
-
-      logDebug("카메라 영역 스케일링: \(cameraPreviewRect) → \(scaledCameraRect)", category: .performance)
 
       // 카메라 이미지를 스케일된 영역에 맞춰 그리기 (Aspect Fill 방식)
       // Aspect Fill로 그려서 카메라 이미지가 잘리지 않도록 함
@@ -114,14 +93,12 @@ extension CameraPreviewUIView {
           x: scaledCameraRect.origin.x, y: offsetY, width: drawWidth, height: drawHeight)
       }
 
-      logDebug("카메라 이미지 Aspect Fill 그리기: \(scaledCameraRect) → \(drawRect)", category: .performance)
       cameraImage.draw(in: drawRect)
 
       // 3-2: UI 오버레이를 전체 화면에 합성
       uiOverlay.draw(in: rect, blendMode: .normal, alpha: 1.0)
     }
 
-    logDebug("최종 이미지 합성 완료: \(streamingSize)", category: .performance)
     return compositeImage
   }
 
@@ -412,7 +389,6 @@ extension CameraPreviewUIView {
       if width > 0 && height > 0 {
         streamWidth = width
         streamHeight = height
-        logInfo("최적 캡처 해상도 계산: 캐시된 시작 해상도 사용 \(streamWidth)×\(streamHeight)", category: .streaming)
       }
     }
 
@@ -422,7 +398,6 @@ extension CameraPreviewUIView {
         let settings = manager.getCurrentSettings()
       else {
         // 기본값: 720p (16:9 비율)
-        logWarning("최적 캡처 해상도 계산: manager 미확인 fallback 1280×720")
         return CGSize(width: 1280, height: 720)
       }
 
@@ -441,12 +416,8 @@ extension CameraPreviewUIView {
       // 비율이 16:9가 아니면 강제로 수정
       let correctedHeight = CGFloat(streamWidth) / aspectRatio
       correctedStreamSize = CGSize(width: streamWidth, height: Int(correctedHeight))
-      logInfo(
-        "비율수정: \(streamWidth)x\(streamHeight) (비율: \(String(format: "%.2f", currentAspectRatio))) → \(correctedStreamSize) (16:9)",
-        category: .streaming)
     } else {
       correctedStreamSize = CGSize(width: streamWidth, height: streamHeight)
-      logDebug("이미 16:9 비율: \(correctedStreamSize)", category: .streaming)
     }
 
     // 16:9 비율 기반 최적 캡처 해상도 계산
@@ -456,31 +427,24 @@ extension CameraPreviewUIView {
 
     switch (width, height) {
     case (640...854, 360...480):
-      // 480p 계열 → 2배 업스케일
-      captureSize = CGSize(width: 1280, height: 720)  // 720p로 캡처
-      logDebug("16:9 캡처 - 480p계열 송출 → 720p 캡처: \(captureSize)", category: .streaming)
+      // 480p 계열: 업스케일 없이 목표 해상도 사용 (프레임 안정성 우선)
+      captureSize = CGSize(width: width, height: height)
 
     case (1280, 720):
-      // 🎯 720p 끊김 개선: 1.5배 업스케일로 성능 부하 감소
-      captureSize = CGSize(width: 1920, height: 1080)  // 1080p로 캡처 (기존 1440p → 1080p)
-      logDebug("16:9 캡처 - 720p 송출 → 1080p 캡처 (끊김 개선): \(captureSize)", category: .streaming)
+      // 720p: 업스케일 제거로 렌더링 부하 완화
+      captureSize = CGSize(width: 1280, height: 720)
 
     case (1920, 1080):
       // 1080p는 송출 해상도와 동일 크기 유지 (안정성 우선)
       captureSize = CGSize(width: 1920, height: 1080)
-      logDebug("16:9 캡처 - 1080p 송출 → 1080p 캡처 (안정성 우선): \(captureSize)", category: .streaming)
 
     default:
-      // 사용자 정의 → 16:9 비율로 강제 변환 후 캡처
-      let targetWidth = max(width, 1280)  // 최소 720p 너비
-      let targetHeight = Int(CGFloat(targetWidth) / aspectRatio)
-      captureSize = CGSize(width: targetWidth, height: targetHeight)
-      logDebug("16:9 캡처 - 사용자정의 → 16:9 강제변환 캡처: \(captureSize)", category: .streaming)
+      // 사용자 정의: 보정된 목표 해상도 그대로 사용
+      captureSize = CGSize(width: width, height: height)
     }
 
     // 1080p 표준 해상도는 그대로 유지해 불필요한 리사이즈 오버헤드를 줄임
     if Int(captureSize.width) == 1920 && Int(captureSize.height) == 1080 {
-      logDebug("최종검증 - 1080p는 16배수 정렬 생략: \(captureSize)", category: .streaming)
       return captureSize
     }
 
@@ -488,14 +452,6 @@ extension CameraPreviewUIView {
     let alignedWidth = ((Int(captureSize.width) + 15) / 16) * 16
     let alignedHeight = ((Int(captureSize.height) + 15) / 16) * 16
     let finalSize = CGSize(width: alignedWidth, height: alignedHeight)
-
-    // 최종 16:9 비율 검증
-    let finalAspectRatio = CGFloat(alignedWidth) / CGFloat(alignedHeight)
-    logDebug("최종검증 - 16배수 정렬: \(captureSize) → \(finalSize)", category: .streaming)
-    logDebug(
-      "최종검증 - 비율 확인: \(String(format: "%.2f", finalAspectRatio)) (16:9 ≈ 1.78)",
-      category: .streaming)
-
     return finalSize
   }
 }

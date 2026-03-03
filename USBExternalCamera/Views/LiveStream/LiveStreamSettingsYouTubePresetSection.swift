@@ -42,7 +42,7 @@ struct YouTubePresetSectionView: View {
                     // 480p 프리셋
                     YouTubePresetCard(
                         title: "480p (SD)",
-                                                    subtitle: "848×480 • 30fps • 1,000 kbps",
+                                                    subtitle: "848×480 • 30fps • 4,000 kbps",
                         description: "저화질 • 안정적인 연결",
                         icon: "play.square",
                         color: .orange,
@@ -55,7 +55,7 @@ struct YouTubePresetSectionView: View {
                     // 720p 프리셋
                     YouTubePresetCard(
                         title: "720p (HD)",
-                        subtitle: "1280×720 • 30fps • 2,500 kbps",
+                        subtitle: "1280×720 • 30fps • 4,000 kbps",
                         description: "표준화질 • 권장 설정",
                         icon: "play.square.fill",
                         color: .green,
@@ -68,7 +68,7 @@ struct YouTubePresetSectionView: View {
                     // 1080p 프리셋 (고성능 iPad 권장)
                     YouTubePresetCard(
                         title: "1080p (Full HD)",
-                        subtitle: "1920×1080 • 30fps • 4,500 kbps",
+                        subtitle: "1920×1080 • 30fps • 10,000 kbps",
                         description: NSLocalizedString("high_quality_streaming", comment: "고화질 스트리밍"),
                         icon: "play.square.stack",
                         color: .purple,
@@ -102,10 +102,15 @@ struct YouTubePresetSectionView: View {
     
     private func isCurrentPreset(_ preset: YouTubeLivePreset) -> Bool {
         let settings = preset.settings
+        let recommendedBitrate = recommendedYouTubeH264Bitrate(
+            width: settings.width,
+            height: settings.height,
+            frameRate: settings.frameRate
+        )
         return viewModel.settings.videoWidth == settings.width &&
                viewModel.settings.videoHeight == settings.height &&
                viewModel.settings.frameRate == settings.frameRate &&
-               viewModel.settings.videoBitrate == settings.videoBitrate
+               viewModel.settings.videoBitrate == recommendedBitrate
     }
     
     /// 현재 설정이 어떤 프리셋과도 일치하지 않는지 확인
@@ -122,12 +127,17 @@ struct YouTubePresetSectionView: View {
     
     private func applyYouTubePreset(_ preset: YouTubeLivePreset) {
         let settings = preset.settings
+        let recommendedBitrate = recommendedYouTubeH264Bitrate(
+            width: settings.width,
+            height: settings.height,
+            frameRate: settings.frameRate
+        )
         
         viewModel.settings.videoWidth = settings.width
         viewModel.settings.videoHeight = settings.height
         viewModel.settings.frameRate = settings.frameRate
-        viewModel.settings.videoBitrate = settings.videoBitrate
-        viewModel.settings.audioBitrate = settings.audioBitrate
+        viewModel.settings.videoBitrate = recommendedBitrate
+        viewModel.settings.audioBitrate = 128
         
         // 유튜브 최적화 기본 설정
         viewModel.settings.videoEncoder = "H.264"
@@ -138,6 +148,19 @@ struct YouTubePresetSectionView: View {
         
         // 설정 저장
         viewModel.saveSettings()
+    }
+
+    private func recommendedYouTubeH264Bitrate(width: Int, height: Int, frameRate: Int) -> Int {
+        let is60fps = frameRate >= 50
+        if width >= 3840 && height >= 2160 {
+            return is60fps ? 51_000 : 35_000
+        } else if width >= 2560 && height >= 1440 {
+            return is60fps ? 24_000 : 16_000
+        } else if width >= 1920 && height >= 1080 {
+            return is60fps ? 12_000 : 10_000
+        } else {
+            return is60fps ? 6_000 : 4_000
+        }
     }
 }
 

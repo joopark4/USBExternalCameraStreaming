@@ -20,10 +20,10 @@ final class LiveStreamViewModel: ObservableObject {
     static let statusTransitionDelay: UInt64 = 500_000_000  // 0.5초
     static let minimumStreamKeyLength = 16
     static let youtubeRTMPURL = "rtmp://a.rtmp.youtube.com/live2/"
-    static let defaultVideoBitrate = 2500
+    static let defaultVideoBitrate = 10_000
     static let defaultAudioBitrate = 128
-    static let defaultVideoWidth = 1280
-    static let defaultVideoHeight = 720
+    static let defaultVideoWidth = 1920
+    static let defaultVideoHeight = 1080
     static let defaultFrameRate = 30
   }
   // MARK: - Published Properties
@@ -281,11 +281,9 @@ final class LiveStreamViewModel: ObservableObject {
   }
   /// 스트리밍 버튼 텍스트
   var streamingButtonText: String {
-    if isScreenCaptureStreaming {
-      return NSLocalizedString("screen_capture_stop", comment: "화면 캡처 중지")
-    } else {
-      return StreamingButtonHelper.streamingButtonText(for: status)
-    }
+    isScreenCaptureStreaming
+      ? NSLocalizedString("live_end", comment: "라이브 종료")
+      : NSLocalizedString("live_start", comment: "라이브 시작")
   }
   /// 스트리밍 버튼 색상
   var streamingButtonColor: Color {

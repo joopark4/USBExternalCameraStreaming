@@ -250,6 +250,8 @@
 // Stream Control Buttons
 "start_streaming" = "스트리밍 시작";
 "stop_streaming" = "스트리밍 중지";
+"live_start" = "라이브 시작";
+"live_end" = "라이브 종료";
 "stopping" = "중지 중";
 "connecting" = "연결 중";
 "ready" = "준비됨";
@@ -402,7 +404,7 @@
 "help_video_bitrate_tip_find_optimal" = "테스트를 통해 최적값을 찾으세요";
 "help_video_bitrate_warning_buffering" = "너무 높게 설정하면 버퍼링이나 연결 끊김이 발생할 수 있습니다";
 "help_video_bitrate_warning_platform_limit" = "플랫폼별로 최대 비트레이트 제한이 있습니다";
-"help_video_bitrate_example_hd" = "HD 스트리밍: 2500 kbps";
+"help_video_bitrate_example_hd" = "Full HD(1080p) 스트리밍: 10000 kbps";
 "help_video_bitrate_example_mobile" = "모바일 최적화: 1000 kbps";
 
 // MARK: - Help Details for Audio Bitrate
@@ -723,8 +725,9 @@
 // MARK: - Views - Live Stream Settings
 "streaming_settings_limited" = "스트리밍 중에는 일부 설정을 변경할 수 없습니다";
 "bitrate_too_high_warning" = "⚠️ 비트레이트가 너무 높습니다";
-"youtube_bitrate_warning" = "YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps";
-"youtube_recommended_range" = "✅ YouTube Live 1080p 권장 범위";
+"youtube_bitrate_warning" = "YouTube Live H.264 권장 비트레이트 범위를 벗어났습니다.";
+"youtube_recommended_range" = "✅ YouTube Live H.264 권장 범위";
+"youtube_recommended_bitrate_format" = "권장 비트레이트 범위: %d-%d kbps";
 "low_bitrate_warning" = "📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다";
 "reset_settings_confirmation" = "설정 초기화 확인";
 "reset_settings_message" = "모든 설정이 기본값으로 초기화됩니다. 계속하시겠습니까?";
