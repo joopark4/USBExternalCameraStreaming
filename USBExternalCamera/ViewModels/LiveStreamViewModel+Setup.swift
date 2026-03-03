@@ -72,13 +72,25 @@ extension LiveStreamViewModel {
       // 스트리밍 상태도 바인딩
       haishinKitManager.$currentStatus
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] status in
+        .scan((previous: LiveStreamStatus.idle, current: LiveStreamStatus.idle)) { state, newStatus in
+          (previous: state.current, current: newStatus)
+        }
+        .sink { [weak self] transition in
           guard let self else { return }
+          let previousStatus = transition.previous
+          let status = transition.current
           self.status = status
-          if status == .streaming, self.screenCaptureStreamingStartedAt == nil {
-            self.screenCaptureStreamingStartedAt = .now
+
+          if status == .streaming {
+            if self.screenCaptureStreamingStartedAt == nil {
+              self.screenCaptureStreamingStartedAt = .now
+            }
+            if previousStatus != .streaming {
+              self.suspendIdleMicrophonePeakMonitoringForStreaming()
+            }
           } else if status == .idle {
             self.screenCaptureStreamingStartedAt = nil
+            self.resumeIdleMicrophonePeakMonitoringAfterStreaming()
           }
         }
         .store(in: &cancellables)

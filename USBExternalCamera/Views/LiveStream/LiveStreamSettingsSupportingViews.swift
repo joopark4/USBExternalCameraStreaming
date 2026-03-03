@@ -188,7 +188,7 @@ struct VideoSettingsSectionView: View {
             viewModel.settings.videoWidth = 1920
             viewModel.settings.videoHeight = 1080
         }
-        viewModel.settings.videoBitrate = recommendedYouTubeH264Bitrate(
+        viewModel.settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
             width: viewModel.settings.videoWidth,
             height: viewModel.settings.videoHeight,
             frameRate: viewModel.settings.frameRate
@@ -273,7 +273,7 @@ struct VideoSettingsSectionView: View {
     }
 
     private var recommendedBitrateRange: ClosedRange<Int> {
-        let recommended = recommendedYouTubeH264Bitrate(
+        let recommended = YouTubeBitrateAdvisor.recommendedH264Bitrate(
             width: viewModel.settings.videoWidth,
             height: viewModel.settings.videoHeight,
             frameRate: viewModel.settings.frameRate
@@ -281,19 +281,6 @@ struct VideoSettingsSectionView: View {
         let minBitrate = max(500, Int(Double(recommended) * 0.8))
         let maxBitrate = Int(Double(recommended) * 1.2)
         return minBitrate...maxBitrate
-    }
-
-    private func recommendedYouTubeH264Bitrate(width: Int, height: Int, frameRate: Int) -> Int {
-        let is60fps = frameRate >= 50
-        if width >= 3840 && height >= 2160 {
-            return is60fps ? 51_000 : 35_000
-        } else if width >= 2560 && height >= 1440 {
-            return is60fps ? 24_000 : 16_000
-        } else if width >= 1920 && height >= 1080 {
-            return is60fps ? 12_000 : 10_000
-        } else {
-            return is60fps ? 6_000 : 4_000
-        }
     }
 
     var body: some View {

@@ -46,20 +46,6 @@ struct DetailView: View {
         }
       }
     }
-    .overlay(alignment: .topLeading) {
-      if horizontalSizeClass == .compact {
-        Button(action: onShowSidebar) {
-          Image(systemName: "sidebar.left")
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(.primary)
-            .frame(width: 36, height: 36)
-            .background(.thinMaterial, in: Circle())
-        }
-        .padding(.top, 8)
-        .padding(.leading, 12)
-        .accessibilityLabel(Text("메뉴 열기"))
-      }
-    }
   }
 
 }

@@ -42,6 +42,22 @@ enum StreamingPreset: String, CaseIterable {
   }
 }
 
+/// YouTube Live H.264 권장 비트레이트 계산 유틸리티
+enum YouTubeBitrateAdvisor {
+  static func recommendedH264Bitrate(width: Int, height: Int, frameRate: Int) -> Int {
+    let is60fps = frameRate >= 50
+    if width >= 3840 && height >= 2160 {
+      return is60fps ? 51_000 : 35_000
+    } else if width >= 2560 && height >= 1440 {
+      return is60fps ? 24_000 : 16_000
+    } else if width >= 1920 && height >= 1080 {
+      return is60fps ? 12_000 : 10_000
+    } else {
+      return is60fps ? 6_000 : 4_000
+    }
+  }
+}
+
 /// 네트워크 상태
 enum NetworkStatus: String, CaseIterable {
   case poor

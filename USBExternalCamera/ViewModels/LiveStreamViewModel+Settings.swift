@@ -6,19 +6,6 @@ import SwiftData
 import SwiftUI
 
 extension LiveStreamViewModel {
-  private func recommendedYouTubeH264Bitrate(width: Int, height: Int, frameRate: Int) -> Int {
-    let is60fps = frameRate >= 50
-    if width >= 3840 && height >= 2160 {
-      return is60fps ? 51_000 : 35_000
-    } else if width >= 2560 && height >= 1440 {
-      return is60fps ? 24_000 : 16_000
-    } else if width >= 1920 && height >= 1080 {
-      return is60fps ? 12_000 : 10_000
-    } else {
-      return is60fps ? 6_000 : 4_000
-    }
-  }
-
   // MARK: - Public Methods - Settings
   /// 스트리밍 설정 저장
   func saveSettings() {
@@ -116,7 +103,7 @@ extension LiveStreamViewModel {
   func applyYouTubePreset(_ preset: YouTubeLivePreset) {
     logDebug("🎯 [PRESET] Applying YouTube preset: \(preset.displayName)", category: .streaming)
     settings.applyYouTubeLivePreset(preset)
-    settings.videoBitrate = recommendedYouTubeH264Bitrate(
+    settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
       width: settings.videoWidth,
       height: settings.videoHeight,
       frameRate: settings.frameRate

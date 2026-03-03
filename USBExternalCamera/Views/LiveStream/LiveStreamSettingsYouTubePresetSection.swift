@@ -102,7 +102,7 @@ struct YouTubePresetSectionView: View {
     
     private func isCurrentPreset(_ preset: YouTubeLivePreset) -> Bool {
         let settings = preset.settings
-        let recommendedBitrate = recommendedYouTubeH264Bitrate(
+        let recommendedBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
             width: settings.width,
             height: settings.height,
             frameRate: settings.frameRate
@@ -127,7 +127,7 @@ struct YouTubePresetSectionView: View {
     
     private func applyYouTubePreset(_ preset: YouTubeLivePreset) {
         let settings = preset.settings
-        let recommendedBitrate = recommendedYouTubeH264Bitrate(
+        let recommendedBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
             width: settings.width,
             height: settings.height,
             frameRate: settings.frameRate
@@ -148,19 +148,6 @@ struct YouTubePresetSectionView: View {
         
         // 설정 저장
         viewModel.saveSettings()
-    }
-
-    private func recommendedYouTubeH264Bitrate(width: Int, height: Int, frameRate: Int) -> Int {
-        let is60fps = frameRate >= 50
-        if width >= 3840 && height >= 2160 {
-            return is60fps ? 51_000 : 35_000
-        } else if width >= 2560 && height >= 1440 {
-            return is60fps ? 24_000 : 16_000
-        } else if width >= 1920 && height >= 1080 {
-            return is60fps ? 12_000 : 10_000
-        } else {
-            return is60fps ? 6_000 : 4_000
-        }
     }
 }
 
