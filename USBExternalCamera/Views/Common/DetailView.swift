@@ -14,6 +14,8 @@ import LiveStreamingCore
 /// 선택된 사이드바 항목에 따라 적절한 콘텐츠를 표시하는 컴포넌트입니다.
 struct DetailView: View {
   @ObservedObject var viewModel: MainViewModel
+  var onShowSidebar: () -> Void = {}
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
   var body: some View {
     Group {
@@ -32,6 +34,16 @@ struct DetailView: View {
             .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
+    }
+    .toolbar {
+      if horizontalSizeClass == .compact {
+        ToolbarItem(placement: .topBarLeading) {
+          Button(action: onShowSidebar) {
+            Image(systemName: "sidebar.left")
+          }
+          .accessibilityLabel(Text("메뉴 열기"))
+        }
       }
     }
   }
@@ -67,21 +79,69 @@ struct CameraDetailContentView: View {
 /// 키보드가 올라와도 레이아웃이 변경되지 않습니다.
 struct CameraPreviewContainerView: View {
   @ObservedObject var viewModel: MainViewModel
+  @State private var isAdvancedPanelExpanded = false
+
+  private var isFocusModeActive: Bool {
+    viewModel.liveStreamViewModel.isScreenCaptureStreaming
+  }
+
+  private var shouldShowAdvancedPanels: Bool {
+    !isFocusModeActive || isAdvancedPanelExpanded
+  }
+
+  private var isActionLocked: Bool {
+    viewModel.liveStreamViewModel.status == .connecting
+      || viewModel.liveStreamViewModel.status == .disconnecting
+      || viewModel.liveStreamViewModel.isLoading
+  }
+
+  private var selectedCameraTitle: String {
+    viewModel.cameraViewModel.selectedCamera?.name
+      ?? NSLocalizedString("select_camera", comment: "카메라 선택")
+  }
+
+  private func isCompactDetailWidth(_ containerSize: CGSize) -> Bool {
+    containerSize.width < 980
+  }
+
+  private func shouldShowTextControls(
+    for containerSize: CGSize,
+    isHorizontal: Bool
+  ) -> Bool {
+    guard shouldShowAdvancedPanels else { return false }
+    // 수평 레이아웃에서는 메뉴 탭 열림 상태에서도 텍스트 컨트롤이 보이도록
+    // 임계값을 낮추고, 레이아웃은 프리뷰 하단 배치로 처리합니다.
+    return isHorizontal ? containerSize.width >= 980 : containerSize.width >= 320
+  }
+
+  private func verticalPreviewHeightRatio(
+    for containerSize: CGSize,
+    showsTextControls: Bool
+  ) -> CGFloat {
+    if isCompactDetailWidth(containerSize) {
+      return showsTextControls ? 0.40 : 0.46
+    }
+    return showsTextControls ? 0.34 : 0.40
+  }
 
   var body: some View {
-    GeometryReader { geometry in
-      let containerSize = geometry.size
-      let isWideScreen = containerSize.width > containerSize.height * 1.3  // 가로가 긴 화면 판단
+    VStack(spacing: 10) {
+      focusModeControlBar
 
-      if isWideScreen {
-        // 가로로 긴 화면 (iPad, Mac): 수평 분할
-        horizontalLayout(containerSize: containerSize)
-      } else {
-        // 세로로 긴 화면 (iPhone): 수직 분할
-        verticalLayout(containerSize: containerSize)
+      GeometryReader { geometry in
+        let containerSize = geometry.size
+        let isWideScreen = containerSize.width >= 980
+          && containerSize.width > containerSize.height * 1.15  // 가로가 긴 화면 판단
+
+        if isWideScreen {
+          // 가로로 긴 화면 (iPad, Mac): 수평 분할
+          horizontalLayout(containerSize: containerSize)
+        } else {
+          // 세로로 긴 화면 (iPhone): 수직 분할
+          verticalLayout(containerSize: containerSize)
+        }
       }
     }
-    .padding(.top, 0)  // 상단 패딩 제거
     .padding(.horizontal, 12)  // 좌우 패딩은 12픽셀 유지
     .padding(.bottom, 12)  // 하단 패딩은 12픽셀 유지
     .background(Color.black.opacity(0.1))
@@ -92,67 +152,191 @@ struct CameraPreviewContainerView: View {
       UIApplication.shared.sendAction(
         #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+    .onChange(of: viewModel.liveStreamViewModel.status) { oldStatus, newStatus in
+      if newStatus == .streaming, oldStatus != .streaming {
+        withAnimation(.easeInOut(duration: 0.2)) {
+          isAdvancedPanelExpanded = false
+        }
+      } else if newStatus == .idle && oldStatus == .disconnecting {
+        isAdvancedPanelExpanded = false
+      } else if case .error = newStatus {
+        isAdvancedPanelExpanded = false
+      }
+    }
   }
 
   // MARK: - Layout Methods
 
   @ViewBuilder
+  private var focusModeControlBar: some View {
+    VStack(spacing: 10) {
+      HStack(spacing: 10) {
+        Button {
+          viewModel.toggleScreenCaptureStreaming()
+        } label: {
+          Label(
+            viewModel.liveStreamViewModel.streamingButtonText,
+            systemImage: viewModel.liveStreamViewModel.isScreenCaptureStreaming
+              ? "stop.fill" : "play.fill"
+          )
+          .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .buttonStyle(FocusActionButtonStyle(tint: viewModel.liveStreamViewModel.isScreenCaptureStreaming ? .red : .blue))
+        .disabled(isActionLocked || !viewModel.liveStreamViewModel.isScreenCaptureButtonEnabled)
+
+        Button {
+          viewModel.switchToNextCamera()
+        } label: {
+          Label(selectedCameraTitle, systemImage: "arrow.triangle.2.circlepath.camera")
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .buttonStyle(FocusActionButtonStyle(tint: .indigo))
+        .disabled(isActionLocked || !viewModel.canSwitchCameraQuickly)
+      }
+
+      HStack(spacing: 8) {
+        FocusMetricChip(
+          title: NSLocalizedString("status", comment: "상태"),
+          value: viewModel.liveStreamViewModel.status.description,
+          icon: "dot.radiowaves.left.and.right",
+          tint: isFocusModeActive ? .red : .gray
+        )
+        .frame(maxWidth: .infinity)
+
+        Button {
+          // 음소거 기능 안정화 전까지 비활성화
+        } label: {
+          Label(
+            viewModel.liveStreamViewModel.isMicrophoneMuted
+              ? NSLocalizedString("microphone_unmute", comment: "마이크 음소거 해제")
+              : NSLocalizedString("microphone_mute", comment: "마이크 음소거"),
+            systemImage: viewModel.liveStreamViewModel.isMicrophoneMuted ? "mic.slash.fill" : "mic.fill"
+          )
+          .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(
+          FocusActionButtonStyle(
+            tint: viewModel.liveStreamViewModel.isMicrophoneMuted ? .orange : .teal))
+        .disabled(true)
+
+        FocusMetricChip(
+          title: NSLocalizedString("video_bitrate", comment: "비디오 비트레이트"),
+          value: "\(viewModel.liveStreamViewModel.settings.videoBitrate) kbps",
+          icon: "speedometer",
+          tint: .blue
+        )
+        .frame(maxWidth: .infinity)
+      }
+
+      if isFocusModeActive {
+        HStack {
+          Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+              isAdvancedPanelExpanded.toggle()
+            }
+          } label: {
+            Label(
+              NSLocalizedString("advanced_settings", comment: "고급 설정"),
+              systemImage: isAdvancedPanelExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill"
+            )
+            .font(.subheadline.weight(.semibold))
+          }
+          .buttonStyle(.plain)
+          .foregroundColor(.secondary)
+
+          Spacer()
+        }
+      }
+    }
+    .padding(12)
+    .background(
+      RoundedRectangle(cornerRadius: 14)
+        .fill(Color(UIColor.secondarySystemBackground))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 14)
+        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+    )
+  }
+
+  @ViewBuilder
   private func horizontalLayout(containerSize: CGSize) -> some View {
-    HStack(spacing: 16) {  // 간격 줄임
+    let showsTextControls = shouldShowTextControls(for: containerSize, isHorizontal: true)
+    let previewAspect: CGFloat = 16.0 / 9.0
+    let controlsReservedHeight: CGFloat = showsTextControls ? 136 : 0
+    let previewAvailableHeight = max(1, containerSize.height - 40 - controlsReservedHeight)
+    let previewMaxWidthByHeight = previewAvailableHeight * previewAspect
+    let targetLeftWidth = showsTextControls ? containerSize.width * 0.64 : containerSize.width * 0.72
+    let previewWidth = min(targetLeftWidth, previewMaxWidthByHeight)
+    let leftColumnWidth = previewWidth
+    let columnSpacing: CGFloat = 8
+
+    HStack(spacing: columnSpacing) {
       // 왼쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역
-      HStack(spacing: 12) {
+      VStack(spacing: 8) {
         // 카메라 프리뷰
         cameraPreviewSection(
           availableSize: CGSize(
-            width: containerSize.width * 0.35,  // 35%로 줄임 (텍스트 컨트롤 공간 확보)
-            height: containerSize.height - 40
+            width: previewWidth,
+            height: previewAvailableHeight
           )
         )
 
-        // 텍스트 컨트롤 영역 (프리뷰 오른쪽에 세로 배치)
-        VStack(spacing: 0) {
+        if showsTextControls {
+          // 메뉴 접힘 상태에서도 프리뷰를 가리지 않도록 하단에 배치
           TextOverlayControlView(viewModel: viewModel)
-          Spacer()
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(width: 120)  // 고정 너비
       }
-      .frame(maxWidth: containerSize.width * 0.45)
+      .frame(width: leftColumnWidth, alignment: .leading)
+      .frame(maxHeight: .infinity, alignment: .topLeading)
 
       // 오른쪽: YouTube Studio 영역 (더 크게)
       VStack(spacing: 0) {
-        YouTubeStudioAccessView(viewModel: viewModel)
+        YouTubeStudioAccessView(
+          viewModel: viewModel,
+          showsSupplementaryInfo: shouldShowAdvancedPanels && !isCompactDetailWidth(containerSize)
+        )
           .frame(maxHeight: .infinity)
       }
-      .frame(maxWidth: containerSize.width * 0.55)  // 55%로 증가
+      .frame(maxWidth: .infinity)
     }
   }
 
   @ViewBuilder
   private func verticalLayout(containerSize: CGSize) -> some View {
+    let showsTextControls = shouldShowTextControls(for: containerSize, isHorizontal: false)
+    let previewHeightRatio = verticalPreviewHeightRatio(
+      for: containerSize,
+      showsTextControls: showsTextControls
+    )
+    let controlsReservedHeight: CGFloat = showsTextControls ? 136 : 0
+    let previewAvailableHeight = max(120, containerSize.height * previewHeightRatio - controlsReservedHeight)
+
     VStack(spacing: 7) {  // 간격을 4에서 7픽셀로 조정
-      // 위쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역 (고정 크기)
-      // 상단 safe area 높이만큼 음수 오프셋 적용하여 인디케이터 영역으로 이동
-      HStack(alignment: .top, spacing: 12) {  // alignment .top으로 변경하여 상단 정렬
-        // 카메라 프리뷰
+      // 위쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역 (iPhone 포함 하단 배치)
+      VStack(alignment: .trailing, spacing: 8) {
         cameraPreviewSection(
           availableSize: CGSize(
-            width: containerSize.width - 140,  // 텍스트 컨트롤 공간 확보
-            height: containerSize.height * 0.32  // 수정 전 크기로 되돌림
+            width: containerSize.width - 12,
+            height: previewAvailableHeight
           )
         )
 
-        // 텍스트 컨트롤 영역 (프리뷰 오른쪽에 세로 배치)
-        VStack(spacing: 0) {
+        if showsTextControls {
           TextOverlayControlView(viewModel: viewModel)
-          Spacer()
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(width: 120)  // 고정 너비
       }
       .layoutPriority(0)  // 낮은 우선순위로 설정
-      .offset(y: -20)  // 상단으로 20픽셀 이동하여 인디케이터와 같은 레벨로 이동
 
       // 아래쪽: YouTube Studio 영역 (남은 공간 모두 차지)
-      YouTubeStudioAccessView(viewModel: viewModel)
+      YouTubeStudioAccessView(
+        viewModel: viewModel,
+        showsSupplementaryInfo: shouldShowAdvancedPanels && !isCompactDetailWidth(containerSize)
+      )
         .frame(maxWidth: .infinity, maxHeight: .infinity)  // 남은 공간 모두 차지
         .layoutPriority(1)  // 높은 우선순위로 확장
     }
@@ -162,8 +346,9 @@ struct CameraPreviewContainerView: View {
   private func cameraPreviewSection(availableSize: CGSize) -> some View {
     // 16:9 비율 계산 (유튜브 라이브 표준)
     let aspectRatio: CGFloat = 16.0 / 9.0
+    let audioMeterHeight: CGFloat = 40
     let maxWidth = availableSize.width
-    let maxHeight = availableSize.height  // 텍스트 영역 제거되어 60픽셀 빼기 불필요
+    let maxHeight = max(120, availableSize.height - audioMeterHeight)  // 하단 오디오 피크 영역 확보
 
     // Aspect Fit 방식으로 16:9 프레임 계산
     let previewSize: CGSize = {
@@ -178,68 +363,137 @@ struct CameraPreviewContainerView: View {
       }
     }()
 
-    // 16:9 프리뷰 영역 (프리뷰 정보 텍스트 제거하여 간격 최소화)
-    ZStack {
-      // 카메라 프리뷰
-      CameraPreviewView(
-        session: viewModel.cameraViewModel.captureSession,
-        streamViewModel: viewModel.liveStreamViewModel,
-        haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
-        showTextOverlay: viewModel.showTextOverlay,
-        overlayText: viewModel.currentOverlayText
-      )
-      .aspectRatio(aspectRatio, contentMode: .fit)
-      .frame(width: previewSize.width, height: previewSize.height)
-      .background(Color.black)
-      .cornerRadius(8)
-      .overlay(
-        RoundedRectangle(cornerRadius: 8)
-          .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-      )
-      .onAppear {
-        // HaishinKitManager에 텍스트 오버레이 정보 전달
-        if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
-          as? HaishinKitManager
-        {
-          haishinKitManager.updateTextOverlay(
-            show: viewModel.showTextOverlay, settings: viewModel.textOverlaySettings)
-        }
-      }
-      .onChange(of: viewModel.textOverlaySettings) { _, newSettings in
-        // 텍스트 설정 변경 시 HaishinKitManager 업데이트
-        if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
-          as? HaishinKitManager
-        {
-          haishinKitManager.updateTextOverlay(
-            show: viewModel.showTextOverlay, settings: newSettings)
-        }
-      }
-      .onChange(of: viewModel.showTextOverlay) { _, newValue in
-        // 텍스트 표시 상태 변경 시 HaishinKitManager 업데이트
-        if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
-          as? HaishinKitManager
-        {
-          haishinKitManager.updateTextOverlay(
-            show: newValue, settings: viewModel.textOverlaySettings)
-        }
-      }
-
-      // 텍스트 오버레이
-      if viewModel.showTextOverlay {
-        TextOverlayDisplayView(
-          settings: viewModel.textOverlaySettings,
-          previewSize: previewSize
+    VStack(spacing: 6) {
+      // 16:9 프리뷰 영역 (프리뷰 정보 텍스트 제거하여 간격 최소화)
+      ZStack {
+        // 카메라 프리뷰
+        CameraPreviewView(
+          session: viewModel.cameraViewModel.captureSession,
+          streamViewModel: viewModel.liveStreamViewModel,
+          haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
+          showTextOverlay: viewModel.showTextOverlay,
+          overlayText: viewModel.currentOverlayText
         )
+        .aspectRatio(aspectRatio, contentMode: .fit)
+        .frame(width: previewSize.width, height: previewSize.height)
+        .background(Color.black)
+        .cornerRadius(8)
+        .overlay(
+          RoundedRectangle(cornerRadius: 8)
+            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
+        .onAppear {
+          // HaishinKitManager에 텍스트 오버레이 정보 전달
+          if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
+            as? HaishinKitManager
+          {
+            haishinKitManager.updateTextOverlay(
+              show: viewModel.showTextOverlay, settings: viewModel.textOverlaySettings)
+          }
+        }
+        .onChange(of: viewModel.textOverlaySettings) { _, newSettings in
+          // 텍스트 설정 변경 시 HaishinKitManager 업데이트
+          if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
+            as? HaishinKitManager
+          {
+            haishinKitManager.updateTextOverlay(
+              show: viewModel.showTextOverlay, settings: newSettings)
+          }
+        }
+        .onChange(of: viewModel.showTextOverlay) { _, newValue in
+          // 텍스트 표시 상태 변경 시 HaishinKitManager 업데이트
+          if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
+            as? HaishinKitManager
+          {
+            haishinKitManager.updateTextOverlay(
+              show: newValue, settings: viewModel.textOverlaySettings)
+          }
+        }
+
+        // 텍스트 오버레이
+        if viewModel.showTextOverlay {
+          TextOverlayDisplayView(
+            settings: viewModel.textOverlaySettings,
+            previewSize: previewSize
+          )
+        }
+
+        // 16:9 경계선 표시 (선택적으로 표시)
+        RoundedRectangle(cornerRadius: 8)
+          .fill(Color.clear)
+          .stroke(Color.red.opacity(0.3), lineWidth: 1)
+          .frame(width: previewSize.width, height: previewSize.height)
       }
 
-      // 16:9 경계선 표시 (선택적으로 표시)
-      RoundedRectangle(cornerRadius: 8)
-        .fill(Color.clear)
-        .stroke(Color.red.opacity(0.3), lineWidth: 1)
-        .frame(width: previewSize.width, height: previewSize.height)
+      AudioPeakMeterView(
+        level: viewModel.liveStreamViewModel.microphonePeakLevel,
+        decibels: viewModel.liveStreamViewModel.microphonePeakDecibels,
+        isMuted: viewModel.liveStreamViewModel.isMicrophoneMuted,
+        isStreaming: viewModel.liveStreamViewModel.status == .streaming,
+        diagnosticMessage: viewModel.liveStreamViewModel.audioPeakDiagnosticMessage,
+        inputSummary: viewModel.liveStreamViewModel.activeMicrophoneDisplaySummary
+      )
+      .frame(width: previewSize.width)
     }
   }
 
+}
+
+private struct FocusActionButtonStyle: ButtonStyle {
+  let tint: Color
+  @Environment(\.isEnabled) private var isEnabled
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.headline.weight(.semibold))
+      .foregroundColor(.white)
+      .padding(.horizontal, 12)
+      .background(
+        RoundedRectangle(cornerRadius: 12)
+          .fill(backgroundColor(isPressed: configuration.isPressed))
+      )
+      .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+      .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+  }
+
+  private func backgroundColor(isPressed: Bool) -> Color {
+    guard isEnabled else { return .gray.opacity(0.45) }
+    return isPressed ? tint.opacity(0.82) : tint
+  }
+}
+
+private struct FocusMetricChip: View {
+  let title: String
+  let value: String
+  let icon: String
+  let tint: Color
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      HStack(spacing: 4) {
+        Image(systemName: icon)
+          .font(.caption2.weight(.bold))
+          .foregroundColor(tint)
+        Text(title)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .lineLimit(1)
+      }
+
+      Text(value)
+        .font(.subheadline.weight(.semibold))
+        .foregroundColor(.primary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, 8)
+    .padding(.vertical, 7)
+    .background(
+      RoundedRectangle(cornerRadius: 10)
+        .fill(Color(UIColor.tertiarySystemBackground))
+    )
+  }
 }
 
 /// 카메라 플레이스홀더 View 컴포넌트

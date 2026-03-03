@@ -27,18 +27,21 @@ import WebKit
 /// - iOS 버전별 최신 웹 기능 활성화
 struct YouTubeStudioAccessView: View {
     @ObservedObject var viewModel: MainViewModel
+    var showsSupplementaryInfo: Bool = true
     @StateObject private var keyboardAccessoryManager = KeyboardAccessoryManager()
     
     var body: some View {
         // 이중 VStack 제거하고 단일 VStack으로 간소화
-        VStack(spacing: 2) { // spacing 4에서 2로 줄임
-            // 메인 컨텐츠 - 웹뷰 공간을 최대화하기 위해 여백 최소화
-            headerSection
-                .layoutPriority(0) // 낮은 우선순위
-            
-            // 스트리밍 상태 정보 (컴팩트하게)
-            streamingStatusCard
-                .layoutPriority(0) // 낮은 우선순위
+        VStack(spacing: showsSupplementaryInfo ? 2 : 0) { // spacing 4에서 2로 줄임
+            if showsSupplementaryInfo {
+                // 메인 컨텐츠 - 웹뷰 공간을 최대화하기 위해 여백 최소화
+                headerSection
+                    .layoutPriority(0) // 낮은 우선순위
+                
+                // 스트리밍 상태 정보 (컴팩트하게)
+                streamingStatusCard
+                    .layoutPriority(0) // 낮은 우선순위
+            }
             
             // YouTube Studio WebView (최대한 확장) - Spacer 역할로 남은 공간 모두 차지
             youtubeStudioWebView

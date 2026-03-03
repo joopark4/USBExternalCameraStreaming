@@ -43,6 +43,7 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - ✅ Real-time audio mixing and processing with AAC encoding
 - ✅ Mic permission/audio-session preflight before live start (prevents audio 0 kbps cases)
 - ✅ Frame backpressure control in screen-capture pipeline (reduced buffering/stutter)
+- 🚧 Microphone mute toggle is currently under development (temporarily disabled in UI)
 
 ### Video & Audio
 - 🎬 **Resolutions**: 480p (848×480), 720p (1280×720), 1080p (1920×1080)
@@ -167,7 +168,7 @@ See [LiveStreamingCore Repository](https://github.com/joopark4/LiveStreamingCore
 ### 3. Start Streaming
 1. Select your USB camera from the camera list
 2. Tap **Start Screen Capture Streaming**
-3. Monitor real-time statistics in the streaming view
+3. Check stream status from the sidebar state and the YouTube Studio panel
 
 ### YouTube Live Setup
 1. Go to [YouTube Studio](https://studio.youtube.com)
@@ -208,7 +209,6 @@ USBExternalCamera-iOS/
 │   │   ├── Camera/             # Camera selection and preview
 │   │   └── Settings/           # Configuration views
 │   ├── ViewModels/             # MVVM ViewModels
-│   ├── Services/               # Business logic
 │   ├── Models/                 # Data models
 │   ├── Managers/               # System managers
 │   └── Utils/                  # Utilities and extensions

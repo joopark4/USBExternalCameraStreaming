@@ -170,7 +170,7 @@ struct VideoSettingsSectionView: View {
         } else if width == 1920 && height == 1080 {
             return .resolution1080p
         }
-        return .resolution720p // default
+        return .resolution1080p
     }
 
     func setResolution(_ resolution: Resolution) {
@@ -178,6 +178,9 @@ struct VideoSettingsSectionView: View {
         case .resolution480p:
             viewModel.settings.videoWidth = 848
             viewModel.settings.videoHeight = 480
+            if viewModel.settings.frameRate > 30 {
+                viewModel.settings.frameRate = 30
+            }
         case .resolution720p:
             viewModel.settings.videoWidth = 1280
             viewModel.settings.videoHeight = 720
@@ -185,6 +188,11 @@ struct VideoSettingsSectionView: View {
             viewModel.settings.videoWidth = 1920
             viewModel.settings.videoHeight = 1080
         }
+        viewModel.settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+            width: viewModel.settings.videoWidth,
+            height: viewModel.settings.videoHeight,
+            frameRate: viewModel.settings.frameRate
+        )
     }
 
     /// 프레임레이트 지원 여부 확인 (일반 검사)
@@ -196,36 +204,83 @@ struct VideoSettingsSectionView: View {
 
     var bitrateColor: Color {
         let bitrate = viewModel.settings.videoBitrate
-        if bitrate < 2500 {
-            return .orange
-        } else if bitrate > 8000 {
-            return .red
+        if recommendedBitrateRange.contains(bitrate) {
+            return .green
         }
-        return .primary
+        return bitrate < recommendedBitrateRange.lowerBound ? .orange : .red
     }
 
+    @ViewBuilder
     var bitrateWarningView: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if viewModel.settings.videoBitrate < 2500 {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                        .font(.caption)
-                    Text("YouTube Live는 최소 2500kbps를 권장합니다")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-            } else if viewModel.settings.videoBitrate > 8000 {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                        .font(.caption)
-                    Text("비트레이트가 너무 높으면 버퍼링이 발생할 수 있습니다")
+        if viewModel.settings.videoBitrate > recommendedBitrateRange.upperBound {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.red)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(NSLocalizedString("bitrate_too_high_warning", comment: "⚠️ 비트레이트가 너무 높습니다"))
                         .font(.caption)
                         .foregroundColor(.red)
+                    Text(NSLocalizedString("youtube_bitrate_warning", comment: "YouTube Live 권장 비트레이트 범위를 벗어났습니다."))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text(String(format: NSLocalizedString("youtube_recommended_bitrate_format", comment: "권장 비트레이트 범위"), recommendedBitrateRange.lowerBound, recommendedBitrateRange.upperBound))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
+                Spacer()
             }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.red.opacity(0.1))
+            .cornerRadius(8)
+        } else if recommendedBitrateRange.contains(viewModel.settings.videoBitrate) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(NSLocalizedString("youtube_recommended_range", comment: "✅ YouTube Live H.264 권장 범위"))
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    Text(String(format: NSLocalizedString("youtube_recommended_bitrate_format", comment: "권장 비트레이트 범위"), recommendedBitrateRange.lowerBound, recommendedBitrateRange.upperBound))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(8)
+        } else {
+            HStack {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(NSLocalizedString("low_bitrate_warning", comment: "📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다"))
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Text(String(format: NSLocalizedString("youtube_recommended_bitrate_format", comment: "권장 비트레이트 범위"), recommendedBitrateRange.lowerBound, recommendedBitrateRange.upperBound))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.orange.opacity(0.1))
+            .cornerRadius(8)
         }
+    }
+
+    private var recommendedBitrateRange: ClosedRange<Int> {
+        let recommended = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+            width: viewModel.settings.videoWidth,
+            height: viewModel.settings.videoHeight,
+            frameRate: viewModel.settings.frameRate
+        )
+        let minBitrate = max(500, Int(Double(recommended) * 0.8))
+        let maxBitrate = Int(Double(recommended) * 1.2)
+        return minBitrate...maxBitrate
     }
 
     var body: some View {
@@ -322,7 +377,7 @@ struct VideoSettingsSectionView: View {
                     Slider(value: Binding(
                         get: { Double(viewModel.settings.videoBitrate) },
                         set: { viewModel.settings.videoBitrate = Int($0) }
-                    ), in: 500...10000, step: 100)
+                    ), in: 500...20000, step: 100)
                     
                     // YouTube Live 권장사항 및 경고
                     bitrateWarningView

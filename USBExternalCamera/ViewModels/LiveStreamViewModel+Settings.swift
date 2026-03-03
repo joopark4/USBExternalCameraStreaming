@@ -89,22 +89,26 @@ extension LiveStreamViewModel {
   /// 설정 초기화 (저장된 설정도 삭제)
   func resetToDefaults() {
     logDebug("🔄 [SETTINGS] Resetting to default settings...", category: .streaming)
-    settings = LiveStreamSettings()
-    // 기본값을 720p 프리셋으로 설정하여 프리셋과 동기화
-    settings.applyYouTubeLivePreset(.hd720p)
+    settings = Self.createDefaultSettings()
     // 저장된 설정도 삭제
     clearSavedSettings()
     // 즉시 기본 설정을 저장
     autoSaveSettings()
     // 스트리밍 가능 여부 업데이트
     updateStreamingAvailability()
-    logDebug("✅ [SETTINGS] Reset to 720p preset successfully", category: .streaming)
+    logDebug("✅ [SETTINGS] Reset to YouTube 1080p baseline successfully", category: .streaming)
   }
 
   /// 유튜브 라이브 스트리밍 표준 프리셋 적용
   func applyYouTubePreset(_ preset: YouTubeLivePreset) {
     logDebug("🎯 [PRESET] Applying YouTube preset: \(preset.displayName)", category: .streaming)
     settings.applyYouTubeLivePreset(preset)
+    settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+      width: settings.videoWidth,
+      height: settings.videoHeight,
+      frameRate: settings.frameRate
+    )
+    settings.audioBitrate = Constants.defaultAudioBitrate
     // 설정 즉시 저장
     autoSaveSettings()
     // 스트리밍 가능 여부 업데이트

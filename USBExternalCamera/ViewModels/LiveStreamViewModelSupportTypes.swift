@@ -25,10 +25,10 @@ enum StreamingPreset: String, CaseIterable {
 
   var description: String {
     switch self {
-    case .low: return "720p • 1.5Mbps"
-    case .standard: return "1080p • 2.5Mbps"
-    case .high: return "1080p • 4.5Mbps"
-    case .ultra: return "4K • 8Mbps"
+    case .low: return "720p • 4.0Mbps"
+    case .standard: return "1080p • 10.0Mbps"
+    case .high: return "1080p60 • 12.0Mbps"
+    case .ultra: return "4K • 35.0Mbps"
     }
   }
 
@@ -38,6 +38,22 @@ enum StreamingPreset: String, CaseIterable {
     case .standard: return "2.circle"
     case .high: return "3.circle"
     case .ultra: return "4.circle"
+    }
+  }
+}
+
+/// YouTube Live H.264 권장 비트레이트 계산 유틸리티
+enum YouTubeBitrateAdvisor {
+  static func recommendedH264Bitrate(width: Int, height: Int, frameRate: Int) -> Int {
+    let is60fps = frameRate >= 50
+    if width >= 3840 && height >= 2160 {
+      return is60fps ? 51_000 : 35_000
+    } else if width >= 2560 && height >= 1440 {
+      return is60fps ? 24_000 : 16_000
+    } else if width >= 1920 && height >= 1080 {
+      return is60fps ? 12_000 : 10_000
+    } else {
+      return is60fps ? 6_000 : 4_000
     }
   }
 }
@@ -74,6 +90,30 @@ enum NetworkStatus: String, CaseIterable {
     case .fair: return .orange
     case .good: return .green
     case .excellent: return .blue
+    }
+  }
+}
+
+/// 사용 가능한 마이크 입력 옵션
+struct MicrophoneInputOption: Identifiable, Hashable {
+  static let automaticID = "automatic"
+
+  let id: String
+  let name: String
+  let portType: AVAudioSession.Port?
+  let uid: String?
+
+  var isAutomatic: Bool {
+    id == Self.automaticID
+  }
+
+  var isExternal: Bool {
+    guard let portType else { return false }
+    switch portType {
+    case .builtInMic:
+      return false
+    default:
+      return true
     }
   }
 }

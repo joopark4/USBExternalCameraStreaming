@@ -9,7 +9,6 @@
 "save" = "Save";
 "done" = "Done";
 "ok" = "OK";
-"settings" = "Settings";
 "menu" = "Menu";
 
 // MARK: - Camera
@@ -71,6 +70,21 @@
 "audio_bitrate" = "Audio Bitrate";
 "audio_bitrate_label" = "Audio Bitrate: %d kbps";
 "audio_bitrate_picker" = "Audio Bitrate";
+"microphone_mute" = "Mute Microphone";
+"microphone_unmute" = "Unmute Microphone";
+"microphone_input_source" = "Microphone Input";
+"microphone_input_auto" = "System Default Microphone (Auto)";
+"microphone_input_active" = "Active Input: %@";
+"microphone_input_select_hint" = "When Bluetooth or wired microphones are connected, you can choose them here.";
+"microphone_input_none" = "No input";
+"microphone_connection_builtin" = "Built-in";
+"microphone_connection_bluetooth" = "Bluetooth";
+"microphone_connection_wired" = "Wired/USB";
+"microphone_connection_external" = "External";
+"audio_peak_label" = "Audio Peak";
+"audio_meter_muted" = "Muted";
+"audio_meter_idle" = "Idle";
+"audio_peak_diag_no_input" = "No audio input detected. Check mic connection/selection.";
 "kbps_64" = "64 kbps";
 "kbps_128" = "128 kbps";
 "kbps_192" = "192 kbps";
@@ -134,8 +148,6 @@
 "connection_settings" = "Connection Settings";
 "stream_settings" = "Stream Settings";
 "preview_and_test" = "Preview & Test";
-"connection_test" = "Connection Test";
-"export_settings" = "Export Settings";
 "estimated_bandwidth" = "Estimated Bandwidth:";
 "required_items_message" = "The following items are required to complete the configuration:";
 "reset_settings_confirm_title" = "Reset Settings";
@@ -230,9 +242,11 @@
 
 // Stream Control Buttons
 "start_streaming" = "Start Streaming";
+"live_start" = "Go Live";
 "connecting" = "Connecting...";
 "ready" = "Ready";
 "stop_streaming" = "Stop Streaming";
+"live_end" = "End Live";
 "stopping" = "Stopping...";
 "retry" = "Retry";
 
@@ -342,7 +356,6 @@
 "network_unavailable_message" = "Not connected to network.";
 "server_error_message" = "Server error occurred. (Code: %d)";
 "unknown_error_message" = "An unknown error occurred.";
-"error_occurred" = "An error occurred.";
 "wifi_connection" = "WiFi";
 "cellular_data" = "Cellular Data";
 "ethernet_connection" = "Ethernet";
@@ -384,7 +397,7 @@
 "help_video_bitrate_tip_find_optimal" = "Find the optimal value through testing";
 "help_video_bitrate_warning_buffering" = "Setting too high may cause buffering or disconnections";
 "help_video_bitrate_warning_platform_limit" = "Each platform has maximum bitrate limitations";
-"help_video_bitrate_example_hd" = "HD Streaming: 2500 kbps";
+"help_video_bitrate_example_hd" = "Full HD (1080p) Streaming: 10000 kbps";
 "help_video_bitrate_example_mobile" = "Mobile Optimized: 1000 kbps";
 
 // MARK: - Help Details for Audio Bitrate
@@ -594,40 +607,20 @@
 "processing" = "Processing...";
 "stop_streaming_capture" = "Stop Streaming - Capture";
 "start_streaming_capture" = "Start Streaming - Capture";
-"streaming_status" = "Streaming Status";
-"status_label" = "Status:";
-"duration_label" = "Duration:";
-"error_occurred" = "Error Occurred";
-"camera_preview" = "Camera Preview";
-"quick_diagnosis" = "Quick Diagnosis";
-"full_diagnosis" = "Full Diagnosis";
-"streaming_info" = "Streaming Info";
-"realtime_transmission_data" = "📡 Real-time Transmission Data";
 
 // MARK: - Views - Live Stream Settings
 "streaming_settings_limited" = "Some settings cannot be changed while streaming";
 "bitrate_too_high_warning" = "⚠️ Bitrate is too high";
-"youtube_bitrate_warning" = "YouTube Live may disconnect. Recommended: 1500-4000 kbps";
-"youtube_recommended_range" = "✅ YouTube Live 1080p recommended range";
+"youtube_bitrate_warning" = "Outside the recommended YouTube Live H.264 bitrate range.";
+"youtube_recommended_range" = "✅ YouTube Live H.264 recommended range";
+"youtube_recommended_bitrate_format" = "Recommended bitrate range: %d-%d kbps";
 "low_bitrate_warning" = "📹 Low bitrate - Quality may be poor";
 "reset_settings_confirmation" = "Reset Settings Confirmation";
 "reset_settings_message" = "All settings will be reset to default values. Do you want to continue?";
 
 // MARK: - Views - Live Stream Control
 "current_status" = "Current Status";
-"advanced_features" = "Advanced Features";
-"youtube_live_setup_guide" = "YouTube Live Setup Guide";
-"youtube_streaming_diagnosis" = "YouTube Streaming Diagnosis";
 "test_connection" = "Test Connection";
-"testing_connection" = "Testing connection...";
-"latency_ms" = "Latency: %dms";
-"ready_to_test" = "Ready to test connection";
-"start_test" = "Start Test";
-"encoder_settings" = "Encoder Settings";
-"network_settings" = "Network Settings";
-"automation" = "Automation";
-"select_quality_preset" = "Select Quality Preset";
-"preset_will_override_settings" = "Applying preset will change current settings";
 
 // MARK: - Views - Streaming Log
 "level_label" = "Level: ";
@@ -705,24 +698,16 @@
 "loading" = "Loading...";
 
 // MARK: - Connection Related Strings
-"connection_timeout" = "Connection Timeout";
 "auto_reconnect" = "Auto Reconnect";
-"connection_test_result" = "Connection Test Result";
-"rtmp_connection_debug" = "RTMP Connection Debug";
-"connection_status" = "Connection Status";
 "reconnecting_attempt" = "🔄 Reconnecting";
 "connection_failed" = "❌ Connection Failed";
 "attempt_retry_format" = "Attempt: %d/%d\n%d seconds to retry";
 "test_connection" = "Test Connection";
-"testing_connection" = "Testing connection...";
-"ready_to_test" = "Ready to test connection";
-"connection_test" = "Connection Test";
 "connecting_to_server" = "Connecting...";
 "connected" = "Connected";
 "disconnected" = "Disconnected";
 "connecting" = "Connecting";
 "disconnecting" = "Disconnecting";
-"connection_troubleshooting" = "If connection fails:";
 "connection_failed_detailed" = "Connection failed: %@";
 
 // MARK: - Error Messages and Recovery Suggestions
@@ -925,21 +910,8 @@
 // Additional UI strings
 "activated" = "Activated";
 "deactivated" = "Deactivated";
-"rtmp_settings" = "RTMP Settings";
-"not_configured" = "Not configured";
-"stream_key_label" = "Stream Key:";
-"validity_label" = "Validity:";
-"status_label" = "Status:";
-"broadcast_label" = "Broadcast:";
-"screen_capture_streaming" = "Screen capture streaming";
-"streaming_manager_not_initialized" = "Streaming manager not initialized";
-"debug_info" = "Debug Info";
-"screen_capture_streaming_enabled" = "Screen capture streaming enabled";
-"debug_info_unavailable" = "Debug info unavailable";
 "text_input" = "Text Input";
 "recent_texts" = "Recent Texts";
-"buffer_size" = "Buffer Size";
-"youtube_guide_description" = "Step-by-step guide to start live streaming on YouTube.";
 
 // Stream key validation
 "whitespace_special_chars_removed" = "⚠️ Whitespace and special characters have been removed";
@@ -948,15 +920,30 @@
 "valid_stream_key_format" = "✅ Valid stream key (%d characters)";
 
 // YouTube setup and troubleshooting
-"timeout_seconds_format" = "%d seconds";
-"youtube_requirement_1" = "• Live streaming feature must be enabled";
-"youtube_requirement_2" = "• Phone number verification must be completed";
-"youtube_requirement_3" = "• Never share your stream key publicly";
-"youtube_requirement_4" = "• You must start a new live stream each time";
-"troubleshoot_1" = "• Try generating a new stream key";
-"troubleshoot_2" = "• Switch between WiFi/mobile data";
-"troubleshoot_3" = "• Turn off VPN and retry";
-"troubleshoot_4" = "• Allow port 1935 in firewall";
-"youtube_setup_required" = "YouTube Live setup required";
-"youtube_stream_key_required" = "You need to get a stream key from YouTube to start streaming.";
-"view_setup_guide" = "View Setup Guide";
+
+// MARK: - Missing keys (backfilled)
+"all_optimizations_enabled" = "All optimizations enabled";
+"audio_channels" = "Audio Channels";
+"enable_optimizations" = "Enable optimizations";
+"hardware_accelerated" = "Hardware Accelerated";
+"high" = "High";
+"high_quality_streaming" = "High quality streaming";
+"low" = "Low";
+"medium" = "Medium";
+"mono" = "Mono";
+"none" = "None";
+"not_optimized" = "Not optimized";
+"optimized" = "Optimized";
+"partial" = "Partial";
+"recommended_audio_bitrate" = "YouTube recommends 128-256 kbps.";
+"reset_to_defaults" = "Reset to Defaults";
+"rtmp_url" = "RTMP URL";
+"sample_rate" = "Sample Rate";
+"settings_info" = "These settings are optimized for YouTube Live.";
+"software_encoding" = "Software Encoding";
+"some_optimizations_enabled" = "Some optimizations enabled";
+"status" = "Status";
+"elapsed_time" = "Elapsed Time";
+"stereo" = "Stereo";
+"stereo_audio" = "Stereo Audio";
+"text_overlay_settings" = "Text Overlay Settings";

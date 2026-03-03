@@ -22,27 +22,29 @@ extension LiveStreamViewModel {
     -> LiveStreamSettings
   {
     var settings = LiveStreamSettings()
+    settings.rtmpURL = Constants.youtubeRTMPURL
+    settings.streamKey = ""
     switch preset {
     case .low:
       settings.videoWidth = 1280
       settings.videoHeight = 720
-      settings.videoBitrate = 2500
+      settings.videoBitrate = 4000
       settings.frameRate = 30
     case .standard:
       settings.videoWidth = 1920
       settings.videoHeight = 1080
-      settings.videoBitrate = 4500
+      settings.videoBitrate = 10_000
       settings.frameRate = 30
     case .high:
       settings.videoWidth = 1920
       settings.videoHeight = 1080
-      settings.videoBitrate = 6000
+      settings.videoBitrate = 12_000
       settings.frameRate = 60
     case .ultra:
       settings.videoWidth = 3840
       settings.videoHeight = 2160
-      settings.videoBitrate = 8000
-      settings.frameRate = 60
+      settings.videoBitrate = 35_000
+      settings.frameRate = 30
     }
     settings.audioBitrate = preset == .ultra ? 256 : 128
     // keyframeInterval, videoEncoder, audioEncoder는 LiveStreamSettings에 없음
@@ -70,8 +72,26 @@ extension LiveStreamViewModel {
       // 스트리밍 상태도 바인딩
       haishinKitManager.$currentStatus
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] status in
-          self?.status = status
+        .scan((previous: LiveStreamStatus.idle, current: LiveStreamStatus.idle)) { state, newStatus in
+          (previous: state.current, current: newStatus)
+        }
+        .sink { [weak self] transition in
+          guard let self else { return }
+          let previousStatus = transition.previous
+          let status = transition.current
+          self.status = status
+
+          if status == .streaming {
+            if self.screenCaptureStreamingStartedAt == nil {
+              self.screenCaptureStreamingStartedAt = .now
+            }
+            if previousStatus != .streaming {
+              self.suspendIdleMicrophonePeakMonitoringForStreaming()
+            }
+          } else if status == .idle {
+            self.screenCaptureStreamingStartedAt = nil
+            self.resumeIdleMicrophonePeakMonitoringAfterStreaming()
+          }
         }
         .store(in: &cancellables)
 
@@ -101,15 +121,25 @@ extension LiveStreamViewModel {
   func loadInitialSettings() {
     Task {
       let loadedSettings = liveStreamService.loadSettings()
+      let defaults = UserDefaults.standard
+      let hasSavedSettings =
+        defaults.object(forKey: "LiveStream.savedAt") != nil
+        || defaults.object(forKey: "LiveStream.videoBitrate") != nil
+        || defaults.object(forKey: "LiveStream.videoWidth") != nil
+        || defaults.object(forKey: "LiveStream.videoHeight") != nil
+        || defaults.object(forKey: "LiveStream.frameRate") != nil
+
       await MainActor.run {
-        // 로드된 설정이 있으면 적용 (빈 설정도 포함)
-        self.settings = loadedSettings
-        if !loadedSettings.rtmpURL.isEmpty || !loadedSettings.streamKey.isEmpty {
+        if hasSavedSettings {
+          self.settings = loadedSettings
           logDebug(
             "🎥 [LOAD] Saved settings loaded - RTMP: \(!loadedSettings.rtmpURL.isEmpty), Key: \(!loadedSettings.streamKey.isEmpty)",
             category: .streaming)
         } else {
-          logDebug("📝 [LOAD] Default settings loaded (no saved data)", category: .streaming)
+          // 저장 이력이 없으면 앱 기본값(YouTube 1080p30/H.264 권장값) 적용
+          self.settings = Self.createDefaultSettings()
+          self.autoSaveSettings()
+          logDebug("📝 [LOAD] Initial defaults applied (YouTube 1080p baseline)", category: .streaming)
         }
         self.updateStreamingAvailability()
         self.updateNetworkRecommendations()

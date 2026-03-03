@@ -9,7 +9,6 @@
 "save" = "저장";
 "done" = "완료";
 "ok" = "확인";
-"settings" = "설정";
 "menu" = "메뉴";
 
 // MARK: - Camera
@@ -71,6 +70,21 @@
 "audio_bitrate" = "오디오 비트레이트";
 "audio_bitrate_label" = "오디오 비트레이트: %d kbps";
 "audio_bitrate_picker" = "오디오 비트레이트";
+"microphone_mute" = "마이크 음소거";
+"microphone_unmute" = "마이크 음소거 해제";
+"microphone_input_source" = "마이크 입력 소스";
+"microphone_input_auto" = "시스템 기본 마이크(자동)";
+"microphone_input_active" = "현재 입력: %@";
+"microphone_input_select_hint" = "블루투스/유선 마이크 연결 시 여기서 선택할 수 있습니다.";
+"microphone_input_none" = "입력 없음";
+"microphone_connection_builtin" = "내장";
+"microphone_connection_bluetooth" = "블루투스";
+"microphone_connection_wired" = "유선/USB";
+"microphone_connection_external" = "외부";
+"audio_peak_label" = "오디오 피크";
+"audio_meter_muted" = "음소거";
+"audio_meter_idle" = "대기";
+"audio_peak_diag_no_input" = "오디오 입력 감지 안됨. 마이크 연결/선택 확인";
 "kbps_64" = "64 kbps";
 "kbps_128" = "128 kbps";
 "kbps_192" = "192 kbps";
@@ -134,8 +148,6 @@
 "connection_settings" = "연결 설정";
 "stream_settings" = "스트림 설정";
 "preview_and_test" = "프리뷰 및 테스트";
-"connection_test" = "연결 테스트";
-"export_settings" = "설정 내보내기";
 "estimated_bandwidth" = "예상 대역폭:";
 "required_items_message" = "설정을 완료하려면 다음 항목이 필요합니다:";
 "reset_settings_confirm_title" = "설정 초기화";
@@ -238,6 +250,8 @@
 // Stream Control Buttons
 "start_streaming" = "스트리밍 시작";
 "stop_streaming" = "스트리밍 중지";
+"live_start" = "라이브 시작";
+"live_end" = "라이브 종료";
 "stopping" = "중지 중";
 "connecting" = "연결 중";
 "ready" = "준비됨";
@@ -349,7 +363,6 @@
 "network_unavailable_message" = "네트워크에 연결되어 있지 않습니다.";
 "server_error_message" = "서버 오류가 발생했습니다. (코드: %d)";
 "unknown_error_message" = "알 수 없는 오류가 발생했습니다.";
-"error_occurred" = "오류가 발생했습니다.";
 "wifi_connection" = "WiFi";
 "cellular_data" = "모바일 데이터";
 "ethernet_connection" = "유선 연결";
@@ -391,7 +404,7 @@
 "help_video_bitrate_tip_find_optimal" = "테스트를 통해 최적값을 찾으세요";
 "help_video_bitrate_warning_buffering" = "너무 높게 설정하면 버퍼링이나 연결 끊김이 발생할 수 있습니다";
 "help_video_bitrate_warning_platform_limit" = "플랫폼별로 최대 비트레이트 제한이 있습니다";
-"help_video_bitrate_example_hd" = "HD 스트리밍: 2500 kbps";
+"help_video_bitrate_example_hd" = "Full HD(1080p) 스트리밍: 10000 kbps";
 "help_video_bitrate_example_mobile" = "모바일 최적화: 1000 kbps";
 
 // MARK: - Help Details for Audio Bitrate
@@ -505,21 +518,8 @@
 // Additional UI strings
 "activated" = "활성화";
 "deactivated" = "비활성화";
-"rtmp_settings" = "RTMP 설정";
-"not_configured" = "설정되지 않음";
-"stream_key_label" = "스트림 키:";
-"validity_label" = "유효성:";
-"status_label" = "상태:";
-"broadcast_label" = "송출:";
-"screen_capture_streaming" = "화면 캡처 스트리밍 중";
-"streaming_manager_not_initialized" = "스트리밍 매니저가 초기화되지 않음";
-"debug_info" = "디버그 정보";
-"screen_capture_streaming_enabled" = "화면 캡처 스트리밍 활성화됨";
-"debug_info_unavailable" = "디버그 정보를 사용할 수 없음";
 "text_input" = "텍스트 입력";
 "recent_texts" = "최근 사용한 텍스트";
-"buffer_size" = "버퍼 크기";
-"youtube_guide_description" = "YouTube에서 라이브 스트리밍을 시작하기 위한 단계별 가이드입니다.";
 
 // Stream key validation
 "whitespace_special_chars_removed" = "⚠️ 공백이나 특수문자가 제거되었습니다";
@@ -528,18 +528,6 @@
 "valid_stream_key_format" = "✅ 유효한 스트림 키입니다 (%d자)";
 
 // YouTube setup and troubleshooting
-"timeout_seconds_format" = "%d초";
-"youtube_requirement_1" = "• 라이브 스트리밍 기능이 활성화되어 있어야 합니다";
-"youtube_requirement_2" = "• 휴대폰 번호 인증이 완료되어 있어야 합니다";
-"youtube_requirement_3" = "• 스트림 키는 절대 공개하지 마세요";
-"youtube_requirement_4" = "• 매번 새로운 라이브 스트리밍을 시작해야 합니다";
-"troubleshoot_1" = "• 새로운 스트림 키를 생성해보세요";
-"troubleshoot_2" = "• WiFi/모바일 데이터를 전환해보세요";
-"troubleshoot_3" = "• VPN을 끄고 재시도하세요";
-"troubleshoot_4" = "• 방화벽에서 포트 1935를 허용하세요";
-"youtube_setup_required" = "YouTube Live 설정이 필요합니다";
-"youtube_stream_key_required" = "스트리밍을 시작하려면 YouTube에서 스트림 키를 가져와야 합니다.";
-"view_setup_guide" = "설정 가이드 보기";
 "help_audio_bitrate_tip_mobile_low" = "모바일 환경에서는 낮은 비트레이트 권장";
 "help_audio_bitrate_warning_too_low" = "너무 낮으면 음질이 크게 저하됩니다";
 "help_audio_bitrate_warning_stereo" = "스테레오는 모노보다 약 2배의 비트레이트가 필요합니다";
@@ -733,40 +721,20 @@
 "processing" = "처리 중...";
 "stop_streaming_capture" = "스트리밍 중지 - 캡처";
 "start_streaming_capture" = "스트리밍 시작 - 캡처";
-"streaming_status" = "스트리밍 상태";
-"status_label" = "상태:";
-"duration_label" = "지속 시간:";
-"error_occurred" = "오류 발생";
-"camera_preview" = "카메라 프리뷰";
-"quick_diagnosis" = "빠른 진단";
-"full_diagnosis" = "전체 진단";
-"streaming_info" = "스트리밍 정보";
-"realtime_transmission_data" = "📡 실시간 송출 데이터";
 
 // MARK: - Views - Live Stream Settings
 "streaming_settings_limited" = "스트리밍 중에는 일부 설정을 변경할 수 없습니다";
 "bitrate_too_high_warning" = "⚠️ 비트레이트가 너무 높습니다";
-"youtube_bitrate_warning" = "YouTube Live에서 연결이 끊어질 수 있습니다. 권장: 1500-4000 kbps";
-"youtube_recommended_range" = "✅ YouTube Live 1080p 권장 범위";
+"youtube_bitrate_warning" = "YouTube Live H.264 권장 비트레이트 범위를 벗어났습니다.";
+"youtube_recommended_range" = "✅ YouTube Live H.264 권장 범위";
+"youtube_recommended_bitrate_format" = "권장 비트레이트 범위: %d-%d kbps";
 "low_bitrate_warning" = "📹 낮은 비트레이트 - 화질이 떨어질 수 있습니다";
 "reset_settings_confirmation" = "설정 초기화 확인";
 "reset_settings_message" = "모든 설정이 기본값으로 초기화됩니다. 계속하시겠습니까?";
 
 // MARK: - Views - Live Stream Control
 "current_status" = "현재 상태";
-"advanced_features" = "고급 기능";
-"youtube_live_setup_guide" = "YouTube Live 설정 가이드";
-"youtube_streaming_diagnosis" = "YouTube 스트리밍 진단";
 "test_connection" = "연결 테스트";
-"testing_connection" = "연결 테스트 중...";
-"latency_ms" = "지연시간: %dms";
-"ready_to_test" = "연결 테스트 준비됨";
-"start_test" = "테스트 시작";
-"encoder_settings" = "인코더 설정";
-"network_settings" = "네트워크 설정";
-"automation" = "자동화";
-"select_quality_preset" = "화질 프리셋 선택";
-"preset_will_override_settings" = "프리셋 적용 시 현재 설정이 변경됩니다";
 
 // MARK: - Views - Streaming Log
 "level_label" = "레벨: ";
@@ -837,24 +805,16 @@
 "loading" = "로딩 중";
 
 // MARK: - 연결 관련 문자열
-"connection_timeout" = "연결 타임아웃";
 "auto_reconnect" = "자동 재연결";
-"connection_test_result" = "연결 테스트 결과";
-"rtmp_connection_debug" = "RTMP 연결 디버깅";
-"connection_status" = "연결 상태";
 "reconnecting_attempt" = "🔄 재연결 중";
 "connection_failed" = "❌ 연결 실패";
 "attempt_retry_format" = "시도: %d/%d\n%d초 후 재시도";
 "test_connection" = "연결 테스트";
-"testing_connection" = "연결 테스트 중...";
-"ready_to_test" = "연결 테스트 준비됨";
-"connection_test" = "연결 테스트";
 "connecting_to_server" = "연결 중...";
 "connected" = "연결됨";
 "disconnected" = "연결 해제";
 "connecting" = "연결 중";
 "disconnecting" = "연결 해제 중";
-"connection_troubleshooting" = "연결이 안 되는 경우:";
 "connection_failed_detailed" = "연결 실패: %@";
 
 // MARK: - 오류 메시지 및 복구 제안
@@ -953,3 +913,30 @@
 "connection_disconnected_waiting" = "연결 끊어짐 - 재연결 대기 중";
 "youtube_live_check_needed" = "YouTube Live 확인 필요 - 수동 재시작 하세요";
 "youtube_live_connection_failed" = "YouTube Live 연결에 실패했습니다. YouTube Studio에서 스트리밍을 시작했는지 확인 후 수동으로 재시도하세요."; 
+
+// MARK: - Missing keys (backfilled)
+"all_optimizations_enabled" = "모든 최적화 활성화";
+"audio_channels" = "오디오 채널";
+"enable_optimizations" = "최적화를 활성화하세요";
+"hardware_accelerated" = "하드웨어 가속 활성화";
+"high" = "높음";
+"high_quality_streaming" = "고화질 스트리밍";
+"low" = "낮음";
+"medium" = "중간";
+"mono" = "모노";
+"none" = "없음";
+"not_optimized" = "미최적화";
+"optimized" = "최적화됨";
+"partial" = "부분적";
+"recommended_audio_bitrate" = "YouTube는 128-256 kbps를 권장합니다";
+"reset_to_defaults" = "기본값으로 재설정";
+"rtmp_url" = "RTMP URL";
+"sample_rate" = "샘플레이트";
+"settings_info" = "이 설정은 YouTube Live에 최적화되어 있습니다";
+"software_encoding" = "소프트웨어 인코딩";
+"some_optimizations_enabled" = "일부 최적화 활성화";
+"status" = "상태";
+"elapsed_time" = "경과 시간";
+"stereo" = "스테레오";
+"stereo_audio" = "스테레오 오디오";
+"text_overlay_settings" = "텍스트 설정";

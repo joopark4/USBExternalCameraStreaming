@@ -155,6 +155,39 @@ final class MainViewModel: ObservableObject {
         liveStreamViewModel.toggleScreenCaptureStreaming()
         logDebug("✅ [MainViewModel] 화면 캡처 스트리밍 토글 요청 완료", category: .ui)
     }
+
+    /// 현재 사용 가능한 카메라 목록 (내장 + 외장)
+    var availableCameras: [CameraDevice] {
+        cameraViewModel.builtInCameras + cameraViewModel.externalCameras
+    }
+
+    /// 카메라 순환 전환 가능 여부
+    var canSwitchCameraQuickly: Bool {
+        availableCameras.count > 1
+    }
+
+    /// 다음 카메라로 순환 전환 (Focus Mode용)
+    func switchToNextCamera() {
+        let cameras = availableCameras
+        guard !cameras.isEmpty else {
+            logWarning("카메라 전환 실패: 사용 가능한 카메라가 없습니다", category: .camera)
+            return
+        }
+
+        if let selected = cameraViewModel.selectedCamera,
+           let currentIndex = cameras.firstIndex(where: { $0.id == selected.id }) {
+            let nextIndex = (currentIndex + 1) % cameras.count
+            let nextCamera = cameras[nextIndex]
+            logInfo("🔁 [MainViewModel] 다음 카메라로 전환: \(selected.name) → \(nextCamera.name)", category: .camera)
+            selectCamera(nextCamera)
+            return
+        }
+
+        if let firstCamera = cameras.first {
+            logInfo("🔁 [MainViewModel] 카메라 기본 선택: \(firstCamera.name)", category: .camera)
+            selectCamera(firstCamera)
+        }
+    }
     
     // MARK: - Text Overlay Methods
     
@@ -300,6 +333,16 @@ final class MainViewModel: ObservableObject {
                     let statusText = newScreenCaptureState ? NSLocalizedString("activated", comment: "활성화") : NSLocalizedString("deactivated", comment: "비활성화")
                     logDebug("🔄 [MainViewModel] 화면 캡처 스트리밍 상태 \(statusText): \(status)", category: .ui)
                 }
+            }
+            .store(in: &cancellables)
+
+        // LiveStreamViewModel 내부 상태 변경(피크/음소거/진단 등)을
+        // MainViewModel 관찰 체인으로 전달해 UI가 사용자 입력 없이 즉시 갱신되도록 보장
+        liveStreamViewModel.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .throttle(for: .milliseconds(33), scheduler: DispatchQueue.main, latest: true)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
             }
             .store(in: &cancellables)
     }

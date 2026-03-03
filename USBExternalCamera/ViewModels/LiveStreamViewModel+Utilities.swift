@@ -44,7 +44,7 @@ extension LiveStreamViewModel {
   /// - Note: 현재는 기본값 반환 (향후 실시간 네트워크 상태 기반 동적 계산 구현 예정)
   func updateNetworkRecommendations() {
     networkRecommendations = StreamingRecommendations(
-      recommendedVideoBitrate: 2500,
+      recommendedVideoBitrate: 10_000,
       recommendedAudioBitrate: 128,
       recommendedResolution: (width: 1920, height: 1080),
       networkQuality: .good,

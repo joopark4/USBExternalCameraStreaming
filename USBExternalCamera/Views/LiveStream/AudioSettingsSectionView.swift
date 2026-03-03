@@ -14,6 +14,53 @@ struct AudioSettingsSectionView: View {
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("audio_settings", comment: "오디오 설정"), icon: "waveform") {
             VStack(spacing: 16) {
+                // 마이크 입력 소스
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("microphone_input_source", comment: "마이크 입력 소스"))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text(viewModel.selectedMicrophoneInputDisplayName)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Picker(
+                        NSLocalizedString("microphone_input_source", comment: "마이크 입력 소스"),
+                        selection: Binding(
+                            get: { viewModel.selectedMicrophoneInputID },
+                            set: { viewModel.selectMicrophoneInput($0) }
+                        )
+                    ) {
+                        ForEach(viewModel.availableMicrophoneInputs) { input in
+                            Text(input.name).tag(input.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "waveform")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(
+                            String.localizedStringWithFormat(
+                                NSLocalizedString("microphone_input_active", comment: "현재 입력: %@"),
+                                viewModel.activeMicrophoneInputName
+                            )
+                        )
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+
+                    if !viewModel.hasExternalMicrophoneInput {
+                        Text(NSLocalizedString("microphone_input_select_hint", comment: "블루투스/유선 마이크 연결 시 여기서 선택할 수 있습니다."))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 // 샘플레이트
                 VStack(alignment: .leading, spacing: 8) {
                     Text(NSLocalizedString("sample_rate", comment: "샘플레이트"))
@@ -107,6 +154,9 @@ struct AudioSettingsSectionView: View {
                     .font(.system(size: 14, weight: .medium))
                 }
             }
+        }
+        .onAppear {
+            viewModel.refreshAvailableMicrophoneInputs()
         }
     }
 }
