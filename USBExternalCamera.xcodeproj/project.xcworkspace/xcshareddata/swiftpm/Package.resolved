@@ -1,5 +1,5 @@
 {
-  "originHash" : "623bae92d7a480d5c6d12a8137e12c12a284469224380f53717967600786c30e",
+  "originHash" : "188346c116c3ccfdcd6626e915a4c863fea988bd71cf0264381f4b1eedba538c",
   "pins" : [
     {
       "identity" : "haishinkit.swift",
@@ -8,14 +8,6 @@
       "state" : {
         "revision" : "d5a94b06f7623fe8e7804993adfd963b06212041",
         "version" : "2.0.8"
-      }
-    },
-    {
-      "identity" : "livestreamingcore",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/joopark4/LiveStreamingCore.git",
-      "state" : {
-        "revision" : "7dc0f3f680a8f2360f3f47ad89f6c2799d2c4818"
       }
     },
     {

@@ -178,8 +178,12 @@ struct YouTubeStudioWebView: UIViewRepresentable {
         configuration.websiteDataStore = .default()
         
         // JavaScript 및 웹 기능 활성화
-        configuration.preferences.javaScriptEnabled = true
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        if #available(iOS 14.0, *) {
+            configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        } else {
+            configuration.preferences.javaScriptEnabled = true
+        }
         
         // iOS 14.0+: 앱 바운드 도메인 제한 해제
         if #available(iOS 14.0, *) {

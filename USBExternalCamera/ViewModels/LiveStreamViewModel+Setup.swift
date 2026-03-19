@@ -28,18 +28,18 @@ extension LiveStreamViewModel {
     case .low:
       settings.videoWidth = 1280
       settings.videoHeight = 720
-      settings.videoBitrate = 4000
+      settings.videoBitrate = 2500
       settings.frameRate = 30
     case .standard:
       settings.videoWidth = 1920
       settings.videoHeight = 1080
-      settings.videoBitrate = 10_000
+      settings.videoBitrate = 4500
       settings.frameRate = 30
     case .high:
       settings.videoWidth = 1920
       settings.videoHeight = 1080
-      settings.videoBitrate = 12_000
-      settings.frameRate = 60
+      settings.videoBitrate = 6000
+      settings.frameRate = 30
     case .ultra:
       settings.videoWidth = 3840
       settings.videoHeight = 2160

@@ -6,14 +6,147 @@
 //
 
 import AVFoundation
+import CoreImage
 import HaishinKit
 import SwiftUI
 import UIKit
 import LiveStreamingCore
 
+private enum CameraStreamingCompositionContext {
+  static let ciContext = CIContext(options: [
+    .useSoftwareRenderer: false,
+    .cacheIntermediates: false,
+  ])
+}
+
 // MARK: - Rendering Helpers Extension for CameraPreviewUIView
 
 extension CameraPreviewUIView {
+  func makeStreamingOverlaySnapshot(streamingSize: CGSize) -> CGImage? {
+    let width = Int(streamingSize.width)
+    let height = Int(streamingSize.height)
+    guard width > 0, height > 0 else { return nil }
+
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue
+      | CGBitmapInfo.byteOrder32Little.rawValue
+
+    guard
+      let context = CGContext(
+        data: nil,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: colorSpace,
+        bitmapInfo: bitmapInfo
+      )
+    else {
+      return nil
+    }
+
+    let currentSize = bounds.size
+    guard currentSize.width > 0, currentSize.height > 0 else { return nil }
+
+    let scaleX = streamingSize.width / currentSize.width
+    let scaleY = streamingSize.height / currentSize.height
+    let scale = max(scaleX, scaleY)
+    let scaledSize = CGSize(width: currentSize.width * scale, height: currentSize.height * scale)
+    let offsetX = (streamingSize.width - scaledSize.width) / 2.0
+    let offsetY = (streamingSize.height - scaledSize.height) / 2.0
+
+    context.clear(CGRect(origin: .zero, size: streamingSize))
+    context.scaleBy(x: scale, y: scale)
+    context.translateBy(x: offsetX / scale, y: offsetY / scale)
+
+    for subview in subviews {
+      subview.layer.render(in: context)
+    }
+
+    return context.makeImage()
+  }
+
+  func composeStreamingPixelBuffer(
+    cameraFrame: CVPixelBuffer?,
+    overlaySnapshot: CGImage?,
+    streamingSize: CGSize
+  ) -> CVPixelBuffer? {
+    let width = Int(streamingSize.width)
+    let height = Int(streamingSize.height)
+    guard width > 0, height > 0 else { return nil }
+
+    guard let outputBuffer = makeStreamingPixelBuffer(width: width, height: height) else {
+      return nil
+    }
+
+    let backgroundImage: CIImage
+    if let cameraFrame {
+      backgroundImage = aspectFillImage(CIImage(cvPixelBuffer: cameraFrame), targetSize: streamingSize)
+    } else {
+      backgroundImage = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1))
+        .cropped(to: CGRect(origin: .zero, size: streamingSize))
+    }
+
+    let composedImage: CIImage
+    if let overlaySnapshot {
+      let overlayImage = CIImage(cgImage: overlaySnapshot)
+      composedImage = overlayImage.composited(over: backgroundImage)
+    } else {
+      composedImage = backgroundImage
+    }
+
+    CameraStreamingCompositionContext.ciContext.render(
+      composedImage,
+      to: outputBuffer,
+      bounds: CGRect(origin: .zero, size: streamingSize),
+      colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+    )
+
+    return outputBuffer
+  }
+
+  private func makeStreamingPixelBuffer(width: Int, height: Int) -> CVPixelBuffer? {
+    let attrs = [
+      kCVPixelBufferCGImageCompatibilityKey as String: kCFBooleanTrue as Any,
+      kCVPixelBufferCGBitmapContextCompatibilityKey as String: kCFBooleanTrue as Any,
+      kCVPixelBufferIOSurfacePropertiesKey as String: [:],
+    ] as CFDictionary
+
+    var pixelBuffer: CVPixelBuffer?
+    let status = CVPixelBufferCreate(
+      kCFAllocatorDefault,
+      width,
+      height,
+      kCVPixelFormatType_32BGRA,
+      attrs,
+      &pixelBuffer
+    )
+
+    guard status == kCVReturnSuccess else { return nil }
+    return pixelBuffer
+  }
+
+  private func aspectFillImage(_ image: CIImage, targetSize: CGSize) -> CIImage {
+    let sourceRect = image.extent
+    guard sourceRect.width > 0, sourceRect.height > 0 else {
+      return image.cropped(to: CGRect(origin: .zero, size: targetSize))
+    }
+
+    let scaleX = targetSize.width / sourceRect.width
+    let scaleY = targetSize.height / sourceRect.height
+    let scale = max(scaleX, scaleY)
+    let scaledWidth = sourceRect.width * scale
+    let scaledHeight = sourceRect.height * scale
+    let offsetX = (targetSize.width - scaledWidth) / 2.0
+    let offsetY = (targetSize.height - scaledHeight) / 2.0
+
+    return image
+      .transformed(
+        by: CGAffineTransform(scaleX: scale, y: scale)
+          .translatedBy(x: offsetX / scale, y: offsetY / scale)
+      )
+      .cropped(to: CGRect(origin: .zero, size: targetSize))
+  }
 
   /// 송출용 고해상도 카메라 프레임과 UI 합성
   ///

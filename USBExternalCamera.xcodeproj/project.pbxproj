@@ -232,7 +232,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				53AF02D92DE864F7006B527D /* XCRemoteSwiftPackageReference "HaishinKit" */,
-				53F0A0032DF2000000000001 /* XCRemoteSwiftPackageReference "LiveStreamingCore" */,
+				53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "Packages/LiveStreamingCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 537567A32DE32C9500946357 /* Products */;
@@ -345,10 +345,11 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = R5N5JUB2P2;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
+					ENABLE_STRICT_OBJC_MSGSEND = YES;
+					ENABLE_TESTABILITY = YES;
+					ENABLE_USER_SCRIPT_SANDBOXING = YES;
+					"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+					GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -409,11 +410,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = R5N5JUB2P2;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
+					DEVELOPMENT_TEAM = R5N5JUB2P2;
+					ENABLE_NS_ASSERTIONS = NO;
+					ENABLE_STRICT_OBJC_MSGSEND = YES;
+					ENABLE_USER_SCRIPT_SANDBOXING = YES;
+					"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+					GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -442,6 +444,7 @@
 				DEFINES_MODULE = YES;
 				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSCameraUsageDescription = "카메라 사용 허용";
@@ -484,6 +487,7 @@
 				DEFINES_MODULE = YES;
 				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSCameraUsageDescription = "카메라 사용 허용";
@@ -629,15 +633,14 @@
 				minimumVersion = 2.0.8;
 			};
 		};
-			53F0A0032DF2000000000001 /* XCRemoteSwiftPackageReference "LiveStreamingCore" */ = {
-				isa = XCRemoteSwiftPackageReference;
-				repositoryURL = "https://github.com/joopark4/LiveStreamingCore.git";
-				requirement = {
-					kind = revision;
-					revision = 7dc0f3f680a8f2360f3f47ad89f6c2799d2c4818;
-				};
-			};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "Packages/LiveStreamingCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/LiveStreamingCore;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		53AF02DA2DE864F7006B527D /* HaishinKit */ = {
@@ -657,7 +660,7 @@
 		};
 		53F0A0022DF2000000000001 /* LiveStreamingCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 53F0A0032DF2000000000001 /* XCRemoteSwiftPackageReference "LiveStreamingCore" */;
+			package = 53F0A0032DF2000000000001 /* XCLocalSwiftPackageReference "Packages/LiveStreamingCore" */;
 			productName = LiveStreamingCore;
 		};
 /* End XCSwiftPackageProductDependency section */

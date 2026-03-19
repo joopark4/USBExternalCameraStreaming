@@ -22,10 +22,27 @@ final class CameraPreviewUIView: UIView {
   /// HaishinKit 미리보기 레이어 (스트리밍 중일 때 사용)
   private var hkPreviewLayer: UIView?
 
-  /// 비디오 출력 (화면 캡처 스트리밍용 프레임 수신 + 스트리밍 통계)
-  private var videoOutput: AVCaptureVideoDataOutput?
-  private let videoOutputQueue = DispatchQueue(
-    label: "CameraPreviewView.VideoOutput", qos: .userInteractive)
+  /// 프리뷰가 수신할 카메라 프레임 라우터
+  weak var frameRouter: CameraPreviewFrameRouting? {
+    didSet {
+      if oldValue !== frameRouter, isFrameConsumerRegistered {
+        oldValue?.removePreviewFrameConsumer(screenCaptureFrameConsumer)
+        isFrameConsumerRegistered = false
+      }
+      updateFrameConsumerRegistration()
+    }
+  }
+
+  /// 프리뷰 프레임 소비자 등록 여부
+  private var isFrameConsumerRegistered = false
+
+  /// 화면 캡처용 최신 프레임 저장소
+  let screenCaptureFrameStore = ScreenCaptureFrameStore()
+
+  /// 화면 캡처용 프레임 소비자
+  lazy var screenCaptureFrameConsumer = ScreenCaptureFrameConsumer(
+    frameStore: screenCaptureFrameStore
+  )
 
   /// 현재 캡처 세션
   var captureSession: AVCaptureSession? {
@@ -79,15 +96,6 @@ final class CameraPreviewUIView: UIView {
   /// - 이 프로퍼티는 인터페이스 호환성을 위해 유지됨
   var overlayText: String = ""
 
-  // MARK: - Internal Runtime Properties
-
-  /// 런타임 상태 관리를 위한 Associated Object 키
-  private struct AssociatedKeys {
-    static var captureOutputDelegate = "captureOutputDelegate"
-    static var captureOutputDelegateQueue = "captureOutputDelegateQueue"
-    static var captureOutputIsOwned = "captureOutputIsOwned"
-  }
-
   // MARK: - Initialization
 
   override init(frame: CGRect) {
@@ -111,6 +119,32 @@ final class CameraPreviewUIView: UIView {
     setupConstraints()
     setupGestureRecognizers()
     setupNotifications()
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    updateFrameConsumerRegistration()
+  }
+
+  private func updateFrameConsumerRegistration() {
+    guard let frameRouter else {
+      isFrameConsumerRegistered = false
+      return
+    }
+
+    if window != nil {
+      guard !isFrameConsumerRegistered else { return }
+      frameRouter.addPreviewFrameConsumer(screenCaptureFrameConsumer)
+      isFrameConsumerRegistered = true
+      logInfo("프리뷰 프레임 소비자 등록 완료", category: .camera)
+      return
+    }
+
+    if isFrameConsumerRegistered {
+      frameRouter.removePreviewFrameConsumer(screenCaptureFrameConsumer)
+      isFrameConsumerRegistered = false
+      logInfo("프리뷰 프레임 소비자 해제 완료", category: .camera)
+    }
   }
 
   private func setupNotifications() {
@@ -281,126 +315,70 @@ final class CameraPreviewUIView: UIView {
   /// - 화면 캡처 모드: 수신된 프레임을 latestCameraFrame에 저장하여 UI와 합성
   /// - 일반 스트리밍 모드: HaishinKit에 프레임 통계 전달
   func setupVideoFrameCapture(with session: AVCaptureSession) {
-    let existingOutput = session.outputs.compactMap { $0 as? AVCaptureVideoDataOutput }.first
-
-    if let existingOutput {
-      // 현재 세션에 이미 연결된 AVCaptureVideoDataOutput이 있으면 재사용
-      // 새 아웃풋을 계속 추가/제거하면 프레임 전달이 끊길 수 있으므로 델리게이트만 교체
-      if let previousDelegate = existingOutput.sampleBufferDelegate,
-         !(previousDelegate is CameraPreviewUIView)
-      {
-        let previousQueue = existingOutput.trackedSampleBufferDelegateQueue
-        logInfo("기존 비디오 출력 델리게이트 백업: \(type(of: previousDelegate))", category: .camera)
-        setCurrentCaptureOutput(previousDelegate, queue: previousQueue)
-      }
-
-      session.beginConfiguration()
-      existingOutput.setTrackedSampleBufferDelegate(self, queue: videoOutputQueue)
-
-      // 비디오 설정 (가벼운 처리용)
-      existingOutput.videoSettings = [
-        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
-      ]
-
-      // 프레임 드롭 허용 (성능 최적화)
-      existingOutput.alwaysDiscardsLateVideoFrames = true
-
-      videoOutput = existingOutput
-
-      // 프리뷰와 동일한 회전/미러링을 적용해 송출 프레임 방향 불일치 방지
-      invalidateVideoOutputConnectionConfigCache()
-      refreshVideoOutputConnectionIfNeeded(force: true)
-
-      session.commitConfiguration()
-
-      // 이 출력은 외부 소유이므로 제거하지 않음
-      setCaptureOutputReuseMode(false)
-      logInfo("기존 비디오 출력 델리게이트를 화면 캡처 모드로 전환", category: .camera)
+    guard captureSession === session else {
+      captureSession = session
       return
     }
-
-    // 세션에 비디오 출력이 없다면 새 출력 추가
-    let newVideoOutput = AVCaptureVideoDataOutput()
-    newVideoOutput.setTrackedSampleBufferDelegate(self, queue: videoOutputQueue)
-
-    // 비디오 설정 (가벼운 처리용)
-    newVideoOutput.videoSettings = [
-      kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
-    ]
-
-    // 프레임 드롭 허용 (성능 최적화)
-    newVideoOutput.alwaysDiscardsLateVideoFrames = true
-
-    session.beginConfiguration()
-
-    // 세션에 추가
-    if session.canAddOutput(newVideoOutput) {
-      session.addOutput(newVideoOutput)
-      videoOutput = newVideoOutput
-      invalidateVideoOutputConnectionConfigCache()
-      refreshVideoOutputConnectionIfNeeded(force: true)
-      setCaptureOutputReuseMode(true)
-      clearCaptureOutputOriginalDelegate()
-      logInfo("화면 캡처 전용 비디오 출력 추가", category: .camera)
-    } else {
-      logError("비디오 프레임 수신 설정 실패", category: .camera)
-      clearCaptureOutputReuseMode()
-    }
-
-    session.commitConfiguration()
+    updateFrameConsumerRegistration()
+    invalidateVideoOutputConnectionConfigCache()
+    refreshVideoOutputConnectionIfNeeded(force: true)
   }
 
   /// 화면 캡처용 비디오 출력 연결을 프리뷰와 동일한 방향으로 정렬
-  private func configureVideoOutputConnection(_ connection: AVCaptureConnection) {
+  private func syncVideoOutputConnection() {
+    guard let frameRouter else { return }
+
     if let previewConnection = previewLayer?.connection {
       if #available(iOS 17.0, *) {
-        let angle = previewConnection.videoRotationAngle
-        if connection.isVideoRotationAngleSupported(angle) {
-          connection.videoRotationAngle = angle
-        } else if connection.isVideoRotationAngleSupported(0) {
-          connection.videoRotationAngle = 0
+        frameRouter.syncPreviewVideoOutputConnection(
+          rotationAngle: previewConnection.videoRotationAngle,
+          orientation: nil,
+          isMirrored: previewConnection.isVideoMirroringSupported
+            ? previewConnection.isVideoMirrored : false
+        )
+      } else {
+        let legacyOrientation: PreviewVideoOrientation
+        switch previewConnection.videoOrientation {
+        case .portrait:
+          legacyOrientation = .portrait
+        case .portraitUpsideDown:
+          legacyOrientation = .portraitUpsideDown
+        case .landscapeRight:
+          legacyOrientation = .landscapeRight
+        case .landscapeLeft:
+          legacyOrientation = .landscapeLeft
+        @unknown default:
+          legacyOrientation = .portrait
         }
-      } else if connection.isVideoOrientationSupported {
-        connection.videoOrientation = previewConnection.videoOrientation
-      }
-
-      if connection.isVideoMirroringSupported {
-        connection.automaticallyAdjustsVideoMirroring = false
-        if previewConnection.isVideoMirroringSupported {
-          connection.isVideoMirrored = previewConnection.isVideoMirrored
-        }
+        frameRouter.syncPreviewVideoOutputConnection(
+          rotationAngle: nil,
+          orientation: legacyOrientation,
+          isMirrored: previewConnection.isVideoMirroringSupported
+            ? previewConnection.isVideoMirrored : false
+        )
       }
       return
     }
 
-    if #available(iOS 17.0, *) {
-      if connection.isVideoRotationAngleSupported(0) {
-        connection.videoRotationAngle = 0
-      }
-    } else if connection.isVideoOrientationSupported {
-      connection.videoOrientation = .portrait
-    }
+    let currentDevice = getCurrentCameraDevice()
+    let isExternalCamera = currentDevice?.deviceType == .external
+    let isFrontCamera = currentDevice?.position == .front
+    let isMirrored = !isExternalCamera && isFrontCamera
 
-    if connection.isVideoMirroringSupported {
-      connection.automaticallyAdjustsVideoMirroring = false
-      let currentDevice = getCurrentCameraDevice()
-      let isExternalCamera = currentDevice?.deviceType == .external
-      let isFrontCamera = currentDevice?.position == .front
-      connection.isVideoMirrored = !isExternalCamera && isFrontCamera
-    }
+    frameRouter.syncPreviewVideoOutputConnection(
+      rotationAngle: 0,
+      orientation: .portrait,
+      isMirrored: isMirrored
+    )
   }
 
   private func refreshVideoOutputConnectionIfNeeded(force: Bool = false) {
-    guard let connection = videoOutput?.connection(with: .video) else {
-      return
-    }
-
     let configKey = makeVideoOutputConnectionConfigKey()
     guard force || videoOutputConnectionConfigKey != configKey else {
       return
     }
 
-    configureVideoOutputConnection(connection)
+    syncVideoOutputConnection()
     videoOutputConnectionConfigKey = configKey
   }
 
@@ -440,91 +418,7 @@ final class CameraPreviewUIView: UIView {
 
   /// 비디오 프레임 수신 해제
   func removeVideoFrameCapture() {
-    guard let session = captureSession, let output = videoOutput else { return }
-
-    if usesCapturedVideoOutputOwnerShip {
-      session.beginConfiguration()
-      session.removeOutput(output)
-      session.commitConfiguration()
-      logInfo("화면 캡처 전용 비디오 출력 제거 완료", category: .camera)
-    } else if let originalDelegate = currentCaptureOutputDelegate {
-      let originalQueue = currentCaptureOutputDelegateQueue ?? videoOutputQueue
-      output.setTrackedSampleBufferDelegate(originalDelegate, queue: originalQueue)
-      logInfo("기존 비디오 출력 델리게이트 복원: \(type(of: originalDelegate))", category: .camera)
-      if currentCaptureOutputDelegateQueue == nil {
-        logWarning("기존 델리게이트 큐 정보가 없어 화면 캡처 큐로 복원했습니다.", category: .camera)
-      }
-    } else {
-      output.setTrackedSampleBufferDelegate(nil, queue: nil)
-      logWarning("기존 비디오 출력 델리게이트 복원 대상 없음", category: .camera)
-    }
-
-    videoOutput = nil
-    usesCapturedVideoOutputOwnerShip = false
-    clearCaptureOutputOriginalDelegate()
-    invalidateVideoOutputConnectionConfigCache()
-  }
-
-  // MARK: - Internal Camera Output State
-
-  /// 기존 output 델리게이트 백업
-  private var currentCaptureOutputDelegate: AVCaptureVideoDataOutputSampleBufferDelegate? {
-    get {
-      objc_getAssociatedObject(self, &AssociatedKeys.captureOutputDelegate) as?
-        AVCaptureVideoDataOutputSampleBufferDelegate
-    }
-    set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.captureOutputDelegate, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
-  }
-
-  /// 기존 output 델리게이트 큐 백업
-  private var currentCaptureOutputDelegateQueue: DispatchQueue? {
-    get {
-      objc_getAssociatedObject(self, &AssociatedKeys.captureOutputDelegateQueue) as? DispatchQueue
-    }
-    set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.captureOutputDelegateQueue, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
-  }
-
-  /// 화면 캡처용 출력 소유 여부
-  private var usesCapturedVideoOutputOwnerShip: Bool {
-    get {
-      (objc_getAssociatedObject(self, &AssociatedKeys.captureOutputIsOwned) as? NSNumber)?.boolValue
-        ?? false
-    }
-    set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.captureOutputIsOwned, NSNumber(value: newValue),
-        .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
-  }
-
-  private func setCaptureOutputReuseMode(_ ownsOutput: Bool) {
-    usesCapturedVideoOutputOwnerShip = ownsOutput
-    logInfo("비디오 출력 소유 모드 변경: ownsOutput=\(ownsOutput)", category: .camera)
-  }
-
-  private func clearCaptureOutputReuseMode() {
-    usesCapturedVideoOutputOwnerShip = false
-  }
-
-  private func setCurrentCaptureOutput(
-    _ delegate: AVCaptureVideoDataOutputSampleBufferDelegate,
-    queue: DispatchQueue?
-  ) {
-    if currentCaptureOutputDelegate == nil {
-      currentCaptureOutputDelegate = delegate
-      currentCaptureOutputDelegateQueue = queue
-    }
-  }
-
-  private func clearCaptureOutputOriginalDelegate() {
-    currentCaptureOutputDelegate = nil
-    currentCaptureOutputDelegateQueue = nil
+    updateFrameConsumerRegistration()
   }
 
   /// 스트리밍 상태 업데이트 (개선된 버전)
@@ -889,7 +783,7 @@ final class CameraPreviewUIView: UIView {
 // MARK: - AVCaptureVideoDataOutput Delegate Queue Tracking
 
 private struct VideoOutputAssociatedKeys {
-  static var delegateQueue = "trackedSampleBufferDelegateQueue"
+  static var delegateQueue: UInt8 = 0
 }
 
 extension AVCaptureVideoDataOutput {
@@ -918,34 +812,6 @@ extension CameraPreviewUIView: CameraControlOverlayDelegate {
   /// - Note: 녹화 기능은 현재 앱 범위에서 제외됨 (스트리밍 전용 앱)
   func didTapRecord() {
     logInfo("Recording functionality not implemented", category: .general)
-  }
-}
-
-// MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
-
-extension CameraPreviewUIView: AVCaptureVideoDataOutputSampleBufferDelegate {
-  /// AVCaptureVideoDataOutput에서 프레임을 받는 델리게이트 메서드
-  func captureOutput(
-    _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
-    from connection: AVCaptureConnection
-  ) {
-    // 🎬 화면 캡처 모드: 실시간 카메라 프레임 저장 (CameraScreenCapture.swift)
-    processVideoFrameForScreenCapture(sampleBuffer)
-
-    // 📡 일반 스트리밍 모드: HaishinKit에 프레임 통계 전달
-    guard isStreaming, let manager = haishinKitManager else { return }
-
-    // HaishinKit에 프레임 통계 정보 전달 (비동기 처리)
-    Task {
-      await manager.processVideoFrame(sampleBuffer)
-    }
-  }
-
-  func captureOutput(
-    _ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer,
-    from connection: AVCaptureConnection
-  ) {
-    // 프레임 드롭은 정상적인 현상이므로 로그 비활성화
   }
 }
 

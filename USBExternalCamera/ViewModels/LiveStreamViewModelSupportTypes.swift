@@ -25,9 +25,9 @@ enum StreamingPreset: String, CaseIterable {
 
   var description: String {
     switch self {
-    case .low: return "720p • 4.0Mbps"
-    case .standard: return "1080p • 10.0Mbps"
-    case .high: return "1080p60 • 12.0Mbps"
+    case .low: return "720p • 2.5Mbps"
+    case .standard: return "1080p • 4.5Mbps"
+    case .high: return "1080p • 6.0Mbps"
     case .ultra: return "4K • 35.0Mbps"
     }
   }
@@ -51,9 +51,9 @@ enum YouTubeBitrateAdvisor {
     } else if width >= 2560 && height >= 1440 {
       return is60fps ? 24_000 : 16_000
     } else if width >= 1920 && height >= 1080 {
-      return is60fps ? 12_000 : 10_000
+      return is60fps ? 9_000 : 4_500
     } else {
-      return is60fps ? 6_000 : 4_000
+      return is60fps ? 6_000 : 2_500
     }
   }
 }

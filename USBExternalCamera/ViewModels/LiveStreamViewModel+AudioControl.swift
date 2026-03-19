@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreMedia
 import Foundation
+import HaishinKit
 import LiveStreamingCore
 
 extension LiveStreamViewModel {

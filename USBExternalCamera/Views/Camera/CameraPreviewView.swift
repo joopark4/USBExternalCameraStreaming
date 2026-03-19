@@ -15,6 +15,7 @@ import LiveStreamingCore
 /// **실제 HaishinKit RTMP 스트리밍을 위한 카메라 미리보기**
 struct CameraPreviewView: UIViewRepresentable {
   let session: AVCaptureSession
+  let cameraViewModel: CameraPreviewFrameRouting
   var streamViewModel: LiveStreamViewModel?
   var haishinKitManager: HaishinKitManager?
 
@@ -24,12 +25,14 @@ struct CameraPreviewView: UIViewRepresentable {
 
   init(
     session: AVCaptureSession,
+    cameraViewModel: CameraPreviewFrameRouting,
     streamViewModel: LiveStreamViewModel? = nil,
     haishinKitManager: HaishinKitManager? = nil,
     showTextOverlay: Bool = false,
     overlayText: String = ""
   ) {
     self.session = session
+    self.cameraViewModel = cameraViewModel
     self.streamViewModel = streamViewModel
     self.haishinKitManager = haishinKitManager
     self.showTextOverlay = showTextOverlay
@@ -39,6 +42,7 @@ struct CameraPreviewView: UIViewRepresentable {
   func makeUIView(context: Context) -> UIView {
     let view = CameraPreviewUIView()
     view.captureSession = session
+    view.frameRouter = cameraViewModel
     view.haishinKitManager = haishinKitManager
     view.showTextOverlay = showTextOverlay
     view.overlayText = overlayText
@@ -70,6 +74,8 @@ struct CameraPreviewView: UIViewRepresentable {
         logInfo("캡처 세션 변경 감지 - 업데이트", category: .camera)
         previewView.captureSession = session
       }
+
+      previewView.frameRouter = cameraViewModel
 
       if managerChanged {
         logInfo("HaishinKit 매니저 변경 감지 - 업데이트", category: .camera)

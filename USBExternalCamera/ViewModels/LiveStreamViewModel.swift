@@ -20,7 +20,7 @@ final class LiveStreamViewModel: ObservableObject {
     static let statusTransitionDelay: UInt64 = 500_000_000  // 0.5초
     static let minimumStreamKeyLength = 16
     static let youtubeRTMPURL = "rtmp://a.rtmp.youtube.com/live2/"
-    static let defaultVideoBitrate = 10_000
+    static let defaultVideoBitrate = 4_500
     static let defaultAudioBitrate = 128
     static let defaultVideoWidth = 1920
     static let defaultVideoHeight = 1080

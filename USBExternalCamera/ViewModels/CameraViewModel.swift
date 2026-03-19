@@ -4,6 +4,17 @@ import Foundation
 import SwiftUI
 import LiveStreamingCore
 
+@MainActor
+protocol CameraPreviewFrameRouting: AnyObject {
+    func addPreviewFrameConsumer(_ consumer: CameraFrameDelegate)
+    func removePreviewFrameConsumer(_ consumer: CameraFrameDelegate)
+    func syncPreviewVideoOutputConnection(
+        rotationAngle: CGFloat?,
+        orientation: PreviewVideoOrientation?,
+        isMirrored: Bool
+    )
+}
+
 /// 카메라 관련 기능을 관리하는 뷰모델
 /// - @MainActor: UI 관련 작업은 메인 스레드에서 실행
 /// - ObservableObject: SwiftUI 뷰와 데이터 바인딩을 위한 프로토콜
@@ -342,10 +353,13 @@ final class CameraViewModel: NSObject, ObservableObject {
     /// - Parameters:
     ///   - streamingManager: 스트리밍 매니저 인스턴스
     func connectToStreaming(_ streamingManager: HaishinKitManager) {
+        if let currentStreamingManager = self.streamingManager,
+           currentStreamingManager !== streamingManager {
+            sessionManager.removeFrameConsumer(currentStreamingManager)
+        }
         self.streamingManager = streamingManager
-        sessionManager.frameDelegate = streamingManager
-        // 화면 캡처 모드에서는 카메라 전환 델리게이트가 불필요
-        logInfo("🔗 카메라와 스트리밍 매니저가 연결되었습니다 (프레임 델리게이트만)", category: .camera)
+        sessionManager.addFrameConsumer(streamingManager)
+        logInfo("🔗 카메라와 스트리밍 매니저가 fan-out 경로로 연결되었습니다", category: .camera)
     }
 
     /// 스트리밍 시작 전 카메라 세션 하드웨어 최적화를 요청
@@ -360,6 +374,31 @@ final class CameraViewModel: NSObject, ObservableObject {
     /// - 세션 정리는 명시적으로 호출해야 함
     /// - 비동기 작업이 포함되어 있어 deinit에서 직접 호출 불가
     deinit {
+        if let streamingManager {
+            sessionManager.removeFrameConsumer(streamingManager)
+        }
         NotificationCenter.default.removeObserver(self)
     }
-} 
+}
+
+extension CameraViewModel: CameraPreviewFrameRouting {
+    func addPreviewFrameConsumer(_ consumer: CameraFrameDelegate) {
+        sessionManager.addFrameConsumer(consumer)
+    }
+
+    func removePreviewFrameConsumer(_ consumer: CameraFrameDelegate) {
+        sessionManager.removeFrameConsumer(consumer)
+    }
+
+    func syncPreviewVideoOutputConnection(
+        rotationAngle: CGFloat?,
+        orientation: PreviewVideoOrientation?,
+        isMirrored: Bool
+    ) {
+        sessionManager.updateVideoOutputConfiguration(
+            rotationAngle: rotationAngle,
+            orientation: orientation,
+            isMirrored: isMirrored
+        )
+    }
+}

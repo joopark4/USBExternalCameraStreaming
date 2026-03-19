@@ -369,6 +369,7 @@ struct CameraPreviewContainerView: View {
         // 카메라 프리뷰
         CameraPreviewView(
           session: viewModel.cameraViewModel.captureSession,
+          cameraViewModel: viewModel.cameraViewModel,
           streamViewModel: viewModel.liveStreamViewModel,
           haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
           showTextOverlay: viewModel.showTextOverlay,

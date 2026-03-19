@@ -12,87 +12,293 @@ import CoreVideo
 import UIKit
 import LiveStreamingCore
 
+private final class PixelBufferReference: @unchecked Sendable {
+  let pixelBuffer: CVPixelBuffer
+
+  init(_ pixelBuffer: CVPixelBuffer) {
+    self.pixelBuffer = pixelBuffer
+  }
+}
+
+final class ScreenCaptureFrameStore: @unchecked Sendable {
+  let processingQueue = DispatchQueue(label: "CameraFrameProcessing", qos: .userInteractive)
+
+  private let lock = NSLock()
+  private var _isScreenCapturing = false
+  private var _latestCameraFrame: CVPixelBuffer?
+  private var _hasReceivedCameraFrame = false
+  private var _latestCameraFrameTimestamp: CFTimeInterval = 0
+  private var _lastLoggedCameraFrameSize: CGSize = .zero
+
+  var isScreenCapturing: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return _isScreenCapturing
+  }
+
+  func setIsScreenCapturing(_ value: Bool) {
+    lock.lock()
+    _isScreenCapturing = value
+    lock.unlock()
+  }
+
+  var latestCameraFrame: CVPixelBuffer? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _latestCameraFrame
+  }
+
+  func setLatestCameraFrame(_ value: CVPixelBuffer?) {
+    lock.lock()
+    _latestCameraFrame = value
+    lock.unlock()
+  }
+
+  var hasReceivedCameraFrame: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return _hasReceivedCameraFrame
+  }
+
+  func setHasReceivedCameraFrame(_ value: Bool) {
+    lock.lock()
+    _hasReceivedCameraFrame = value
+    lock.unlock()
+  }
+
+  var latestCameraFrameTimestamp: CFTimeInterval {
+    lock.lock()
+    defer { lock.unlock() }
+    return _latestCameraFrameTimestamp
+  }
+
+  func setLatestCameraFrameTimestamp(_ value: CFTimeInterval) {
+    lock.lock()
+    _latestCameraFrameTimestamp = value
+    lock.unlock()
+  }
+
+  var lastLoggedCameraFrameSize: CGSize {
+    lock.lock()
+    defer { lock.unlock() }
+    return _lastLoggedCameraFrameSize
+  }
+
+  func setLastLoggedCameraFrameSize(_ value: CGSize) {
+    lock.lock()
+    _lastLoggedCameraFrameSize = value
+    lock.unlock()
+  }
+
+  func updateLatestFrame(_ pixelBuffer: CVPixelBuffer, timestamp: CFTimeInterval) -> CGSize? {
+    let size = CGSize(
+      width: CVPixelBufferGetWidth(pixelBuffer),
+      height: CVPixelBufferGetHeight(pixelBuffer)
+    )
+
+    lock.lock()
+    defer { lock.unlock() }
+
+    _latestCameraFrame = pixelBuffer
+    _latestCameraFrameTimestamp = timestamp
+    _hasReceivedCameraFrame = true
+
+    guard size != _lastLoggedCameraFrameSize else {
+      return nil
+    }
+
+    _lastLoggedCameraFrameSize = size
+    return size
+  }
+}
+
+final class ScreenCaptureFrameConsumer: NSObject, CameraFrameDelegate, @unchecked Sendable {
+  private let frameStore: ScreenCaptureFrameStore
+
+  init(frameStore: ScreenCaptureFrameStore) {
+    self.frameStore = frameStore
+  }
+
+  nonisolated func didReceiveVideoFrame(
+    _ sampleBuffer: CMSampleBuffer,
+    from connection: AVCaptureConnection
+  ) {
+    guard frameStore.isScreenCapturing,
+      let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
+    else {
+      return
+    }
+
+    let pixelBufferReference = PixelBufferReference(pixelBuffer)
+
+    frameStore.processingQueue.async { [frameStore, pixelBufferReference] in
+      guard frameStore.isScreenCapturing else { return }
+
+      guard let copiedPixelBuffer = Self.clonePixelBufferForStreaming(pixelBufferReference.pixelBuffer)
+      else {
+        logWarning("카메라 프레임 복사 실패 - 전송용 프레임 생략", category: .camera)
+        return
+      }
+
+      if let size = frameStore.updateLatestFrame(
+        copiedPixelBuffer,
+        timestamp: CACurrentMediaTime()
+      ) {
+        logDebug(
+          "카메라 프레임 크기 수신: \(Int(size.width))×\(Int(size.height))",
+          category: .camera
+        )
+      }
+    }
+  }
+
+  private static func clonePixelBufferForStreaming(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
+    let width = CVPixelBufferGetWidth(pixelBuffer)
+    let height = CVPixelBufferGetHeight(pixelBuffer)
+    let pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer)
+
+    let attrs: [CFString: Any] = [
+      kCVPixelBufferIOSurfacePropertiesKey: [:],
+      kCVPixelBufferCGImageCompatibilityKey: true,
+      kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+    ]
+
+    var clonedPixelBuffer: CVPixelBuffer?
+    let createStatus = CVPixelBufferCreate(
+      kCFAllocatorDefault,
+      width,
+      height,
+      pixelFormat,
+      attrs as CFDictionary,
+      &clonedPixelBuffer
+    )
+
+    guard createStatus == kCVReturnSuccess, let clonedPixelBuffer else {
+      logWarning("카메라 프레임 복사용 버퍼 생성 실패: status=\(createStatus)")
+      return nil
+    }
+
+    CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+    CVPixelBufferLockBaseAddress(clonedPixelBuffer, [])
+
+    defer {
+      CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
+      CVPixelBufferUnlockBaseAddress(clonedPixelBuffer, [])
+    }
+
+    let sourceIsPlanar = CVPixelBufferIsPlanar(pixelBuffer) == true
+
+    if sourceIsPlanar {
+      let planeCount = CVPixelBufferGetPlaneCount(pixelBuffer)
+      for plane in 0..<planeCount {
+        guard
+          let sourcePlane = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, plane),
+          let destinationPlane = CVPixelBufferGetBaseAddressOfPlane(clonedPixelBuffer, plane)
+        else {
+          logWarning("카메라 프레임 플레인 \(plane) 주소를 얻지 못해 복사를 건너뜀")
+          continue
+        }
+
+        let sourceBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, plane)
+        let destinationBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(clonedPixelBuffer, plane)
+        let rowHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, plane)
+
+        if sourceBytesPerRow == destinationBytesPerRow {
+          memcpy(destinationPlane, sourcePlane, sourceBytesPerRow * rowHeight)
+          continue
+        }
+
+        let copyBytesPerRow = min(sourceBytesPerRow, destinationBytesPerRow)
+        for row in 0..<rowHeight {
+          let sourcePointer = sourcePlane.advanced(by: row * sourceBytesPerRow)
+          let destinationPointer = destinationPlane.advanced(by: row * destinationBytesPerRow)
+          memcpy(destinationPointer, sourcePointer, copyBytesPerRow)
+        }
+      }
+    } else if
+      let sourceBuffer = CVPixelBufferGetBaseAddress(pixelBuffer),
+      let destinationBuffer = CVPixelBufferGetBaseAddress(clonedPixelBuffer)
+    {
+      let sourceBytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+      let destinationBytesPerRow = CVPixelBufferGetBytesPerRow(clonedPixelBuffer)
+      if sourceBytesPerRow == destinationBytesPerRow {
+        memcpy(destinationBuffer, sourceBuffer, sourceBytesPerRow * height)
+      } else {
+        let copyBytesPerRow = min(sourceBytesPerRow, destinationBytesPerRow)
+        for row in 0..<height {
+          let sourcePointer = sourceBuffer.advanced(by: row * sourceBytesPerRow)
+          let destinationPointer = destinationBuffer.advanced(by: row * destinationBytesPerRow)
+          memcpy(destinationPointer, sourcePointer, copyBytesPerRow)
+        }
+      }
+    } else {
+      logWarning("카메라 프레임 버퍼 주소를 얻지 못해 복사 실패")
+      return nil
+    }
+
+    return clonedPixelBuffer
+  }
+}
+
 // MARK: - Screen Capture Extension for CameraPreviewUIView
 
 extension CameraPreviewUIView {
 
   // MARK: - Screen Capture Properties
 
-  /// 화면 캡처용 타이머
-  private var screenCaptureTimer: Timer? {
+  /// 화면 캡처용 디스플레이 링크
+  private var screenCaptureDisplayLink: CADisplayLink? {
     get {
-      return objc_getAssociatedObject(self, &AssociatedKeys.screenCaptureTimer) as? Timer
+      return objc_getAssociatedObject(self, &AssociatedKeys.screenCaptureDisplayLink) as? CADisplayLink
     }
     set {
       objc_setAssociatedObject(
-        self, &AssociatedKeys.screenCaptureTimer, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        self, &AssociatedKeys.screenCaptureDisplayLink, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
   }
 
   /// 화면 캡처 상태
   var isScreenCapturing: Bool {
     get {
-      return objc_getAssociatedObject(self, &AssociatedKeys.isScreenCapturing) as? Bool ?? false
+      screenCaptureFrameStore.isScreenCapturing
     }
     set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.isScreenCapturing, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      screenCaptureFrameStore.setIsScreenCapturing(newValue)
     }
   }
 
   /// 최근 카메라 프레임 (화면 캡처용)
   var latestCameraFrame: CVPixelBuffer? {
     get {
-      guard let anyObject = objc_getAssociatedObject(self, &AssociatedKeys.latestCameraFrame) else {
-        return nil
-      }
-      // CFType (CVPixelBuffer)의 안전한 타입 검증 후 캐스팅
-      let cfRef = anyObject as CFTypeRef
-      guard CFGetTypeID(cfRef) == CVPixelBufferGetTypeID() else {
-        return nil
-      }
-      // 타입 ID 검증 완료 후 안전하게 캐스팅
-      // swiftlint:disable:next force_cast
-      return (anyObject as! CVPixelBuffer)
+      screenCaptureFrameStore.latestCameraFrame
     }
     set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.latestCameraFrame, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      screenCaptureFrameStore.setLatestCameraFrame(newValue)
     }
   }
 
   /// 카메라 프레임 수신 이력
   var hasReceivedCameraFrame: Bool {
     get {
-      return (objc_getAssociatedObject(self, &AssociatedKeys.hasReceivedCameraFrame) as? Bool) ?? false
+      screenCaptureFrameStore.hasReceivedCameraFrame
     }
     set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.hasReceivedCameraFrame, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      screenCaptureFrameStore.setHasReceivedCameraFrame(newValue)
     }
   }
 
   /// 프레임 처리 큐
   var frameProcessingQueue: DispatchQueue {
-    if let queue = objc_getAssociatedObject(self, &AssociatedKeys.frameProcessingQueue)
-      as? DispatchQueue
-    {
-      return queue
-    }
-    let queue = DispatchQueue(label: "CameraFrameProcessing", qos: .userInteractive)
-    objc_setAssociatedObject(
-      self, &AssociatedKeys.frameProcessingQueue, queue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    return queue
+    screenCaptureFrameStore.processingQueue
   }
 
   /// 최근 카메라 프레임 수신 시각(초 단위)
   var latestCameraFrameTimestamp: CFTimeInterval {
     get {
-      return objc_getAssociatedObject(self, &AssociatedKeys.latestCameraFrameTimestamp) as? CFTimeInterval ?? 0
+      screenCaptureFrameStore.latestCameraFrameTimestamp
     }
     set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.latestCameraFrameTimestamp, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      screenCaptureFrameStore.setLatestCameraFrameTimestamp(newValue)
     }
   }
 
@@ -122,15 +328,10 @@ extension CameraPreviewUIView {
   /// 마지막 로그된 카메라 프레임 크기
   var lastLoggedCameraFrameSize: CGSize {
     get {
-      if let value = objc_getAssociatedObject(self, &AssociatedKeys.lastLoggedCameraFrameSize) as? NSValue {
-        return value.cgSizeValue
-      }
-      return .zero
+      screenCaptureFrameStore.lastLoggedCameraFrameSize
     }
     set {
-      objc_setAssociatedObject(
-        self, &AssociatedKeys.lastLoggedCameraFrameSize, NSValue(cgSize: newValue),
-        .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      screenCaptureFrameStore.setLastLoggedCameraFrameSize(newValue)
     }
   }
 
@@ -175,6 +376,36 @@ extension CameraPreviewUIView {
     set {
       objc_setAssociatedObject(
         self, &AssociatedKeys.lastFrameDropLogTime, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+  }
+
+  /// 마지막 display link tick 시각
+  var lastDisplayLinkTickTimestamp: CFTimeInterval {
+    get {
+      objc_getAssociatedObject(self, &AssociatedKeys.lastDisplayLinkTickTimestamp) as? CFTimeInterval ?? 0
+    }
+    set {
+      objc_setAssociatedObject(
+        self,
+        &AssociatedKeys.lastDisplayLinkTickTimestamp,
+        newValue,
+        .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+      )
+    }
+  }
+
+  /// 마지막 실제 캡처 시각
+  var lastCaptureDispatchTimestamp: CFTimeInterval {
+    get {
+      objc_getAssociatedObject(self, &AssociatedKeys.lastCaptureDispatchTimestamp) as? CFTimeInterval ?? 0
+    }
+    set {
+      objc_setAssociatedObject(
+        self,
+        &AssociatedKeys.lastCaptureDispatchTimestamp,
+        newValue,
+        .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+      )
     }
   }
 
@@ -236,6 +467,8 @@ extension CameraPreviewUIView {
     isFrameRenderInProgress = false
     isFrameSendInProgress = false
     lastFrameDropLogTime = 0
+    lastDisplayLinkTickTimestamp = 0
+    lastCaptureDispatchTimestamp = 0
     frameProcessingQueue.async { [weak self] in
       self?.latestCameraFrame = nil
       self?.latestCameraFrameTimestamp = 0
@@ -249,15 +482,19 @@ extension CameraPreviewUIView {
         "현재 세션의 캡처 목표 해상도: \(Int(target.width))×\(Int(target.height))", category: .streaming)
     }
 
-    // **720p 특화 최적화**: 해상도별 차등 FPS 적용
-    let captureInterval = getCaptureIntervalForResolution()
-    let timer = Timer(timeInterval: captureInterval, repeats: true) { [weak self] _ in
-      self?.captureCurrentFrame()
+    let targetFrameRate = resolvedCaptureFrameRateForCurrentResolution()
+    let displayLink = CADisplayLink(target: self, selector: #selector(handleScreenCaptureDisplayLink(_:)))
+    if #available(iOS 15.0, *) {
+      displayLink.preferredFrameRateRange = CAFrameRateRange(
+        minimum: Float(targetFrameRate),
+        maximum: Float(max(targetFrameRate, 60)),
+        preferred: Float(targetFrameRate)
+      )
+    } else {
+      displayLink.preferredFramesPerSecond = targetFrameRate
     }
-    // 프레임 간격 변동을 줄여 재생 체감 부드러움 개선
-    timer.tolerance = captureInterval * 0.05
-    RunLoop.main.add(timer, forMode: .common)
-    screenCaptureTimer = timer
+    displayLink.add(to: .main, forMode: .common)
+    screenCaptureDisplayLink = displayLink
   }
 
   /// 화면 캡처 송출 중지
@@ -270,11 +507,13 @@ extension CameraPreviewUIView {
     }
 
     isScreenCapturing = false
-    screenCaptureTimer?.invalidate()
-    screenCaptureTimer = nil
+    screenCaptureDisplayLink?.invalidate()
+    screenCaptureDisplayLink = nil
     isFrameRenderInProgress = false
     isFrameSendInProgress = false
     lastFrameDropLogTime = 0
+    lastDisplayLinkTickTimestamp = 0
+    lastCaptureDispatchTimestamp = 0
 
     // 메모리 정리: 최근 캡처된 카메라 프레임 제거
     frameProcessingQueue.async { [weak self] in
@@ -291,6 +530,43 @@ extension CameraPreviewUIView {
     logInfo("화면 캡처 송출 중지 및 리소스 정리 완료", category: .streaming)
   }
 
+  @objc private func handleScreenCaptureDisplayLink(_ displayLink: CADisplayLink) {
+    guard isScreenCapturing else { return }
+
+    let currentTimestamp = displayLink.timestamp
+    let targetInterval = getCaptureIntervalForResolution()
+
+    let mainThreadHitch: Bool
+    if lastDisplayLinkTickTimestamp > 0 {
+      let tickDelta = currentTimestamp - lastDisplayLinkTickTimestamp
+      mainThreadHitch = tickDelta > max(targetInterval * 1.75, 0.05)
+    } else {
+      mainThreadHitch = false
+    }
+    lastDisplayLinkTickTimestamp = currentTimestamp
+
+    if lastCaptureDispatchTimestamp > 0 {
+      let elapsedSinceLastCapture = currentTimestamp - lastCaptureDispatchTimestamp
+      if elapsedSinceLastCapture + 0.0005 < targetInterval {
+        return
+      }
+    }
+
+    let captureCadenceMs: Double?
+    if lastCaptureDispatchTimestamp > 0 {
+      captureCadenceMs = (currentTimestamp - lastCaptureDispatchTimestamp) * 1000
+    } else {
+      captureCadenceMs = nil
+    }
+    lastCaptureDispatchTimestamp = currentTimestamp
+
+    captureCurrentFrame(
+      captureCadenceMs: captureCadenceMs,
+      mainThreadHitch: mainThreadHitch,
+      presentationTimestamp: currentTimestamp
+    )
+  }
+
   /// 현재 프레임 캡처 및 HaishinKit 전송
   ///
   /// 이 메서드는 30fps 타이머에 의해 호출되며, 다음 단계를 수행합니다:
@@ -298,44 +574,73 @@ extension CameraPreviewUIView {
   /// 2. 카메라 프레임과 UI를 합성하여 최종 이미지 생성
   /// 3. UIImage를 CVPixelBuffer로 변환
   /// 4. HaishinKit을 통해 스트리밍 서버에 전송
-  private func captureCurrentFrame() {
-    if !Thread.isMainThread {
-      DispatchQueue.main.async { [weak self] in
-        self?.captureCurrentFrame()
-      }
-      return
-    }
-
+  private func captureCurrentFrame(
+    captureCadenceMs: Double?,
+    mainThreadHitch: Bool,
+    presentationTimestamp: CFTimeInterval
+  ) {
     // 화면 캡처 상태 재확인 (타이머 지연으로 인한 중복 실행 방지)
     guard isScreenCapturing else { return }
 
     // 렌더링이 이전 프레임 처리 중이면 이번 프레임은 드랍
     guard !isFrameRenderInProgress else {
       logFrameDropIfNeeded(reason: "렌더링 작업이 밀려 현재 프레임을 드랍합니다.")
+      haishinKitManager?.recordScreenCaptureDrop(reason: .renderBackpressure)
       return
     }
 
     // 전송이 아직 완료되지 않았다면 큐 적체를 피하기 위해 현재 프레임 드랍
     guard !isFrameSendInProgress else {
       logFrameDropIfNeeded(reason: "프레임 전송이 밀려 현재 프레임을 드랍합니다.")
+      haishinKitManager?.recordScreenCaptureDrop(reason: .sendBackpressure)
       return
     }
+
+    let streamingSize = getOptimalCaptureSize()
+    let overlaySnapshot = makeStreamingOverlaySnapshot(streamingSize: streamingSize)
+    let cameraFrame = latestCameraFrame
+    let cameraFrameAgeMs: Double? =
+      hasReceivedCameraFrame && latestCameraFrameTimestamp > 0
+      ? max(0, (CACurrentMediaTime() - latestCameraFrameTimestamp) * 1000)
+      : nil
 
     isFrameRenderInProgress = true
-    defer { isFrameRenderInProgress = false }
+    frameProcessingQueue.async { [weak self] in
+      guard let self else { return }
 
-    // Step 1: 현재 화면을 이미지로 렌더링 (카메라 프레임 + UI 합성)
-    guard let capturedImage = renderToImage() else {
-      return
+      let compositionStart = CACurrentMediaTime()
+      let pixelBuffer = self.composeStreamingPixelBuffer(
+        cameraFrame: cameraFrame,
+        overlaySnapshot: overlaySnapshot,
+        streamingSize: streamingSize
+      )
+      let compositionTimeMs = (CACurrentMediaTime() - compositionStart) * 1000
+
+      DispatchQueue.main.async { [weak self] in
+        guard let self else { return }
+        self.isFrameRenderInProgress = false
+
+        if pixelBuffer == nil {
+          self.logFrameDropIfNeeded(reason: "합성 결과가 없어 현재 프레임을 드랍합니다.")
+          self.haishinKitManager?.recordScreenCaptureDrop(reason: .renderBackpressure)
+          return
+        }
+
+        self.haishinKitManager?.reportScreenCaptureLoopMetrics(
+          captureCadenceMs: captureCadenceMs,
+          cameraFrameAgeMs: cameraFrameAgeMs,
+          compositionTimeMs: compositionTimeMs,
+          mainThreadHitch: mainThreadHitch
+        )
+        self.sendFrameToHaishinKit(
+          pixelBuffer!,
+          frameRate: self.resolvedCaptureFrameRateForCurrentResolution(),
+          compositionTimeMs: compositionTimeMs,
+          cameraFrameAgeMs: cameraFrameAgeMs,
+          presentationTimestamp: presentationTimestamp
+        )
+      }
     }
-
-    // Step 2: UIImage를 CVPixelBuffer로 변환 (HaishinKit 호환 포맷)
-    guard let pixelBuffer = capturedImage.toCVPixelBuffer() else {
-      return
-    }
-
-    // Step 3: HaishinKit을 통해 스트리밍 서버에 전송
-    sendFrameToHaishinKit(pixelBuffer)
   }
 
   /// 프레임 드랍 상태 로깅 (스팸 방지)
@@ -348,16 +653,29 @@ extension CameraPreviewUIView {
 
   /// 프레임 전송 타이밍에 대한 중복 실행 방지 로직
   private func performFrameSendWithBackpressure(
-    manager: HaishinKitManager, pixelBuffer: CVPixelBuffer
+    manager: HaishinKitManager,
+    pixelBuffer: CVPixelBuffer,
+    frameRate: Int,
+    compositionTimeMs: Double?,
+    cameraFrameAgeMs: Double?,
+    presentationTimestamp: CFTimeInterval
   ) {
     guard !isFrameSendInProgress else {
       logFrameDropIfNeeded(reason: "프레임 전송이 밀려 현재 프레임을 드랍합니다.")
+      manager.recordScreenCaptureDrop(reason: .sendBackpressure)
       return
     }
 
     isFrameSendInProgress = true
+    let presentationTime = CMTime(seconds: presentationTimestamp, preferredTimescale: 1_000_000_000)
     Task { @MainActor [weak self] in
-      await manager.sendManualFrame(pixelBuffer)
+      _ = await manager.enqueueManualFrame(
+        pixelBuffer,
+        presentationTime: presentationTime,
+        frameRate: frameRate,
+        compositionTimeMs: compositionTimeMs,
+        cameraFrameAgeMs: cameraFrameAgeMs
+      )
       self?.isFrameSendInProgress = false
     }
   }
@@ -472,10 +790,23 @@ extension CameraPreviewUIView {
   /// - 성공/실패 카운트와 현재 FPS를 확인할 수 있습니다
   ///
   /// - Parameter pixelBuffer: 전송할 프레임 데이터
-  private func sendFrameToHaishinKit(_ pixelBuffer: CVPixelBuffer) {
+  private func sendFrameToHaishinKit(
+    _ pixelBuffer: CVPixelBuffer,
+    frameRate: Int,
+    compositionTimeMs: Double?,
+    cameraFrameAgeMs: Double?,
+    presentationTimestamp: CFTimeInterval
+  ) {
     // HaishinKitManager를 통한 실제 프레임 전송
     if let manager = haishinKitManager {
-      performFrameSendWithBackpressure(manager: manager, pixelBuffer: pixelBuffer)
+      performFrameSendWithBackpressure(
+        manager: manager,
+        pixelBuffer: pixelBuffer,
+        frameRate: frameRate,
+        compositionTimeMs: compositionTimeMs,
+        cameraFrameAgeMs: cameraFrameAgeMs,
+        presentationTimestamp: presentationTimestamp
+      )
 
       // 성능 모니터링: 10초마다 전송 통계 출력 (로그 부하 완화)
       if frameCounter % 300 == 0 {
@@ -560,8 +891,7 @@ extension CameraPreviewUIView {
     let resolved = resolveStreamingSizeForDiagnostics()
     let width = resolved.width
     let height = resolved.height
-    let frameRate = resolveStreamingFrameRateForDiagnostics()
-    let clampedFrameRate = min(max(frameRate, 15), 30)
+    let clampedFrameRate = resolvedCaptureFrameRateForCurrentResolution()
 
     switch (width, height) {
     case (1280, 720):
@@ -582,6 +912,23 @@ extension CameraPreviewUIView {
       // 기타: 설정값 기반 처리
       return 1.0 / Double(clampedFrameRate)
     }
+  }
+
+  private func maxSupportedCaptureFrameRate(width: Int, height: Int) -> Int {
+    switch (width, height) {
+    case (1280, 720):
+      return 60
+    default:
+      return 30
+    }
+  }
+
+  private func resolvedCaptureFrameRateForCurrentResolution() -> Int {
+    let resolved = resolveStreamingSizeForDiagnostics()
+    return min(
+      max(resolveStreamingFrameRateForDiagnostics(), 15),
+      maxSupportedCaptureFrameRate(width: resolved.width, height: resolved.height)
+    )
   }
 
   /// 스트리밍 상태/설정 기반 캡처 FPS 조회
@@ -638,141 +985,6 @@ extension CameraPreviewUIView {
 
     setStreamingTargetSize(CGSize(width: width, height: height))
   }
-
-  /// 프레임 크기 변경 추적 로그 (과도한 로그 방지)
-  private func recordCameraFrameSize(for pixelBuffer: CVPixelBuffer) {
-    let size = CGSize(
-      width: CVPixelBufferGetWidth(pixelBuffer),
-      height: CVPixelBufferGetHeight(pixelBuffer)
-    )
-
-    if size != lastLoggedCameraFrameSize {
-      logDebug("카메라 프레임 크기 수신: \(Int(size.width))×\(Int(size.height))", category: .camera)
-      lastLoggedCameraFrameSize = size
-    }
-  }
-}
-
-// MARK: - Screen Capture Video Frame Processing Extension
-
-extension CameraPreviewUIView {
-
-  /// 화면 캡처 모드를 위한 비디오 프레임 처리
-  func processVideoFrameForScreenCapture(_ sampleBuffer: CMSampleBuffer) {
-    // 🎬 화면 캡처 모드: 실시간 카메라 프레임 저장
-    // UI와 합성하기 위해 최신 프레임을 백그라운드에서 저장
-    guard isScreenCapturing, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
-      return
-    }
-
-    // 백그라운드 큐에서 프레임 저장 (메인 스레드 블록킹 방지)
-    frameProcessingQueue.async { [weak self] in
-      guard let self else { return }
-
-      guard let copiedPixelBuffer = self.clonePixelBufferForStreaming(pixelBuffer) else {
-        logWarning("카메라 프레임 복사 실패 - 전송용 프레임 생략", category: .camera)
-        return
-      }
-
-      self.latestCameraFrame = copiedPixelBuffer
-      self.recordCameraFrameSize(for: copiedPixelBuffer)
-      self.latestCameraFrameTimestamp = CACurrentMediaTime()
-      self.hasReceivedCameraFrame = true
-    }
-  }
-
-  /// 화면 캡처 전송용 버퍼 안정화용 카피
-  ///
-  /// AVCaptureVideoDataOutput에서 넘어오는 CVPixelBuffer는 캡처 이후 재사용될 수 있어,
-  /// 그대로 참조하면 합성 시 검은 프레임/깨짐이 발생할 수 있습니다.
-  /// 화면 캡처 파이프라인에서만 사용하는 최소 비용 복사본을 생성합니다.
-  func clonePixelBufferForStreaming(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
-    let width = CVPixelBufferGetWidth(pixelBuffer)
-    let height = CVPixelBufferGetHeight(pixelBuffer)
-    let pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer)
-
-    let attrs = [
-      kCVPixelBufferIOSurfacePropertiesKey: [:],
-      kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue,
-      kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue,
-    ] as CFDictionary
-
-    var clonedPixelBuffer: CVPixelBuffer?
-    let createStatus = CVPixelBufferCreate(
-      kCFAllocatorDefault,
-      width,
-      height,
-      pixelFormat,
-      attrs,
-      &clonedPixelBuffer
-    )
-
-    guard createStatus == kCVReturnSuccess, let clonedPixelBuffer else {
-      logWarning("카메라 프레임 복사용 버퍼 생성 실패: status=\(createStatus)")
-      return nil
-    }
-
-    CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-    CVPixelBufferLockBaseAddress(clonedPixelBuffer, [])
-
-    defer {
-      CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
-      CVPixelBufferUnlockBaseAddress(clonedPixelBuffer, [])
-    }
-
-    let sourceIsPlanar = CVPixelBufferIsPlanar(pixelBuffer) == true
-
-    if sourceIsPlanar {
-      let planeCount = CVPixelBufferGetPlaneCount(pixelBuffer)
-      for plane in 0..<planeCount {
-        guard
-          let sourcePlane = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, plane),
-          let destinationPlane = CVPixelBufferGetBaseAddressOfPlane(clonedPixelBuffer, plane)
-        else {
-          logWarning("카메라 프레임 플레인 \(plane) 주소를 얻지 못해 복사를 건너뜀")
-          continue
-        }
-
-        let sourceBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, plane)
-        let destinationBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(clonedPixelBuffer, plane)
-        let rowHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, plane)
-
-        if sourceBytesPerRow == destinationBytesPerRow {
-          memcpy(destinationPlane, sourcePlane, sourceBytesPerRow * rowHeight)
-          continue
-        }
-
-        let copyBytesPerRow = min(sourceBytesPerRow, destinationBytesPerRow)
-        for row in 0..<rowHeight {
-          let sourcePointer = sourcePlane.advanced(by: row * sourceBytesPerRow)
-          let destinationPointer = destinationPlane.advanced(by: row * destinationBytesPerRow)
-          memcpy(destinationPointer, sourcePointer, copyBytesPerRow)
-        }
-      }
-    } else if
-      let sourceBuffer = CVPixelBufferGetBaseAddress(pixelBuffer),
-      let destinationBuffer = CVPixelBufferGetBaseAddress(clonedPixelBuffer)
-    {
-      let sourceBytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-      let destinationBytesPerRow = CVPixelBufferGetBytesPerRow(clonedPixelBuffer)
-      if sourceBytesPerRow == destinationBytesPerRow {
-        memcpy(destinationBuffer, sourceBuffer, sourceBytesPerRow * height)
-      } else {
-        let copyBytesPerRow = min(sourceBytesPerRow, destinationBytesPerRow)
-        for row in 0..<height {
-          let sourcePointer = sourceBuffer.advanced(by: row * sourceBytesPerRow)
-          let destinationPointer = destinationBuffer.advanced(by: row * destinationBytesPerRow)
-          memcpy(destinationPointer, sourcePointer, copyBytesPerRow)
-        }
-      }
-    } else {
-      logWarning("카메라 프레임 버퍼 주소를 얻지 못해 복사 실패")
-      return nil
-    }
-
-    return clonedPixelBuffer
-  }
-
   /// 화면 캡처 시작 직전 전달받은 목표 해상도 저장
   ///
   /// 해상도 저장 위치(캐시)로 인해 매니저 준비 시점과 무관하게
@@ -812,18 +1024,14 @@ extension CameraPreviewUIView {
 // MARK: - Associated Keys for Runtime Properties
 
 private struct AssociatedKeys {
-  static var screenCaptureTimer = "screenCaptureTimer"
-  static var isScreenCapturing = "isScreenCapturing"
-  static var latestCameraFrame = "latestCameraFrame"
-  static var frameProcessingQueue = "frameProcessingQueue"
-  static var frameCounter = "frameCounter"
-  static var isFrameRenderInProgress = "isFrameRenderInProgress"
-  static var isFrameSendInProgress = "isFrameSendInProgress"
-  static var lastFrameDropLogTime = "lastFrameDropLogTime"
-  static var streamingTargetSize = "streamingTargetSize"
-  static var latestCameraFrameTimestamp = "latestCameraFrameTimestamp"
-  static var hasReceivedCameraFrame = "hasReceivedCameraFrame"
-  static var lastCameraFrameWarningTime = "lastCameraFrameWarningTime"
-  static var screenCaptureStartTime = "screenCaptureStartTime"
-  static var lastLoggedCameraFrameSize = "lastLoggedCameraFrameSize"
+  static var screenCaptureDisplayLink: UInt8 = 0
+  static var frameCounter: UInt8 = 0
+  static var isFrameRenderInProgress: UInt8 = 0
+  static var isFrameSendInProgress: UInt8 = 0
+  static var lastFrameDropLogTime: UInt8 = 0
+  static var lastDisplayLinkTickTimestamp: UInt8 = 0
+  static var lastCaptureDispatchTimestamp: UInt8 = 0
+  static var streamingTargetSize: UInt8 = 0
+  static var lastCameraFrameWarningTime: UInt8 = 0
+  static var screenCaptureStartTime: UInt8 = 0
 }

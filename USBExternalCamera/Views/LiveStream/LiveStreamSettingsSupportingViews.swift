@@ -178,9 +178,6 @@ struct VideoSettingsSectionView: View {
         case .resolution480p:
             viewModel.settings.videoWidth = 848
             viewModel.settings.videoHeight = 480
-            if viewModel.settings.frameRate > 30 {
-                viewModel.settings.frameRate = 30
-            }
         case .resolution720p:
             viewModel.settings.videoWidth = 1280
             viewModel.settings.videoHeight = 720
@@ -188,6 +185,7 @@ struct VideoSettingsSectionView: View {
             viewModel.settings.videoWidth = 1920
             viewModel.settings.videoHeight = 1080
         }
+        normalizeFrameRateIfNeeded(for: resolution)
         viewModel.settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
             width: viewModel.settings.videoWidth,
             height: viewModel.settings.videoHeight,
@@ -195,11 +193,36 @@ struct VideoSettingsSectionView: View {
         )
     }
 
-    /// 프레임레이트 지원 여부 확인 (일반 검사)
-    /// - 30fps 이하만 지원 (60fps 등 고프레임레이트 미지원)
-    /// - Note: 해상도별 세부 제한은 LiveStreamSettingsView.isFrameRateSupported에서 처리
+    private func supportedFrameRates(for resolution: Resolution) -> [Int] {
+        switch resolution {
+        case .resolution480p:
+            return [24, 30]
+        case .resolution720p:
+            return [24, 30, 60]
+        case .resolution1080p:
+            return [24, 30]
+        }
+    }
+
+    private func normalizeFrameRateIfNeeded(for resolution: Resolution) {
+        let supportedRates = supportedFrameRates(for: resolution)
+        guard !supportedRates.contains(viewModel.settings.frameRate) else { return }
+        viewModel.settings.frameRate = supportedRates.contains(30) ? 30 : supportedRates.last ?? 30
+    }
+
+    private func setFrameRate(_ frameRate: Int) {
+        guard isFrameRateSupported(frameRate) else { return }
+        viewModel.settings.frameRate = frameRate
+        viewModel.settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+            width: viewModel.settings.videoWidth,
+            height: viewModel.settings.videoHeight,
+            frameRate: viewModel.settings.frameRate
+        )
+    }
+
+    /// 프레임레이트 지원 여부 확인
     func isFrameRateSupported(_ frameRate: Int) -> Bool {
-        return frameRate <= 30
+        supportedFrameRates(for: currentResolution).contains(frameRate)
     }
 
     var bitrateColor: Color {
@@ -339,7 +362,7 @@ struct VideoSettingsSectionView: View {
                             isSelected: viewModel.settings.frameRate == 24,
                             isEnabled: isFrameRateSupported(24),
                             action: {
-                                viewModel.settings.frameRate = 24
+                                setFrameRate(24)
                             }
                         )
                         
@@ -349,18 +372,24 @@ struct VideoSettingsSectionView: View {
                             isSelected: viewModel.settings.frameRate == 30,
                             isEnabled: isFrameRateSupported(30),
                             action: {
-                                viewModel.settings.frameRate = 30
+                                setFrameRate(30)
                             }
                         )
                         
                         FrameRateButton(
                             title: "60fps",
                             frameRate: 60,
-                            isSelected: false,
-                            isEnabled: false,
-                            action: {}
+                            isSelected: viewModel.settings.frameRate == 60,
+                            isEnabled: isFrameRateSupported(60),
+                            action: {
+                                setFrameRate(60)
+                            }
                         )
                     }
+
+                    Text("60fps는 720p에서만 지원됩니다.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
                 
                 // 비트레이트 설정
@@ -383,6 +412,9 @@ struct VideoSettingsSectionView: View {
                     bitrateWarningView
                 }
             }
+        }
+        .onAppear {
+            normalizeFrameRateIfNeeded(for: currentResolution)
         }
     }
 }
