@@ -56,6 +56,10 @@ extension CameraPreviewUIView {
     let offsetY = (streamingSize.height - scaledSize.height) / 2.0
 
     context.clear(CGRect(origin: .zero, size: streamingSize))
+    // CGContext 기본 좌표계는 하단 원점이라 UIKit 레이어를 그대로 렌더링하면
+    // 송출 오버레이가 상하 반전되고 Y축 위치도 뒤집힌다.
+    context.translateBy(x: 0, y: streamingSize.height)
+    context.scaleBy(x: 1, y: -1)
     context.scaleBy(x: scale, y: scale)
     context.translateBy(x: offsetX / scale, y: offsetY / scale)
 
