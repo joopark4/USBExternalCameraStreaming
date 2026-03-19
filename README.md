@@ -67,11 +67,14 @@ This project was initiated to enable **flexible shooting and monitoring from var
 
 - **iOS**: 17.0 or later
 - **Xcode**: 16.3 or later
+- **Development Host**: Apple Silicon Mac recommended and officially supported for local builds and simulator validation
 - **Device**: iPad with USB-C port (iPhone not officially supported - not tested due to lack of test device)
 - **Camera**: UVC-compatible USB external camera
 - **Microphone**: Mic permission required for audio track output
 - **Network**: Stable upload bandwidth (recommended: 3+ Mbps for 480p, 6+ Mbps for 720p, 10+ Mbps for 1080p)
 - **Orientation**: **Landscape mode** (Portrait mode under development) - Currently optimized for landscape orientation
+
+> **Policy Note**: Intel Mac development environments are not officially supported. Simulator validation is based on Apple Silicon Macs, and this project intentionally excludes the `x86_64` iOS Simulator architecture.
 
 ### 📷 Tested External Cameras
 
@@ -115,7 +118,8 @@ cd USBExternalCamera-iOS
 open USBExternalCamera.xcodeproj
 
 # Build and run on your device
-# Note: Simulator is not supported for camera functionality
+# Note: A physical device is required for camera functionality
+# Note: Intel Mac simulator builds are not supported by project policy
 ```
 
 ### Dependencies
@@ -341,6 +345,7 @@ xcodebuild -scheme USBExternalCamera -destination 'platform=iOS,name=Your-Device
 
 # Note: Physical device required for camera functionality
 # Simulator testing is limited to UI components only
+# Note: Intel Mac simulator validation is not supported
 ```
 
 ### 🚧 Future Development Plans

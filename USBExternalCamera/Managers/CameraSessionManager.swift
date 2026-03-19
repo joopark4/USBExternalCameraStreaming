@@ -2,6 +2,13 @@ import AVFoundation
 import Foundation
 import LiveStreamingCore
 
+public enum PreviewVideoOrientation: Sendable {
+    case portrait
+    case portraitUpsideDown
+    case landscapeRight
+    case landscapeLeft
+}
+
 /// 카메라 전환 완료를 알리는 델리게이트
 public protocol CameraSwitchDelegate: AnyObject {
     /// 카메라 전환이 완료되었을 때 호출
@@ -15,12 +22,22 @@ public protocol CameraSessionManaging: AnyObject {
     /// 현재 카메라 세션
     /// - 카메라 입력과 출력을 관리하는 AVCaptureSession 인스턴스
     var captureSession: AVCaptureSession { get }
-    
-    /// 카메라 프레임 델리게이트
-    var frameDelegate: CameraFrameDelegate? { get set }
-    
+
     /// 카메라 전환 델리게이트
     var switchDelegate: CameraSwitchDelegate? { get set }
+
+    /// 비디오 프레임 소비자 등록
+    func addFrameConsumer(_ consumer: CameraFrameDelegate)
+
+    /// 비디오 프레임 소비자 해제
+    func removeFrameConsumer(_ consumer: CameraFrameDelegate)
+
+    /// 비디오 출력 연결의 회전/미러링 상태 동기화
+    func updateVideoOutputConfiguration(
+        rotationAngle: CGFloat?,
+        orientation: PreviewVideoOrientation?,
+        isMirrored: Bool
+    )
     
     /// 특정 카메라로 전환
     /// - camera: 전환할 카메라 디바이스
@@ -40,11 +57,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     /// 카메라 캡처 세션
     /// - 카메라 입력과 출력을 관리하는 핵심 객체
     public let captureSession = AVCaptureSession()
-    
-    /// 카메라 프레임 델리게이트
-    /// - 캡처된 비디오 프레임을 스트리밍 매니저로 전달
-    public weak var frameDelegate: CameraFrameDelegate?
-    
+
     /// 카메라 전환 델리게이트
     public weak var switchDelegate: CameraSwitchDelegate?
     
@@ -55,6 +68,9 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     /// 비디오 데이터 출력
     /// - 캡처된 비디오 프레임을 처리하기 위한 출력 설정
     private let videoOutput = AVCaptureVideoDataOutput()
+
+    /// 프레임 소비자 목록
+    private let frameConsumers = NSHashTable<AnyObject>.weakObjects()
     
     /// 세션 작업을 위한 전용 큐
     /// - 카메라 작업은 메인 스레드에서 실행하면 안 되므로 별도 큐 사용
@@ -110,6 +126,59 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             
             self.captureSession.commitConfiguration()
             logInfo("🎥 카메라 세션이 초기화되었습니다", category: .camera)
+        }
+    }
+
+    public func addFrameConsumer(_ consumer: CameraFrameDelegate) {
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            if !self.frameConsumers.allObjects.contains(where: { $0 === consumer }) {
+                self.frameConsumers.add(consumer)
+                logInfo("🎯 프레임 소비자 등록: \(type(of: consumer))", category: .camera)
+            }
+        }
+    }
+
+    public func removeFrameConsumer(_ consumer: CameraFrameDelegate) {
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            self.frameConsumers.remove(consumer)
+            logInfo("🧹 프레임 소비자 해제: \(type(of: consumer))", category: .camera)
+        }
+    }
+
+    public func updateVideoOutputConfiguration(
+        rotationAngle: CGFloat?,
+        orientation: PreviewVideoOrientation?,
+        isMirrored: Bool
+    ) {
+        sessionQueue.async { [weak self] in
+            guard let self, let connection = self.videoOutput.connection(with: .video) else { return }
+
+            if #available(iOS 17.0, *) {
+                let angle = rotationAngle ?? 0
+                if connection.isVideoRotationAngleSupported(angle) {
+                    connection.videoRotationAngle = angle
+                } else if connection.isVideoRotationAngleSupported(0) {
+                    connection.videoRotationAngle = 0
+                }
+            } else if let orientation, connection.isVideoOrientationSupported {
+                switch orientation {
+                case .portrait:
+                    connection.videoOrientation = .portrait
+                case .portraitUpsideDown:
+                    connection.videoOrientation = .portraitUpsideDown
+                case .landscapeRight:
+                    connection.videoOrientation = .landscapeRight
+                case .landscapeLeft:
+                    connection.videoOrientation = .landscapeLeft
+                }
+            }
+
+            if connection.isVideoMirroringSupported {
+                connection.automaticallyAdjustsVideoMirroring = false
+                connection.isVideoMirrored = isMirrored
+            }
         }
     }
     
@@ -418,8 +487,10 @@ extension CameraSessionManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             lastFrameTime = currentTime
         }
         
-        // 프레임을 스트리밍 매니저로 전달
-        frameDelegate?.didReceiveVideoFrame(sampleBuffer, from: connection)
+        let delegates = frameConsumers.allObjects.compactMap { $0 as? CameraFrameDelegate }
+        for delegate in delegates {
+            delegate.didReceiveVideoFrame(sampleBuffer, from: connection)
+        }
     }
     
     /// 프레임 드랍 발생 시 호출

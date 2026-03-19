@@ -595,9 +595,9 @@ struct LiveStreamSettingsView: View {
         } else if width >= 2560 && height >= 1440 {
             return is60fps ? 24_000 : 16_000
         } else if width >= 1920 && height >= 1080 {
-            return is60fps ? 12_000 : 10_000
+            return is60fps ? 9_000 : 4_500
         } else {
-            return is60fps ? 6_000 : 4_000
+            return is60fps ? 6_000 : 2_500
         }
     }
 
@@ -628,7 +628,7 @@ struct LiveStreamSettingsView: View {
         case .resolution480p:
             viewModel.settings.videoWidth = 848  // 16의 배수 (854 → 848)
             viewModel.settings.videoHeight = 480
-            viewModel.settings.videoBitrate = 4000
+            viewModel.settings.videoBitrate = 1500
             // 480p는 60fps 지원하지 않음
             if viewModel.settings.frameRate == 60 {
                 viewModel.settings.frameRate = 30
@@ -636,11 +636,11 @@ struct LiveStreamSettingsView: View {
         case .resolution720p:
             viewModel.settings.videoWidth = 1280
             viewModel.settings.videoHeight = 720
-            viewModel.settings.videoBitrate = 4000
+            viewModel.settings.videoBitrate = 2500
         case .resolution1080p:
             viewModel.settings.videoWidth = 1920
             viewModel.settings.videoHeight = 1080
-            viewModel.settings.videoBitrate = 10_000
+            viewModel.settings.videoBitrate = 4500
         }
     }
     
