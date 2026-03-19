@@ -75,6 +75,7 @@ extension HaishinKitManager {
       "frameCount": screenCaptureStats.frameCount,
       "successCount": screenCaptureStats.successCount,
       "currentFPS": screenCaptureStats.currentFPS,
+      "isMicrophoneMuted": isMicrophoneMuted,
       "renderDropCount": screenCaptureStats.renderDropCount,
       "sendDropCount": screenCaptureStats.sendDropCount,
       "captureCadenceMs": screenCaptureStats.latestCaptureCadenceMs,

@@ -48,11 +48,17 @@ extension HaishinKitManager {
     logger.info("🎵 오디오 빠른 설정", category: .system)
 
     // 기본 오디오 디바이스만 연결 (최적화는 나중에)
-    if let audioDevice = AVCaptureDevice.default(for: .audio) {
+    let audioDevice = AVCaptureDevice.default(for: .audio)
+    if let audioDevice {
       try await mixer.attachAudio(audioDevice, track: 0)
-      logger.info("✅ 기본 오디오 연결 완료", category: .system)
     } else {
       logger.warning("⚠️ 오디오 디바이스 없음 - 비디오만 송출", category: .system)
+    }
+
+    await applyCurrentMicrophoneMuteState()
+
+    if audioDevice != nil {
+      logger.info("✅ 기본 오디오 연결 완료", category: .system)
     }
   }
 

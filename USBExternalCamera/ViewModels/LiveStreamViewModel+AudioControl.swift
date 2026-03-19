@@ -15,9 +15,14 @@ extension LiveStreamViewModel {
     guard isMicrophoneMuted != muted else { return }
 
     isMicrophoneMuted = muted
+    audioPeakDiagnosticMessage = ""
 
     if muted {
+      stopAudioPeakHealthCheckTask()
       resetMicrophonePeakDisplay()
+    } else if status == .streaming {
+      resetAudioPeakDiagnostics()
+      startAudioPeakHealthCheckTask()
     }
 
     Task { [weak self] in
@@ -76,10 +81,12 @@ extension LiveStreamViewModel {
     }
 
     guard configureAudioSessionForIdleMonitoring() else {
-      audioPeakDiagnosticMessage = NSLocalizedString(
-        "audio_peak_diag_no_input",
-        comment: "오디오 입력 감지 안됨. 마이크 연결/선택 확인"
-      )
+      if !isMicrophoneMuted {
+        audioPeakDiagnosticMessage = NSLocalizedString(
+          "audio_peak_diag_no_input",
+          comment: "오디오 입력 감지 안됨. 마이크 연결/선택 확인"
+        )
+      }
       return
     }
 
@@ -101,10 +108,12 @@ extension LiveStreamViewModel {
       }
       logDebug("🎙️ 대기 상태 오디오 피크 모니터 시작", category: .streaming)
     } else {
-      audioPeakDiagnosticMessage = NSLocalizedString(
-        "audio_peak_diag_no_input",
-        comment: "오디오 입력 감지 안됨. 마이크 연결/선택 확인"
-      )
+      if !isMicrophoneMuted {
+        audioPeakDiagnosticMessage = NSLocalizedString(
+          "audio_peak_diag_no_input",
+          comment: "오디오 입력 감지 안됨. 마이크 연결/선택 확인"
+        )
+      }
       logWarning("대기 상태 오디오 피크 모니터 시작 실패", category: .streaming)
     }
   }
@@ -198,7 +207,17 @@ extension LiveStreamViewModel {
   // MARK: - Internal Audio Pipeline
 
   fileprivate func updateMicrophonePeak(level: Float, decibels: Float) {
-    guard !isMicrophoneMuted else { return }
+    audioPeakSampleCount += 1
+    audioPeakLastSampleAt = Date()
+    if !audioPeakDiagnosticMessage.isEmpty {
+      audioPeakDiagnosticMessage = ""
+    }
+
+    guard !isMicrophoneMuted else {
+      microphonePeakLevel = 0
+      microphonePeakDecibels = -80
+      return
+    }
 
     let normalized = level.clamped(to: 0...1)
     if status == .streaming {
@@ -208,64 +227,15 @@ extension LiveStreamViewModel {
       microphonePeakLevel = normalized
     }
     microphonePeakDecibels = decibels.clamped(to: -80...0)
-    audioPeakSampleCount += 1
-    audioPeakLastSampleAt = Date()
-    if !audioPeakDiagnosticMessage.isEmpty {
-      audioPeakDiagnosticMessage = ""
-    }
   }
 
   func applyMicrophoneMuteStateToStreamingPipeline() async {
     let muted = isMicrophoneMuted
-
-    let sessionApplied = applyMicrophoneMuteViaAudioSessionCategory(muted)
-    let bitrateApplied = await enforceStreamAudioBitrate()
+    let serviceApplied = await liveStreamService.setMicrophoneMuted(muted)
 
     logDebug(
-      "🎚️ [AUDIO MUTE] requested=\(muted), session=\(sessionApplied), bitrate=\(bitrateApplied)",
+      "🎚️ [AUDIO MUTE] requested=\(muted), service=\(serviceApplied)",
       category: .streaming)
-  }
-
-  private func applyMicrophoneMuteViaAudioSessionCategory(_ muted: Bool) -> Bool {
-    let session = AVAudioSession.sharedInstance()
-
-    do {
-      if muted {
-        try session.setCategory(
-          .playback,
-          mode: .default,
-          options: [.defaultToSpeaker, .allowBluetoothA2DP]
-        )
-      } else {
-        try session.setCategory(
-          .playAndRecord,
-          mode: status == .streaming ? .videoRecording : .measurement,
-          options: [.defaultToSpeaker, .allowBluetoothHFP]
-        )
-      }
-
-      try session.setActive(true)
-      return true
-    } catch {
-      logWarning("오디오 세션 기반 음소거 반영 실패: \(error.localizedDescription)", category: .streaming)
-      return false
-    }
-  }
-
-  private func enforceStreamAudioBitrate() async -> Bool {
-    guard let stream = liveStreamService.getRTMPStream() else {
-      return false
-    }
-
-    var audioSettings = await stream.audioSettings
-    let targetBitrate = max(64_000, settings.audioBitrate * 1_000)
-
-    if audioSettings.bitRate != targetBitrate {
-      audioSettings.bitRate = targetBitrate
-      await stream.setAudioSettings(audioSettings)
-    }
-
-    return true
   }
 
   private func configureAudioSessionForIdleMonitoring() -> Bool {
@@ -320,6 +290,7 @@ extension LiveStreamViewModel {
       await MainActor.run { [weak self] in
         guard let self else { return }
         guard self.status == .streaming else { return }
+        guard !self.isMicrophoneMuted else { return }
         guard self.audioPeakSampleCount == 0 else { return }
 
         let routeInput = AVAudioSession.sharedInstance().currentRoute.inputs.first?.portName

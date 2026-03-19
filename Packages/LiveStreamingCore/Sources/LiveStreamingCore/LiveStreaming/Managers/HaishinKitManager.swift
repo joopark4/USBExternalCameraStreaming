@@ -173,6 +173,9 @@ public protocol HaishinKitManagerProtocol: AnyObject {
   /// 설정 저장
   func saveSettings(_ settings: LiveStreamSettings)
 
+  /// 송출 마이크 음소거 상태 적용
+  func setMicrophoneMuted(_ muted: Bool) async -> Bool
+
   /// RTMP 스트림 반환 (UI 미리보기용)
   func getRTMPStream() -> RTMPStream?
 
@@ -438,6 +441,9 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
 
   /// 텍스트 오버레이 설정
   @Published public var textOverlaySettings: TextOverlaySettings = TextOverlaySettings()
+
+  /// 현재 송출 마이크 음소거 상태
+  var isMicrophoneMuted: Bool = false
 
   /// 현재 스트리밍 설정
   var currentSettings: LiveStreamSettings?

@@ -206,7 +206,7 @@ struct CameraPreviewContainerView: View {
         .frame(maxWidth: .infinity)
 
         Button {
-          // 음소거 기능 안정화 전까지 비활성화
+          viewModel.liveStreamViewModel.toggleMicrophoneMute()
         } label: {
           Label(
             viewModel.liveStreamViewModel.isMicrophoneMuted
@@ -219,7 +219,10 @@ struct CameraPreviewContainerView: View {
         .buttonStyle(
           FocusActionButtonStyle(
             tint: viewModel.liveStreamViewModel.isMicrophoneMuted ? .orange : .teal))
-        .disabled(true)
+        .disabled(
+          viewModel.liveStreamViewModel.status == .connecting
+            || viewModel.liveStreamViewModel.status == .disconnecting
+        )
 
         FocusMetricChip(
           title: NSLocalizedString("video_bitrate", comment: "비디오 비트레이트"),

@@ -250,6 +250,7 @@ extension HaishinKitManager {
 
       // 오디오 디바이스 연결
       try await mixer.attachAudio(audioDevice, track: 0)
+      await applyCurrentMicrophoneMuteState()
 
       // 오디오 설정은 기본값 사용 (HaishinKit에서 지원하는 설정만)
 
