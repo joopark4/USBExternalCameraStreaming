@@ -83,6 +83,9 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     
     /// 현재 적용된 스트리밍 설정 (중복 설정 방지용 캐시)
     private var currentStreamingSettings: LiveStreamSettings?
+
+    /// 마지막으로 적용한 비디오 출력 연결 설정 (중복 적용 방지용 캐시)
+    private var lastAppliedVideoOutputConfigurationKey: String?
     
     /// 초기화 및 기본 세션 설정
     /// - 세션 프리셋과 비디오 출력을 초기화
@@ -155,6 +158,17 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
         sessionQueue.async { [weak self] in
             guard let self, let connection = self.videoOutput.connection(with: .video) else { return }
 
+            let configurationKey = self.makeVideoOutputConfigurationKey(
+                connection: connection,
+                rotationAngle: rotationAngle,
+                orientation: orientation,
+                isMirrored: isMirrored
+            )
+
+            guard self.lastAppliedVideoOutputConfigurationKey != configurationKey else {
+                return
+            }
+
             if #available(iOS 17.0, *) {
                 if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
                     connection.videoRotationAngle = rotationAngle
@@ -189,7 +203,40 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
                 connection.automaticallyAdjustsVideoMirroring = false
                 connection.isVideoMirrored = isMirrored
             }
+
+            self.lastAppliedVideoOutputConfigurationKey = configurationKey
         }
+    }
+
+    private func makeVideoOutputConfigurationKey(
+        connection: AVCaptureConnection,
+        rotationAngle: CGFloat?,
+        orientation: PreviewVideoOrientation?,
+        isMirrored: Bool
+    ) -> String {
+        let connectionIdentifier = ObjectIdentifier(connection).hashValue
+        let rotationKey = rotationAngle.map { String(Int($0.rounded())) } ?? "nil"
+        let orientationKey: String
+
+        switch orientation {
+        case .portrait:
+            orientationKey = "portrait"
+        case .portraitUpsideDown:
+            orientationKey = "portraitUpsideDown"
+        case .landscapeRight:
+            orientationKey = "landscapeRight"
+        case .landscapeLeft:
+            orientationKey = "landscapeLeft"
+        case .none:
+            orientationKey = "nil"
+        }
+
+        return [
+            "connection:\(connectionIdentifier)",
+            "rotation:\(rotationKey)",
+            "orientation:\(orientationKey)",
+            "mirrored:\(isMirrored)",
+        ].joined(separator: "|")
     }
     
     /// 스트리밍 설정에 맞춰 카메라 하드웨어 품질 최적화

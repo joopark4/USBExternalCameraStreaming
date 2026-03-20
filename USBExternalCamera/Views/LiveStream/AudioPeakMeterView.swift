@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 카메라 프리뷰 하단에 표시되는 실시간 마이크 피크 미터
-struct AudioPeakMeterView: View {
+struct AudioPeakMeterContentView: View {
   let level: Float
   let decibels: Float
   let isMuted: Bool
@@ -50,6 +50,14 @@ struct AudioPeakMeterView: View {
     )
   }
 
+  private var visibleBarScale: CGFloat {
+    guard !isMuted else { return 0 }
+    if clampedLevel > 0.01 {
+      return max(clampedLevel, 0.015)
+    }
+    return 0
+  }
+
   var body: some View {
     VStack(spacing: 4) {
       HStack(spacing: 6) {
@@ -84,24 +92,19 @@ struct AudioPeakMeterView: View {
         .lineLimit(1)
         .minimumScaleFactor(0.85)
 
-      GeometryReader { geometry in
-        let rawWidth = geometry.size.width * (isMuted ? 0 : clampedLevel)
-        let barWidth = max(rawWidth, (!isMuted && clampedLevel > 0.01) ? 3 : 0)
+      ZStack(alignment: .leading) {
+        Capsule()
+          .fill(Color.secondary.opacity(0.2))
 
-        ZStack(alignment: .leading) {
-          Capsule()
-            .fill(Color.secondary.opacity(0.2))
-
-          Capsule()
-            .fill(
-              isMuted
-                ? AnyShapeStyle(mutedTint)
-                : AnyShapeStyle(activeTint)
-            )
-            .frame(width: barWidth)
-            .animation(.easeOut(duration: 0.1), value: clampedLevel)
-            .animation(.easeInOut(duration: 0.2), value: isMuted)
-        }
+        Capsule()
+          .fill(
+            isMuted
+              ? AnyShapeStyle(mutedTint)
+              : AnyShapeStyle(activeTint)
+          )
+          .scaleEffect(x: visibleBarScale, y: 1, anchor: .leading)
+          .animation(.easeOut(duration: 0.1), value: clampedLevel)
+          .animation(.easeInOut(duration: 0.2), value: isMuted)
       }
       .frame(height: 7)
 

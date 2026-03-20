@@ -13,6 +13,11 @@ import LiveStreamingCore
 
 /// 실제 카메라 미리보기를 담당하는 UIView
 final class CameraPreviewUIView: UIView {
+  #if DEBUG
+    private static let isPreviewDebugLoggingEnabled =
+      ProcessInfo.processInfo.arguments.contains("--preview-debug-log")
+      || UserDefaults.standard.bool(forKey: "Debug.previewDebugLoggingEnabled")
+  #endif
 
   // MARK: - Properties
 
@@ -70,15 +75,7 @@ final class CameraPreviewUIView: UIView {
   var streamingSettings: LiveStreamSettings? {
     didSet {
       guard hasMeaningfulStreamingSettingChange(from: oldValue, to: streamingSettings) else { return }
-      let orientationChanged = oldValue?.streamOrientation != streamingSettings?.streamOrientation
-      DispatchQueue.main.async { [weak self] in
-        guard let self else { return }
-        if orientationChanged {
-          self.requiresPreviewLayerRebuildForOrientationChange = true
-        }
-        self.invalidateVideoOutputConnectionConfigCache()
-        self.refreshPreviewLayerGeometryIfNeeded(force: true)
-      }
+      requestPreviewPresentationUpdate(forceConnectionRefresh: false)
     }
   }
 
@@ -94,8 +91,14 @@ final class CameraPreviewUIView: UIView {
   /// 프리뷰 레이어 지오메트리 재구성 캐시 키
   private var previewGeometryConfigKey: String?
 
-  /// 가로/세로 전환 시 AVFoundation 프리뷰 레이어 재생성이 필요한지 여부
-  private var requiresPreviewLayerRebuildForOrientationChange = false
+  /// 프리뷰 레이어 지오메트리 갱신 작업 (중복 스케줄 방지)
+  private var pendingPreviewPresentationUpdate: DispatchWorkItem?
+
+  /// 프리뷰 갱신 시 비디오 output sync까지 함께 요청할지 여부
+  private var pendingPreviewConnectionRefresh = false
+
+  /// 회전 중 발생하는 중간 레이아웃 변화를 한 번으로 합치기 위한 짧은 지연
+  private let previewPresentationDebounceInterval: TimeInterval = 0.03
 
   #if DEBUG
     /// 마지막으로 기록한 프리뷰 디버그 스냅샷
@@ -153,13 +156,13 @@ final class CameraPreviewUIView: UIView {
     updateFrameConsumerRegistration()
   }
 
-  private func updateFrameConsumerRegistration() {
+  func updateFrameConsumerRegistration() {
     guard let frameRouter else {
       isFrameConsumerRegistered = false
       return
     }
 
-    if window != nil {
+    if window != nil && isScreenCapturing {
       guard !isFrameConsumerRegistered else { return }
       frameRouter.addPreviewFrameConsumer(screenCaptureFrameConsumer)
       isFrameConsumerRegistered = true
@@ -387,6 +390,7 @@ final class CameraPreviewUIView: UIView {
       "bounds:\(roundedPreviewDimension(bounds.width))x\(roundedPreviewDimension(bounds.height))",
       "preview:\(roundedPreviewDimension(previewFrame.width))x\(roundedPreviewDimension(previewFrame.height))",
       "stream:\(activeStreamingSettings.streamOrientation.rawValue)",
+      "interface:\(interfaceOrientation)",
       "session:\(sessionIdentifier)",
     ].joined(separator: "|")
   }
@@ -395,53 +399,57 @@ final class CameraPreviewUIView: UIView {
     previewGeometryConfigKey = nil
   }
 
-  private func refreshPreviewLayerGeometryIfNeeded(force: Bool = false) {
+  private func requestPreviewPresentationUpdate(forceConnectionRefresh: Bool = false) {
     guard Thread.isMainThread else {
       DispatchQueue.main.async { [weak self] in
-        self?.refreshPreviewLayerGeometryIfNeeded(force: force)
+        self?.requestPreviewPresentationUpdate(forceConnectionRefresh: forceConnectionRefresh)
       }
       return
     }
 
+    if forceConnectionRefresh {
+      pendingPreviewConnectionRefresh = true
+    }
+
+    pendingPreviewPresentationUpdate?.cancel()
+
+    let workItem = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+      self.pendingPreviewPresentationUpdate = nil
+      self.performPreviewPresentationUpdate()
+    }
+
+    pendingPreviewPresentationUpdate = workItem
+    let delay = forceConnectionRefresh ? 0 : previewPresentationDebounceInterval
+    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+  }
+
+  private func performPreviewPresentationUpdate() {
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { [weak self] in
+        self?.performPreviewPresentationUpdate()
+      }
+      return
+    }
+
+    let forceConnectionRefresh = pendingPreviewConnectionRefresh
+    pendingPreviewConnectionRefresh = false
+
     guard let session = captureSession else { return }
 
+    let previewFrame = calculatePreviewFrame(in: bounds)
     let geometryKey = makePreviewGeometryConfigKey()
     let needsPreviewLayerRebuild =
       previewLayer == nil
       || previewLayer?.session !== session
-      || requiresPreviewLayerRebuildForOrientationChange
 
-    guard force || needsPreviewLayerRebuild || previewGeometryConfigKey != geometryKey else {
-      updatePreviewPresentation(forceConnectionRefresh: force)
+    guard forceConnectionRefresh || needsPreviewLayerRebuild || previewGeometryConfigKey != geometryKey else {
       return
     }
-
-    previewGeometryConfigKey = geometryKey
-    if needsPreviewLayerRebuild {
-      requiresPreviewLayerRebuildForOrientationChange = false
-      logDebug("프리뷰 레이어 재생성: \(geometryKey)", category: .camera)
-      previewLayer?.removeFromSuperlayer()
-      previewLayer = nil
-      setupAVFoundationPreview(with: session)
-      return
-    }
-
-    logDebug("프리뷰 레이어 지오메트리 업데이트: \(geometryKey)", category: .camera)
-    updatePreviewPresentation(forceConnectionRefresh: true)
-  }
-
-  private func updatePreviewPresentation(forceConnectionRefresh: Bool = false) {
-    guard Thread.isMainThread else {
-      DispatchQueue.main.async { [weak self] in
-        self?.updatePreviewPresentation(forceConnectionRefresh: forceConnectionRefresh)
-      }
-      return
-    }
-
-    let previewFrame = calculatePreviewFrame(in: bounds)
 
     CATransaction.begin()
     CATransaction.setDisableActions(true)
+    previewGeometryConfigKey = geometryKey
     previewLayer?.bounds = previewLayerBounds(for: previewFrame)
     previewLayer?.position = CGPoint(x: previewFrame.midX, y: previewFrame.midY)
     hkPreviewLayer?.frame = previewFrame
@@ -469,6 +477,8 @@ final class CameraPreviewUIView: UIView {
 
   private func updatePreviewLayer() {
     invalidatePreviewGeometryConfigCache()
+    pendingPreviewPresentationUpdate?.cancel()
+    pendingPreviewPresentationUpdate = nil
     // 기존 레이어 제거
     previewLayer?.removeFromSuperlayer()
     hkPreviewLayer?.removeFromSuperview()
@@ -559,7 +569,7 @@ final class CameraPreviewUIView: UIView {
       }
     }
 
-    refreshPreviewLayerGeometryIfNeeded(force: true)
+    requestPreviewPresentationUpdate(forceConnectionRefresh: false)
 
     logDebug("프리뷰 레이어 보호 완료", category: .camera)
   }
@@ -629,8 +639,6 @@ final class CameraPreviewUIView: UIView {
       keyComponents.append("preview:none")
     }
 
-    keyComponents.append("streamOrientation:\(activeStreamingSettings.streamOrientation.rawValue)")
-
     if let currentDevice = getCurrentCameraDevice() {
       keyComponents.append("device:\(currentDevice.uniqueID)")
       keyComponents.append("position:\(currentDevice.position.rawValue)")
@@ -692,7 +700,6 @@ final class CameraPreviewUIView: UIView {
 
     // 연결 상태에 따른 상세 UI 업데이트
     DispatchQueue.main.async { [weak self] in
-      self?.refreshVideoOutputConnectionIfNeeded()
       self?.updateDetailedStreamingStatus(
         isStreaming: newStreamingState,
         connectionStatus: connectionStatus,
@@ -725,6 +732,7 @@ final class CameraPreviewUIView: UIView {
   /// 정리 작업
   deinit {
     statusMonitorTimer?.invalidate()
+    pendingPreviewPresentationUpdate?.cancel()
     NotificationCenter.default.removeObserver(self)
     // textOverlayLabel 제거됨 - SwiftUI에서 관리
   }
@@ -814,7 +822,8 @@ final class CameraPreviewUIView: UIView {
     previewLayer = newPreviewLayer
     previewGeometryConfigKey = makePreviewGeometryConfigKey()
     invalidateVideoOutputConnectionConfigCache()
-    updatePreviewPresentation(forceConnectionRefresh: true)
+    pendingPreviewConnectionRefresh = true
+    performPreviewPresentationUpdate()
     logPreviewDebugSnapshot(context: "setupAVFoundationPreview")
 
     logInfo("AVFoundation 프리뷰 레이어 설정 완료", category: .camera)
@@ -824,6 +833,8 @@ final class CameraPreviewUIView: UIView {
 
   #if DEBUG
     private func logPreviewDebugSnapshot(context: String) {
+      guard Self.isPreviewDebugLoggingEnabled else { return }
+
       let previewFrame = calculatePreviewFrame(in: bounds)
       let connectionDescription: String = {
         guard let connection = previewLayer?.connection else { return "none" }
@@ -886,12 +897,17 @@ final class CameraPreviewUIView: UIView {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    refreshPreviewLayerGeometryIfNeeded()
+    requestPreviewPresentationUpdate(forceConnectionRefresh: false)
   }
 
   override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
     super.traitCollectionDidChange(previousTraitCollection)
-    refreshPreviewLayerGeometryIfNeeded(force: true)
+    let horizontalSizeClassChanged =
+      previousTraitCollection?.horizontalSizeClass != traitCollection.horizontalSizeClass
+    let verticalSizeClassChanged =
+      previousTraitCollection?.verticalSizeClass != traitCollection.verticalSizeClass
+    guard horizontalSizeClassChanged || verticalSizeClassChanged else { return }
+    requestPreviewPresentationUpdate(forceConnectionRefresh: false)
   }
 
   // MARK: - Gesture Handlers

@@ -11,12 +11,6 @@ import SwiftData
 import Combine
 import LiveStreamingCore
 
-private struct LivePreviewSettingsSnapshot: Equatable {
-    let streamOrientation: StreamOrientation
-    let videoWidth: Int
-    let videoHeight: Int
-}
-
 /// 메인 화면의 ViewModel
 /// MVVM 패턴에서 View와 Model 사이의 중간층 역할을 담당합니다.
 /// UI 상태 관리, 사용자 상호작용 처리, 비즈니스 로직 조율을 담당합니다.
@@ -31,10 +25,6 @@ final class MainViewModel: ObservableObject {
     
     /// 권한 설정 시트 표시 여부
     @Published var showingPermissionAlert = false
-    
-    /// 라이브 스트리밍 설정 시트 표시 상태
-    /// 메인 화면 전체 리렌더를 피하기 위해 발행하지 않고 내부 플래그로만 관리합니다.
-    private(set) var isPresentingLiveStreamSettings = false
     
     /// 로깅 설정 시트 표시 여부 (개발용)
     @Published var showingLoggingSettings = false
@@ -129,12 +119,7 @@ final class MainViewModel: ObservableObject {
     
     /// 라이브 스트리밍 설정 시트 표시 상태 갱신
     func setLiveStreamSettingsPresented(_ isPresented: Bool) {
-        guard isPresentingLiveStreamSettings != isPresented else { return }
-        isPresentingLiveStreamSettings = isPresented
         logDebug("📺 MainViewModel: isPresentingLiveStreamSettings set to \(isPresented)", category: .ui)
-        if !isPresented {
-            objectWillChange.send()
-        }
     }
     
     /// 로깅 설정 화면 표시 (개발용)
@@ -346,38 +331,6 @@ final class MainViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // 설정 시트를 띄운 상태에서도 프리뷰에 필요한 방향/해상도 변경은 전달합니다.
-        liveStreamViewModel.$settings
-            .map {
-                LivePreviewSettingsSnapshot(
-                    streamOrientation: $0.streamOrientation,
-                    videoWidth: $0.videoWidth,
-                    videoHeight: $0.videoHeight
-                )
-            }
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] snapshot in
-                guard let self else { return }
-                logDebug(
-                    "🖼️ [MainViewModel] 프리뷰 설정 변경 전달: \(snapshot.streamOrientation.rawValue) \(snapshot.videoWidth)x\(snapshot.videoHeight)",
-                    category: .ui
-                )
-                self.objectWillChange.send()
-            }
-            .store(in: &cancellables)
-
-        // LiveStreamViewModel 내부 상태 변경(피크/음소거/진단 등)을
-        // MainViewModel 관찰 체인으로 전달해 UI가 사용자 입력 없이 즉시 갱신되도록 보장
-        liveStreamViewModel.objectWillChange
-            .receive(on: DispatchQueue.main)
-            .throttle(for: .milliseconds(33), scheduler: DispatchQueue.main, latest: true)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                guard !self.isPresentingLiveStreamSettings else { return }
-                self.objectWillChange.send()
-            }
-            .store(in: &cancellables)
     }
     
     /// 현재 상태에 따른 UI 상태 업데이트

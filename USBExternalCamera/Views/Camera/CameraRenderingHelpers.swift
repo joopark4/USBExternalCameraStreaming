@@ -22,6 +22,18 @@ private enum CameraStreamingCompositionContext {
 // MARK: - Rendering Helpers Extension for CameraPreviewUIView
 
 extension CameraPreviewUIView {
+  private func makeStreamingOverlaySnapshotCacheKey(streamingSize: CGSize) -> String {
+    let previewBounds = bounds.integral.size
+    let safeArea = safeAreaInsets
+    return [
+      "stream:\(Int(streamingSize.width))x\(Int(streamingSize.height))",
+      "bounds:\(Int(previewBounds.width))x\(Int(previewBounds.height))",
+      "safe:\(Int(safeArea.top))|\(Int(safeArea.left))|\(Int(safeArea.bottom))|\(Int(safeArea.right))",
+      "subviews:\(subviews.count)",
+      "streaming:\(haishinKitManager?.isStreaming == true)",
+    ].joined(separator: "|")
+  }
+
   private func orientedCameraImageForStreaming(_ image: CIImage) -> CIImage {
     image
   }
@@ -34,6 +46,13 @@ extension CameraPreviewUIView {
     let width = Int(streamingSize.width)
     let height = Int(streamingSize.height)
     guard width > 0, height > 0 else { return nil }
+
+    let cacheKey = makeStreamingOverlaySnapshotCacheKey(streamingSize: streamingSize)
+    if cachedStreamingOverlaySnapshotKey == cacheKey,
+       let cachedSnapshot = cachedStreamingOverlaySnapshot
+    {
+      return cachedSnapshot
+    }
 
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue
@@ -75,7 +94,10 @@ extension CameraPreviewUIView {
       subview.layer.render(in: context)
     }
 
-    return context.makeImage()
+    let snapshot = context.makeImage()
+    cachedStreamingOverlaySnapshotKey = cacheKey
+    cachedStreamingOverlaySnapshot = snapshot
+    return snapshot
   }
 
   func composeStreamingPixelBuffer(

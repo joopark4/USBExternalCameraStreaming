@@ -20,6 +20,14 @@ private final class PixelBufferReference: @unchecked Sendable {
   }
 }
 
+private final class StreamingOverlaySnapshotReference: NSObject {
+  let image: CGImage
+
+  init(image: CGImage) {
+    self.image = image
+  }
+}
+
 final class ScreenCaptureFrameStore: @unchecked Sendable {
   let processingQueue = DispatchQueue(label: "CameraFrameProcessing", qos: .userInteractive)
 
@@ -346,6 +354,22 @@ extension CameraPreviewUIView {
     }
   }
 
+  /// 마지막으로 로그한 캡처 간격 설정 키
+  var lastLoggedCaptureIntervalConfigurationKey: String? {
+    get {
+      objc_getAssociatedObject(self, &AssociatedKeys.lastLoggedCaptureIntervalConfigurationKey)
+        as? String
+    }
+    set {
+      objc_setAssociatedObject(
+        self,
+        &AssociatedKeys.lastLoggedCaptureIntervalConfigurationKey,
+        newValue,
+        .OBJC_ASSOCIATION_COPY_NONATOMIC
+      )
+    }
+  }
+
   /// 렌더링 중복 실행 방지 플래그 (백프레셔)
   var isFrameRenderInProgress: Bool {
     get {
@@ -409,6 +433,43 @@ extension CameraPreviewUIView {
     }
   }
 
+  /// 최근 생성한 UI 오버레이 스냅샷 캐시 키
+  var cachedStreamingOverlaySnapshotKey: String? {
+    get {
+      objc_getAssociatedObject(self, &AssociatedKeys.cachedStreamingOverlaySnapshotKey) as? String
+    }
+    set {
+      objc_setAssociatedObject(
+        self,
+        &AssociatedKeys.cachedStreamingOverlaySnapshotKey,
+        newValue,
+        .OBJC_ASSOCIATION_COPY_NONATOMIC
+      )
+    }
+  }
+
+  /// 최근 생성한 UI 오버레이 스냅샷 캐시
+  var cachedStreamingOverlaySnapshot: CGImage? {
+    get {
+      (objc_getAssociatedObject(self, &AssociatedKeys.cachedStreamingOverlaySnapshotReference)
+        as? StreamingOverlaySnapshotReference)?.image
+    }
+    set {
+      let reference = newValue.map { StreamingOverlaySnapshotReference(image: $0) }
+      objc_setAssociatedObject(
+        self,
+        &AssociatedKeys.cachedStreamingOverlaySnapshotReference,
+        reference,
+        .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+      )
+    }
+  }
+
+  func clearCachedStreamingOverlaySnapshot() {
+    cachedStreamingOverlaySnapshotKey = nil
+    cachedStreamingOverlaySnapshot = nil
+  }
+
   // MARK: - Screen Capture for Streaming
 
   /// CameraPreviewUIView의 화면 캡처 송출 기능
@@ -457,6 +518,8 @@ extension CameraPreviewUIView {
     lastCameraFrameWarningTime = 0
     lastLoggedCameraFrameSize = .zero
 
+    isScreenCapturing = true
+
     // 화면 캡처 시작 전 카메라 파이프라인 정합성 확보
     if let session = captureSession {
       setupVideoFrameCapture(with: session)
@@ -469,13 +532,14 @@ extension CameraPreviewUIView {
     lastFrameDropLogTime = 0
     lastDisplayLinkTickTimestamp = 0
     lastCaptureDispatchTimestamp = 0
+    lastLoggedCaptureIntervalConfigurationKey = nil
+    clearCachedStreamingOverlaySnapshot()
     frameProcessingQueue.async { [weak self] in
       self?.latestCameraFrame = nil
       self?.latestCameraFrameTimestamp = 0
       self?.hasReceivedCameraFrame = false
     }
 
-    isScreenCapturing = true
     logInfo("화면 캡처 송출 시작", category: .streaming)
     if let target = streamingTargetSize {
       logInfo(
@@ -514,6 +578,9 @@ extension CameraPreviewUIView {
     lastFrameDropLogTime = 0
     lastDisplayLinkTickTimestamp = 0
     lastCaptureDispatchTimestamp = 0
+    lastLoggedCaptureIntervalConfigurationKey = nil
+    clearCachedStreamingOverlaySnapshot()
+    updateFrameConsumerRegistration()
 
     // 메모리 정리: 최근 캡처된 카메라 프레임 제거
     frameProcessingQueue.async { [weak self] in
@@ -668,7 +735,7 @@ extension CameraPreviewUIView {
 
     isFrameSendInProgress = true
     let presentationTime = CMTime(seconds: presentationTimestamp, preferredTimescale: 1_000_000_000)
-    Task { @MainActor [weak self] in
+    Task { [weak self] in
       _ = await manager.enqueueManualFrame(
         pixelBuffer,
         presentationTime: presentationTime,
@@ -676,7 +743,9 @@ extension CameraPreviewUIView {
         compositionTimeMs: compositionTimeMs,
         cameraFrameAgeMs: cameraFrameAgeMs
       )
-      self?.isFrameSendInProgress = false
+      await MainActor.run {
+        self?.isFrameSendInProgress = false
+      }
     }
   }
 
@@ -894,22 +963,42 @@ extension CameraPreviewUIView {
       height: resolved.height
     ).resolutionClass
     let clampedFrameRate = resolvedCaptureFrameRateForCurrentResolution()
+    logCaptureIntervalConfigurationIfNeeded(
+      resolutionClass: resolutionClass,
+      frameRate: clampedFrameRate
+    )
 
     switch resolutionClass {
     case .p720:
-      logInfo("720p 특화 캡처: \(clampedFrameRate)fps 적용", category: .streaming)
       return 1.0 / Double(clampedFrameRate)
 
     case .p1080:
-      // 1080p에서도 설정 FPS를 우선 적용해 스톱모션 체감 완화
-      let optimizedFrameRate = clampedFrameRate
-      logInfo("1080p 특화 캡처: \(optimizedFrameRate)fps 적용", category: .streaming)
-      return 1.0 / Double(optimizedFrameRate)
+      return 1.0 / Double(clampedFrameRate)
 
     case .p480, .p4k, .custom:
-      // 480p: 설정값 기반 처리
       return 1.0 / Double(clampedFrameRate)
     }
+  }
+
+  private func logCaptureIntervalConfigurationIfNeeded(
+    resolutionClass: StreamResolutionClass,
+    frameRate: Int
+  ) {
+    let configurationKey = "\(resolutionClass.rawValue)|\(frameRate)"
+    guard lastLoggedCaptureIntervalConfigurationKey != configurationKey else { return }
+    lastLoggedCaptureIntervalConfigurationKey = configurationKey
+
+    let message: String
+    switch resolutionClass {
+    case .p720:
+      message = "720p 특화 캡처: \(frameRate)fps 적용"
+    case .p1080:
+      message = "1080p 특화 캡처: \(frameRate)fps 적용"
+    case .p480, .p4k, .custom:
+      message = "\(resolutionClass.rawValue) 캡처: \(frameRate)fps 적용"
+    }
+
+    logInfo(message, category: .streaming)
   }
 
   private func maxSupportedCaptureFrameRate(width: Int, height: Int) -> Int {
@@ -1009,12 +1098,14 @@ extension CameraPreviewUIView {
   /// 화면 캡처 타겟 해상도 저장
   func setStreamingTargetSize(_ size: CGSize) {
     streamingTargetSize = size
+    clearCachedStreamingOverlaySnapshot()
     logInfo("화면 캡처 목표 해상도 캐시: \(Int(size.width))×\(Int(size.height))", category: .streaming)
   }
 
   /// 화면 캡처 타겟 해상도 캐시 삭제
   func clearStreamingTargetSize() {
     streamingTargetSize = nil
+    clearCachedStreamingOverlaySnapshot()
     logInfo("화면 캡처 목표 해상도 캐시 삭제", category: .streaming)
   }
 }
@@ -1032,4 +1123,7 @@ private struct AssociatedKeys {
   static var streamingTargetSize: UInt8 = 0
   static var lastCameraFrameWarningTime: UInt8 = 0
   static var screenCaptureStartTime: UInt8 = 0
+  static var cachedStreamingOverlaySnapshotKey: UInt8 = 0
+  static var cachedStreamingOverlaySnapshotReference: UInt8 = 0
+  static var lastLoggedCaptureIntervalConfigurationKey: UInt8 = 0
 }
