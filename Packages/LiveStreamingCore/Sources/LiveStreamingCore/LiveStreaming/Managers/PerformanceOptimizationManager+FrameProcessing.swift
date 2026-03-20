@@ -218,7 +218,7 @@ extension PerformanceOptimizationManager {
     /// 720p 스트리밍 특화 최적화 설정 (사용자 설정 유지)
     public func optimize720pStreaming(settings: LiveStreamSettings) -> LiveStreamSettings {
         // 720p 해상도 확인
-        guard settings.videoWidth == 1280 && settings.videoHeight == 720 else {
+        guard settings.normalizedResolutionClass == .p720 else {
             return settings // 720p가 아니면 기본 설정 유지
         }
         

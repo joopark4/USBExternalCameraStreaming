@@ -24,7 +24,7 @@ struct LiveStreamSettingsView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
+                LazyVStack(spacing: 20) {
                     // 상태 표시
                     StatusSectionView(viewModel: viewModel)
                     

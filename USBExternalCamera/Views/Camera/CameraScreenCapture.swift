@@ -889,36 +889,34 @@ extension CameraPreviewUIView {
   /// 해상도별 최적 캡처 간격 계산 (720p 끊김 개선)
   private func getCaptureIntervalForResolution() -> TimeInterval {
     let resolved = resolveStreamingSizeForDiagnostics()
-    let width = resolved.width
-    let height = resolved.height
+    let resolutionClass = StreamResolutionDescriptor(
+      width: resolved.width,
+      height: resolved.height
+    ).resolutionClass
     let clampedFrameRate = resolvedCaptureFrameRateForCurrentResolution()
 
-    switch (width, height) {
-    case (1280, 720):
+    switch resolutionClass {
+    case .p720:
       logInfo("720p 특화 캡처: \(clampedFrameRate)fps 적용", category: .streaming)
       return 1.0 / Double(clampedFrameRate)
 
-    case (1920, 1080):
+    case .p1080:
       // 1080p에서도 설정 FPS를 우선 적용해 스톱모션 체감 완화
       let optimizedFrameRate = clampedFrameRate
       logInfo("1080p 특화 캡처: \(optimizedFrameRate)fps 적용", category: .streaming)
       return 1.0 / Double(optimizedFrameRate)
 
-    case (640...854, 360...480):
+    case .p480, .p4k, .custom:
       // 480p: 설정값 기반 처리
-      return 1.0 / Double(clampedFrameRate)
-
-    default:
-      // 기타: 설정값 기반 처리
       return 1.0 / Double(clampedFrameRate)
     }
   }
 
   private func maxSupportedCaptureFrameRate(width: Int, height: Int) -> Int {
-    switch (width, height) {
-    case (1280, 720):
+    switch StreamResolutionDescriptor(width: width, height: height).resolutionClass {
+    case .p720:
       return 60
-    default:
+    case .p480, .p1080, .p4k, .custom:
       return 30
     }
   }

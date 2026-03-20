@@ -947,3 +947,7 @@
 "stereo" = "Stereo";
 "stereo_audio" = "Stereo Audio";
 "text_overlay_settings" = "Text Overlay Settings";
+"stream_orientation" = "Stream Orientation";
+"stream_orientation_landscape" = "Landscape";
+"stream_orientation_portrait" = "Portrait";
+"stream_orientation_locked_message" = "Stream orientation can only be changed before the next broadcast.";

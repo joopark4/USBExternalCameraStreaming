@@ -6,6 +6,15 @@ import LiveStreamingCore
 /// 유튜브 권장 송출 셋업 프리셋 섹션
 struct YouTubePresetSectionView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
+
+    private var isPresetLocked: Bool {
+        switch viewModel.status {
+        case .connected, .streaming, .connecting, .disconnecting:
+            return true
+        case .idle, .error:
+            return false
+        }
+    }
     
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("youtube_preset_title", comment: "YouTube 권장 송출 설정"), icon: "play.rectangle.fill") {
@@ -34,6 +43,18 @@ struct YouTubePresetSectionView: View {
                             Spacer()
                         }
                     }
+
+                    if isPresetLocked {
+                        HStack {
+                            Image(systemName: "lock.fill")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                            Text(NSLocalizedString("stream_orientation_locked_message", comment: "방송 중에는 방향을 바꿀 수 없습니다. 다음 방송 전에 변경해주세요."))
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            Spacer()
+                        }
+                    }
                 }
                 .padding(.bottom, 4)
                 
@@ -42,11 +63,12 @@ struct YouTubePresetSectionView: View {
                     // 480p 프리셋
                     YouTubePresetCard(
                         title: "480p (SD)",
-                                                    subtitle: "848×480 • 30fps • 4,000 kbps",
+                        subtitle: presetSubtitle(.sd480p),
                         description: "저화질 • 안정적인 연결",
                         icon: "play.square",
                         color: .orange,
                         isSelected: isCurrentPreset(.sd480p),
+                        isEnabled: !isPresetLocked,
                         action: {
                             applyYouTubePreset(.sd480p)
                         }
@@ -55,11 +77,12 @@ struct YouTubePresetSectionView: View {
                     // 720p 프리셋
                     YouTubePresetCard(
                         title: "720p (HD)",
-                        subtitle: "1280×720 • 30fps • 4,000 kbps",
+                        subtitle: presetSubtitle(.hd720p),
                         description: "표준화질 • 권장 설정",
                         icon: "play.square.fill",
                         color: .green,
                         isSelected: isCurrentPreset(.hd720p),
+                        isEnabled: !isPresetLocked,
                         action: {
                             applyYouTubePreset(.hd720p)
                         }
@@ -68,12 +91,12 @@ struct YouTubePresetSectionView: View {
                     // 1080p 프리셋 (고성능 iPad 권장)
                     YouTubePresetCard(
                         title: "1080p (Full HD)",
-                        subtitle: "1920×1080 • 30fps • 10,000 kbps",
+                        subtitle: presetSubtitle(.fhd1080p),
                         description: NSLocalizedString("high_quality_streaming", comment: "고화질 스트리밍"),
                         icon: "play.square.stack",
                         color: .purple,
                         isSelected: isCurrentPreset(.fhd1080p),
-                        isEnabled: true,
+                        isEnabled: !isPresetLocked,
                         action: {
                             applyYouTubePreset(.fhd1080p)
                         }
@@ -99,9 +122,19 @@ struct YouTubePresetSectionView: View {
     }
     
     // MARK: - Helper Methods
+
+    private func presetSubtitle(_ preset: YouTubeLivePreset) -> String {
+        let settings = preset.settings(for: viewModel.settings.streamOrientation)
+        let recommendedBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+            width: settings.width,
+            height: settings.height,
+            frameRate: settings.frameRate
+        )
+        return "\(settings.width)×\(settings.height) • \(settings.frameRate)fps • \(recommendedBitrate) kbps"
+    }
     
     private func isCurrentPreset(_ preset: YouTubeLivePreset) -> Bool {
-        let settings = preset.settings
+        let settings = preset.settings(for: viewModel.settings.streamOrientation)
         let recommendedBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
             width: settings.width,
             height: settings.height,
@@ -126,28 +159,8 @@ struct YouTubePresetSectionView: View {
     }
     
     private func applyYouTubePreset(_ preset: YouTubeLivePreset) {
-        let settings = preset.settings
-        let recommendedBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
-            width: settings.width,
-            height: settings.height,
-            frameRate: settings.frameRate
-        )
-        
-        viewModel.settings.videoWidth = settings.width
-        viewModel.settings.videoHeight = settings.height
-        viewModel.settings.frameRate = settings.frameRate
-        viewModel.settings.videoBitrate = recommendedBitrate
-        viewModel.settings.audioBitrate = 128
-        
-        // 유튜브 최적화 기본 설정
-        viewModel.settings.videoEncoder = "H.264"
-        viewModel.settings.audioEncoder = "AAC"
-        viewModel.settings.autoReconnect = true
-        viewModel.settings.connectionTimeout = 30
-        viewModel.settings.bufferSize = 3
-        
-        // 설정 저장
-        viewModel.saveSettings()
+        guard !isPresetLocked else { return }
+        viewModel.applyYouTubePreset(preset)
     }
 }
 

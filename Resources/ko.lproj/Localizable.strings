@@ -940,3 +940,7 @@
 "stereo" = "스테레오";
 "stereo_audio" = "스테레오 오디오";
 "text_overlay_settings" = "텍스트 설정";
+"stream_orientation" = "송출 방향";
+"stream_orientation_landscape" = "가로";
+"stream_orientation_portrait" = "세로";
+"stream_orientation_locked_message" = "방송 중에는 방향을 바꿀 수 없습니다. 다음 방송 전에 변경해주세요.";

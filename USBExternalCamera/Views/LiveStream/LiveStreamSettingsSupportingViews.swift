@@ -1,4 +1,5 @@
 import SwiftUI
+import LiveStreamingCore
 
 // MARK: - Supporting Views
 
@@ -34,6 +35,29 @@ struct StatusSectionView: View {
 /// 기본 설정 섹션
 struct BasicSettingsSectionView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
+
+    private var rtmpURLBinding: Binding<String> {
+        Binding(
+            get: { viewModel.settings.rtmpURL },
+            set: { newValue in
+                viewModel.updateSettings { settings in
+                    settings.rtmpURL = newValue
+                }
+            }
+        )
+    }
+
+    private var streamKeyBinding: Binding<String> {
+        Binding(
+            get: { viewModel.settings.streamKey },
+            set: { newValue in
+                let cleaned = cleanStreamKey(newValue)
+                viewModel.updateSettings { settings in
+                    settings.streamKey = cleaned
+                }
+            }
+        )
+    }
     
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("basic_settings", comment: ""), icon: "gear") {
@@ -44,7 +68,7 @@ struct BasicSettingsSectionView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(NSLocalizedString("rtmp_url", comment: ""))
                         .font(.headline)
-                    TextField(NSLocalizedString("rtmp_url_placeholder", comment: ""), text: $viewModel.settings.rtmpURL)
+                    TextField(NSLocalizedString("rtmp_url_placeholder", comment: ""), text: rtmpURLBinding)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                 }
                 
@@ -57,15 +81,8 @@ struct BasicSettingsSectionView: View {
                         // 스트림 키 검증 상태 표시
                         streamKeyValidationIcon
                     }
-                    SecureField(NSLocalizedString("stream_key_placeholder", comment: ""), text: $viewModel.settings.streamKey)
+                    SecureField(NSLocalizedString("stream_key_placeholder", comment: ""), text: streamKeyBinding)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .onChange(of: viewModel.settings.streamKey) { oldValue, newValue in
-                            // 실시간 스트림 키 정제
-                            let cleaned = cleanStreamKey(newValue)
-                            if cleaned != newValue {
-                                viewModel.settings.streamKey = cleaned
-                            }
-                        }
                     
                     // 스트림 키 상태 메시지
                     if !viewModel.settings.streamKey.isEmpty {
@@ -153,76 +170,85 @@ struct BasicSettingsSectionView: View {
 struct VideoSettingsSectionView: View {
     @ObservedObject var viewModel: LiveStreamViewModel
 
-    enum Resolution {
-        case resolution480p
-        case resolution720p
-        case resolution1080p
+    private var currentResolutionClass: StreamResolutionClass {
+        viewModel.settings.normalizedResolutionClass
     }
 
-    var currentResolution: Resolution {
-        let width = viewModel.settings.videoWidth
-        let height = viewModel.settings.videoHeight
-
-        if width == 848 && height == 480 {
-            return .resolution480p
-        } else if width == 1280 && height == 720 {
-            return .resolution720p
-        } else if width == 1920 && height == 1080 {
-            return .resolution1080p
+    private var isOrientationLocked: Bool {
+        switch viewModel.status {
+        case .connected, .streaming, .connecting, .disconnecting:
+            return true
+        case .idle, .error:
+            return false
         }
-        return .resolution1080p
     }
 
-    func setResolution(_ resolution: Resolution) {
-        switch resolution {
-        case .resolution480p:
-            viewModel.settings.videoWidth = 848
-            viewModel.settings.videoHeight = 480
-        case .resolution720p:
-            viewModel.settings.videoWidth = 1280
-            viewModel.settings.videoHeight = 720
-        case .resolution1080p:
-            viewModel.settings.videoWidth = 1920
-            viewModel.settings.videoHeight = 1080
+    private func resolutionSubtitle(for resolutionClass: StreamResolutionClass) -> String {
+        guard let size = StreamResolutionDescriptor.presetSize(
+            for: resolutionClass,
+            orientation: viewModel.settings.streamOrientation
+        ) else {
+            return "\(viewModel.settings.videoWidth)×\(viewModel.settings.videoHeight)"
         }
-        normalizeFrameRateIfNeeded(for: resolution)
-        viewModel.settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
-            width: viewModel.settings.videoWidth,
-            height: viewModel.settings.videoHeight,
-            frameRate: viewModel.settings.frameRate
-        )
+        return "\(size.width)×\(size.height)"
     }
 
-    private func supportedFrameRates(for resolution: Resolution) -> [Int] {
-        switch resolution {
-        case .resolution480p:
-            return [24, 30]
-        case .resolution720p:
+    private func setResolution(_ resolutionClass: StreamResolutionClass) {
+        guard !isOrientationLocked else { return }
+        viewModel.updateSettings { settings in
+            settings.applyResolutionClass(resolutionClass)
+
+            let supportedRates = supportedFrameRates(for: resolutionClass)
+            if !supportedRates.contains(settings.frameRate) {
+                settings.frameRate = supportedRates.contains(30) ? 30 : supportedRates.last ?? 30
+            }
+
+            settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+                width: settings.videoWidth,
+                height: settings.videoHeight,
+                frameRate: settings.frameRate
+            )
+        }
+    }
+
+    private func supportedFrameRates(for resolutionClass: StreamResolutionClass) -> [Int] {
+        switch resolutionClass {
+        case .p720:
             return [24, 30, 60]
-        case .resolution1080p:
+        case .p480, .p1080, .p4k, .custom:
             return [24, 30]
         }
     }
 
-    private func normalizeFrameRateIfNeeded(for resolution: Resolution) {
-        let supportedRates = supportedFrameRates(for: resolution)
+    private func normalizeFrameRateIfNeeded(for resolutionClass: StreamResolutionClass) {
+        let supportedRates = supportedFrameRates(for: resolutionClass)
         guard !supportedRates.contains(viewModel.settings.frameRate) else { return }
-        viewModel.settings.frameRate = supportedRates.contains(30) ? 30 : supportedRates.last ?? 30
+        viewModel.updateSettings { settings in
+            settings.frameRate = supportedRates.contains(30) ? 30 : supportedRates.last ?? 30
+        }
     }
 
     private func setFrameRate(_ frameRate: Int) {
         guard isFrameRateSupported(frameRate) else { return }
-        viewModel.settings.frameRate = frameRate
-        viewModel.settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
-            width: viewModel.settings.videoWidth,
-            height: viewModel.settings.videoHeight,
-            frameRate: viewModel.settings.frameRate
-        )
+        viewModel.updateSettings { settings in
+            settings.frameRate = frameRate
+            settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+                width: settings.videoWidth,
+                height: settings.videoHeight,
+                frameRate: settings.frameRate
+            )
+        }
+    }
+
+    private func updateOrientation(_ orientation: StreamOrientation) {
+        guard !isOrientationLocked else { return }
+        viewModel.updateStreamOrientation(orientation)
+        normalizeFrameRateIfNeeded(for: currentResolutionClass)
     }
 
     /// 프레임레이트 지원 여부 확인
     func isFrameRateSupported(_ frameRate: Int) -> Bool {
-        supportedFrameRates(for: currentResolution).contains(frameRate)
+        supportedFrameRates(for: currentResolutionClass).contains(frameRate)
     }
 
     var bitrateColor: Color {
@@ -309,6 +335,37 @@ struct VideoSettingsSectionView: View {
     var body: some View {
         SettingsSectionView(title: NSLocalizedString("video_settings", comment: ""), icon: "video") {
             VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(NSLocalizedString("stream_orientation", comment: "송출 방향"))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text("\(viewModel.settings.videoWidth)×\(viewModel.settings.videoHeight)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Picker(
+                        NSLocalizedString("stream_orientation", comment: "송출 방향"),
+                        selection: Binding(
+                            get: { viewModel.settings.streamOrientation },
+                            set: { updateOrientation($0) }
+                        )
+                    ) {
+                        Text(NSLocalizedString("stream_orientation_landscape", comment: "가로")).tag(StreamOrientation.landscape)
+                        Text(NSLocalizedString("stream_orientation_portrait", comment: "세로")).tag(StreamOrientation.portrait)
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(isOrientationLocked)
+
+                    if isOrientationLocked {
+                        Text(NSLocalizedString("stream_orientation_locked_message", comment: "방송 중에는 방향을 바꿀 수 없습니다. 다음 방송 전에 변경해주세요."))
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                }
+
                 // 해상도 선택
                 VStack(alignment: .leading, spacing: 8) {
                     Text(NSLocalizedString("resolution", comment: "해상도"))
@@ -319,31 +376,33 @@ struct VideoSettingsSectionView: View {
                         // 480p 버튼
                         ResolutionButton(
                             title: "480p",
-                            subtitle: "848×480",
-                            isSelected: currentResolution == .resolution480p,
+                            subtitle: resolutionSubtitle(for: .p480),
+                            isSelected: currentResolutionClass == .p480,
+                            isEnabled: !isOrientationLocked,
                             action: {
-                                setResolution(.resolution480p)
+                                setResolution(.p480)
                             }
                         )
                         
                         // 720p 버튼
                         ResolutionButton(
                             title: "720p",
-                            subtitle: "1280×720",
-                            isSelected: currentResolution == .resolution720p,
+                            subtitle: resolutionSubtitle(for: .p720),
+                            isSelected: currentResolutionClass == .p720,
+                            isEnabled: !isOrientationLocked,
                             action: {
-                                setResolution(.resolution720p)
+                                setResolution(.p720)
                             }
                         )
                         
                         // 1080p 버튼 (고성능 iPad 권장)
                         ResolutionButton(
                             title: "1080p",
-                            subtitle: "1920×1080",
-                            isSelected: currentResolution == .resolution1080p,
-                            isEnabled: true,
+                            subtitle: resolutionSubtitle(for: .p1080),
+                            isSelected: currentResolutionClass == .p1080,
+                            isEnabled: !isOrientationLocked,
                             action: {
-                                setResolution(.resolution1080p)
+                                setResolution(.p1080)
                             }
                         )
                     }
@@ -360,7 +419,7 @@ struct VideoSettingsSectionView: View {
                             title: "24fps",
                             frameRate: 24,
                             isSelected: viewModel.settings.frameRate == 24,
-                            isEnabled: isFrameRateSupported(24),
+                            isEnabled: !isOrientationLocked && isFrameRateSupported(24),
                             action: {
                                 setFrameRate(24)
                             }
@@ -370,7 +429,7 @@ struct VideoSettingsSectionView: View {
                             title: "30fps",
                             frameRate: 30,
                             isSelected: viewModel.settings.frameRate == 30,
-                            isEnabled: isFrameRateSupported(30),
+                            isEnabled: !isOrientationLocked && isFrameRateSupported(30),
                             action: {
                                 setFrameRate(30)
                             }
@@ -380,7 +439,7 @@ struct VideoSettingsSectionView: View {
                             title: "60fps",
                             frameRate: 60,
                             isSelected: viewModel.settings.frameRate == 60,
-                            isEnabled: isFrameRateSupported(60),
+                            isEnabled: !isOrientationLocked && isFrameRateSupported(60),
                             action: {
                                 setFrameRate(60)
                             }
@@ -405,8 +464,13 @@ struct VideoSettingsSectionView: View {
                     // 비트레이트 슬라이더
                     Slider(value: Binding(
                         get: { Double(viewModel.settings.videoBitrate) },
-                        set: { viewModel.settings.videoBitrate = Int($0) }
+                        set: { newValue in
+                            viewModel.updateSettings { settings in
+                                settings.videoBitrate = Int(newValue)
+                            }
+                        }
                     ), in: 500...20000, step: 100)
+                    .disabled(isOrientationLocked)
                     
                     // YouTube Live 권장사항 및 경고
                     bitrateWarningView
@@ -414,7 +478,7 @@ struct VideoSettingsSectionView: View {
             }
         }
         .onAppear {
-            normalizeFrameRateIfNeeded(for: currentResolution)
+            normalizeFrameRateIfNeeded(for: currentResolutionClass)
         }
     }
 }

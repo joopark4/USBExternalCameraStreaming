@@ -156,9 +156,19 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             guard let self, let connection = self.videoOutput.connection(with: .video) else { return }
 
             if #available(iOS 17.0, *) {
-                let angle = rotationAngle ?? 0
-                if connection.isVideoRotationAngleSupported(angle) {
-                    connection.videoRotationAngle = angle
+                if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
+                    connection.videoRotationAngle = rotationAngle
+                } else if let orientation, connection.isVideoOrientationSupported {
+                    switch orientation {
+                    case .portrait:
+                        connection.videoOrientation = .portrait
+                    case .portraitUpsideDown:
+                        connection.videoOrientation = .portraitUpsideDown
+                    case .landscapeRight:
+                        connection.videoOrientation = .landscapeRight
+                    case .landscapeLeft:
+                        connection.videoOrientation = .landscapeLeft
+                    }
                 } else if connection.isVideoRotationAngleSupported(0) {
                     connection.videoRotationAngle = 0
                 }
@@ -191,9 +201,9 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             
             // 동일한 설정이면 재적용 생략
             if let current = self.currentStreamingSettings,
-               current.videoWidth == settings.videoWidth &&
-               current.videoHeight == settings.videoHeight &&
+               current.normalizedResolutionClass == settings.normalizedResolutionClass &&
                current.frameRate == settings.frameRate {
+                self.currentStreamingSettings = settings
                 return
             }
             
@@ -220,24 +230,21 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     /// - 지원 해상도: 480p, 720p, 1080p (정확한 해상도 매칭)
     /// - 미지원 해상도는 .high 프리셋으로 폴백
     private func optimizeSessionPreset(for settings: LiveStreamSettings) {
-        let targetResolution = (width: settings.videoWidth, height: settings.videoHeight)
-
-        // 해상도별 프리셋 매핑 (정확한 매칭만 지원)
         let optimalPreset: AVCaptureSession.Preset
-        switch targetResolution {
-        case (854, 480), (848, 480), (640, 480):
+        switch settings.normalizedResolutionClass {
+        case .p480:
             optimalPreset = .vga640x480
             logInfo("📐 480p 스트리밍 → VGA 프리셋 적용", category: .camera)
             
-        case (1280, 720):
+        case .p720:
             optimalPreset = .hd1280x720
             logInfo("📐 720p 스트리밍 → HD 프리셋 적용", category: .camera)
             
-        case (1920, 1080):
+        case .p1080:
             optimalPreset = .hd1920x1080
             logInfo("📐 1080p 스트리밍 → Full HD 프리셋 적용", category: .camera)
             
-        case (3840, 2160):
+        case .p4k:
             if self.captureSession.canSetSessionPreset(.hd4K3840x2160) {
                 optimalPreset = .hd4K3840x2160
                 logInfo("📐 4K 스트리밍 → 4K 프리셋 적용", category: .camera)
@@ -246,7 +253,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
                 logInfo("📐 4K 스트리밍 (지원안함) → Full HD 프리셋으로 대체", category: .camera)
             }
             
-        default:
+        case .custom:
             optimalPreset = .high
             logInfo("📐 사용자 정의 해상도 → High 프리셋 적용", category: .camera)
         }

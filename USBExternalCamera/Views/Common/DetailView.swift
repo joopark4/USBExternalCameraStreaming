@@ -85,6 +85,14 @@ struct CameraPreviewContainerView: View {
     viewModel.liveStreamViewModel.isScreenCaptureStreaming
   }
 
+  private var streamLayoutProfile: StreamLayoutProfile {
+    viewModel.liveStreamViewModel.settings.streamLayoutProfile
+  }
+
+  private var isPortraitStream: Bool {
+    viewModel.liveStreamViewModel.settings.streamOrientation.isPortrait
+  }
+
   private var shouldShowAdvancedPanels: Bool {
     !isFocusModeActive || isAdvancedPanelExpanded
   }
@@ -118,10 +126,24 @@ struct CameraPreviewContainerView: View {
     for containerSize: CGSize,
     showsTextControls: Bool
   ) -> CGFloat {
+    if isPortraitStream {
+      if isCompactDetailWidth(containerSize) {
+        return showsTextControls ? 0.68 : 0.74
+      }
+      return showsTextControls ? 0.58 : 0.64
+    }
+
     if isCompactDetailWidth(containerSize) {
       return showsTextControls ? 0.40 : 0.46
     }
     return showsTextControls ? 0.34 : 0.40
+  }
+
+  private func horizontalPreviewTargetWidthRatio(showsTextControls: Bool) -> CGFloat {
+    if isPortraitStream {
+      return showsTextControls ? 0.50 : 0.56
+    }
+    return showsTextControls ? 0.64 : 0.72
   }
 
   var body: some View {
@@ -267,11 +289,13 @@ struct CameraPreviewContainerView: View {
   @ViewBuilder
   private func horizontalLayout(containerSize: CGSize) -> some View {
     let showsTextControls = shouldShowTextControls(for: containerSize, isHorizontal: true)
-    let previewAspect: CGFloat = 16.0 / 9.0
+    let previewAspect = streamLayoutProfile.aspectRatio
     let controlsReservedHeight: CGFloat = showsTextControls ? 136 : 0
     let previewAvailableHeight = max(1, containerSize.height - 40 - controlsReservedHeight)
     let previewMaxWidthByHeight = previewAvailableHeight * previewAspect
-    let targetLeftWidth = showsTextControls ? containerSize.width * 0.64 : containerSize.width * 0.72
+    let targetLeftWidth = containerSize.width * horizontalPreviewTargetWidthRatio(
+      showsTextControls: showsTextControls
+    )
     let previewWidth = min(targetLeftWidth, previewMaxWidthByHeight)
     let leftColumnWidth = previewWidth
     let columnSpacing: CGFloat = 8
@@ -347,11 +371,15 @@ struct CameraPreviewContainerView: View {
 
   @ViewBuilder
   private func cameraPreviewSection(availableSize: CGSize) -> some View {
-    // 16:9 비율 계산 (유튜브 라이브 표준)
-    let aspectRatio: CGFloat = 16.0 / 9.0
+    let liveStreamSettings = viewModel.liveStreamViewModel.settings
+    let aspectRatio = streamLayoutProfile.aspectRatio
     let audioMeterHeight: CGFloat = 40
     let maxWidth = availableSize.width
     let maxHeight = max(120, availableSize.height - audioMeterHeight)  // 하단 오디오 피크 영역 확보
+    let previewIdentity = [
+      liveStreamSettings.streamOrientation.rawValue,
+      "\(liveStreamSettings.videoWidth)x\(liveStreamSettings.videoHeight)"
+    ].joined(separator: "|")
 
     // Aspect Fit 방식으로 16:9 프레임 계산
     let previewSize: CGSize = {
@@ -365,7 +393,6 @@ struct CameraPreviewContainerView: View {
         return CGSize(width: maxWidth, height: height)
       }
     }()
-
     VStack(spacing: 6) {
       // 16:9 프리뷰 영역 (프리뷰 정보 텍스트 제거하여 간격 최소화)
       ZStack {
@@ -373,11 +400,12 @@ struct CameraPreviewContainerView: View {
         CameraPreviewView(
           session: viewModel.cameraViewModel.captureSession,
           cameraViewModel: viewModel.cameraViewModel,
-          streamViewModel: viewModel.liveStreamViewModel,
+          streamingSettings: liveStreamSettings,
           haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
           showTextOverlay: viewModel.showTextOverlay,
           overlayText: viewModel.currentOverlayText
         )
+        .id(previewIdentity)
         .aspectRatio(aspectRatio, contentMode: .fit)
         .frame(width: previewSize.width, height: previewSize.height)
         .background(Color.black)

@@ -66,6 +66,22 @@ final class CameraPreviewUIView: UIView {
     }
   }
 
+  /// 프리뷰와 송출 레이아웃 기준이 되는 현재 스트리밍 설정
+  var streamingSettings: LiveStreamSettings? {
+    didSet {
+      guard hasMeaningfulStreamingSettingChange(from: oldValue, to: streamingSettings) else { return }
+      let orientationChanged = oldValue?.streamOrientation != streamingSettings?.streamOrientation
+      DispatchQueue.main.async { [weak self] in
+        guard let self else { return }
+        if orientationChanged {
+          self.requiresPreviewLayerRebuildForOrientationChange = true
+        }
+        self.invalidateVideoOutputConnectionConfigCache()
+        self.refreshPreviewLayerGeometryIfNeeded(force: true)
+      }
+    }
+  }
+
   /// 스트리밍 상태
   private var isStreaming: Bool = false
 
@@ -74,6 +90,17 @@ final class CameraPreviewUIView: UIView {
 
   /// 비디오 출력 연결 설정 캐시 키 (카메라/방향 변화 시에만 재설정)
   private var videoOutputConnectionConfigKey: String?
+
+  /// 프리뷰 레이어 지오메트리 재구성 캐시 키
+  private var previewGeometryConfigKey: String?
+
+  /// 가로/세로 전환 시 AVFoundation 프리뷰 레이어 재생성이 필요한지 여부
+  private var requiresPreviewLayerRebuildForOrientationChange = false
+
+  #if DEBUG
+    /// 마지막으로 기록한 프리뷰 디버그 스냅샷
+    private var lastPreviewDebugSnapshot: String?
+  #endif
 
   /// 카메라 컨트롤 오버레이
   private lazy var controlOverlay: CameraControlOverlay = {
@@ -212,9 +239,236 @@ final class CameraPreviewUIView: UIView {
     addGestureRecognizer(zoomPinchGesture)
   }
 
+  private func hasMeaningfulStreamingSettingChange(
+    from oldValue: LiveStreamSettings?,
+    to newValue: LiveStreamSettings?
+  ) -> Bool {
+    switch (oldValue, newValue) {
+    case (nil, nil):
+      return false
+    case (nil, _), (_, nil):
+      return true
+    case let (oldValue?, newValue?):
+      return oldValue.videoWidth != newValue.videoWidth
+        || oldValue.videoHeight != newValue.videoHeight
+        || oldValue.streamOrientation != newValue.streamOrientation
+    }
+  }
+
+  private var activeStreamingSettings: LiveStreamSettings {
+    streamingSettings ?? haishinKitManager?.getCurrentSettings() ?? LiveStreamSettings()
+  }
+
+  private var activeStreamLayoutProfile: StreamLayoutProfile {
+    activeStreamingSettings.streamLayoutProfile
+  }
+
+  private var previewAspectRatio: CGFloat {
+    let aspectRatio = activeStreamingSettings.streamAspectRatio
+    return aspectRatio > 0 ? aspectRatio : activeStreamLayoutProfile.aspectRatio
+  }
+
+  private var currentInterfaceOrientation: UIInterfaceOrientation? {
+    window?.windowScene?.interfaceOrientation
+  }
+
+  private var previewNeedsVisualQuarterTurn: Bool {
+    false
+  }
+
+  private var previewVisualRotationAngle: CGFloat {
+    0
+  }
+
+  private func calculatePreviewFrame(in viewBounds: CGRect) -> CGRect {
+    let aspectRatio = previewAspectRatio
+    guard viewBounds.width > 0, viewBounds.height > 0, aspectRatio > 0 else {
+      return viewBounds
+    }
+
+    if viewBounds.width / viewBounds.height > aspectRatio {
+      let width = viewBounds.height * aspectRatio
+      let offsetX = (viewBounds.width - width) / 2
+      return CGRect(x: offsetX, y: 0, width: width, height: viewBounds.height)
+    }
+
+    let height = viewBounds.width / aspectRatio
+    let offsetY = (viewBounds.height - height) / 2
+    return CGRect(x: 0, y: offsetY, width: viewBounds.width, height: height)
+  }
+
+  private var previewConnectionOrientation: PreviewVideoOrientation {
+    if let interfaceOrientation = currentInterfaceOrientation {
+      return previewVideoOrientation(for: interfaceOrientation)
+    }
+
+    if let deviceOrientation = fallbackPreviewVideoOrientationFromDevice() {
+      return deviceOrientation
+    }
+
+    return .portrait
+  }
+
+  private var previewConnectionRotationAngle: CGFloat? {
+    return nil
+  }
+
+  private var videoOutputRotationAngle: CGFloat? {
+    previewConnectionRotationAngle
+  }
+
+  private var videoOutputOrientation: PreviewVideoOrientation {
+    previewConnectionOrientation
+  }
+
+  private func previewLayerBounds(for previewFrame: CGRect) -> CGRect {
+    CGRect(origin: .zero, size: previewFrame.size)
+  }
+
+  private func applyPreviewConnectionOrientation(to connection: AVCaptureConnection?) {
+    guard let connection else { return }
+
+    guard connection.isVideoOrientationSupported else { return }
+
+    switch previewConnectionOrientation {
+    case .portrait:
+      connection.videoOrientation = .portrait
+    case .portraitUpsideDown:
+      connection.videoOrientation = .portraitUpsideDown
+    case .landscapeRight:
+      connection.videoOrientation = .landscapeRight
+    case .landscapeLeft:
+      connection.videoOrientation = .landscapeLeft
+    }
+  }
+
+  private func previewVideoOrientation(for interfaceOrientation: UIInterfaceOrientation)
+    -> PreviewVideoOrientation
+  {
+    switch interfaceOrientation {
+    case .portrait:
+      return .portrait
+    case .portraitUpsideDown:
+      return .portraitUpsideDown
+    case .landscapeLeft:
+      return .landscapeLeft
+    case .landscapeRight:
+      return .landscapeRight
+    default:
+      return .portrait
+    }
+  }
+
+  private func fallbackPreviewVideoOrientationFromDevice() -> PreviewVideoOrientation? {
+    switch UIDevice.current.orientation {
+    case .portrait:
+      return .portrait
+    case .portraitUpsideDown:
+      return .portraitUpsideDown
+    case .landscapeLeft:
+      return .landscapeRight
+    case .landscapeRight:
+      return .landscapeLeft
+    default:
+      return nil
+    }
+  }
+
+  private func roundedPreviewDimension(_ value: CGFloat) -> Int {
+    Int(value.rounded(.toNearestOrAwayFromZero))
+  }
+
+  private func makePreviewGeometryConfigKey() -> String {
+    let previewFrame = calculatePreviewFrame(in: bounds)
+    let interfaceOrientation = window?.windowScene?.interfaceOrientation.rawValue ?? -1
+    let sessionIdentifier = captureSession.map { ObjectIdentifier($0).hashValue } ?? 0
+
+    return [
+      "bounds:\(roundedPreviewDimension(bounds.width))x\(roundedPreviewDimension(bounds.height))",
+      "preview:\(roundedPreviewDimension(previewFrame.width))x\(roundedPreviewDimension(previewFrame.height))",
+      "stream:\(activeStreamingSettings.streamOrientation.rawValue)",
+      "session:\(sessionIdentifier)",
+    ].joined(separator: "|")
+  }
+
+  private func invalidatePreviewGeometryConfigCache() {
+    previewGeometryConfigKey = nil
+  }
+
+  private func refreshPreviewLayerGeometryIfNeeded(force: Bool = false) {
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { [weak self] in
+        self?.refreshPreviewLayerGeometryIfNeeded(force: force)
+      }
+      return
+    }
+
+    guard let session = captureSession else { return }
+
+    let geometryKey = makePreviewGeometryConfigKey()
+    let needsPreviewLayerRebuild =
+      previewLayer == nil
+      || previewLayer?.session !== session
+      || requiresPreviewLayerRebuildForOrientationChange
+
+    guard force || needsPreviewLayerRebuild || previewGeometryConfigKey != geometryKey else {
+      updatePreviewPresentation(forceConnectionRefresh: force)
+      return
+    }
+
+    previewGeometryConfigKey = geometryKey
+    if needsPreviewLayerRebuild {
+      requiresPreviewLayerRebuildForOrientationChange = false
+      logDebug("프리뷰 레이어 재생성: \(geometryKey)", category: .camera)
+      previewLayer?.removeFromSuperlayer()
+      previewLayer = nil
+      setupAVFoundationPreview(with: session)
+      return
+    }
+
+    logDebug("프리뷰 레이어 지오메트리 업데이트: \(geometryKey)", category: .camera)
+    updatePreviewPresentation(forceConnectionRefresh: true)
+  }
+
+  private func updatePreviewPresentation(forceConnectionRefresh: Bool = false) {
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { [weak self] in
+        self?.updatePreviewPresentation(forceConnectionRefresh: forceConnectionRefresh)
+      }
+      return
+    }
+
+    let previewFrame = calculatePreviewFrame(in: bounds)
+
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    previewLayer?.bounds = previewLayerBounds(for: previewFrame)
+    previewLayer?.position = CGPoint(x: previewFrame.midX, y: previewFrame.midY)
+    hkPreviewLayer?.frame = previewFrame
+    applyPreviewConnectionOrientation(to: previewLayer?.connection)
+    previewLayer?.setAffineTransform(CGAffineTransform(rotationAngle: previewVisualRotationAngle))
+    CATransaction.commit()
+
+    logPreviewDebugSnapshot(context: "updatePreviewPresentation")
+
+    refreshVideoOutputConnectionIfNeeded(force: forceConnectionRefresh)
+  }
+
+  private func previewLayerPointToDevicePoint(_ point: CGPoint) -> CGPoint {
+    guard let previewLayer else {
+      let x = bounds.width > 0 ? point.x / bounds.width : 0.5
+      let y = bounds.height > 0 ? point.y / bounds.height : 0.5
+      return CGPoint(x: x, y: y)
+    }
+
+    let layerPoint = layer.convert(point, to: previewLayer)
+    return previewLayer.captureDevicePointConverted(fromLayerPoint: layerPoint)
+  }
+
   // MARK: - Preview Layer Management
 
   private func updatePreviewLayer() {
+    invalidatePreviewGeometryConfigCache()
     // 기존 레이어 제거
     previewLayer?.removeFromSuperlayer()
     hkPreviewLayer?.removeFromSuperview()
@@ -303,10 +557,9 @@ final class CameraPreviewUIView: UIView {
         logInfo("프리뷰 레이어 다시 추가", category: .camera)
         self.layer.insertSublayer(layer, at: 0)
       }
-
-      // 프레임 업데이트
-      layer.frame = bounds
     }
+
+    refreshPreviewLayerGeometryIfNeeded(force: true)
 
     logDebug("프리뷰 레이어 보호 완료", category: .camera)
   }
@@ -320,6 +573,7 @@ final class CameraPreviewUIView: UIView {
       return
     }
     updateFrameConsumerRegistration()
+    invalidatePreviewGeometryConfigCache()
     invalidateVideoOutputConnectionConfigCache()
     refreshVideoOutputConnectionIfNeeded(force: true)
   }
@@ -328,47 +582,17 @@ final class CameraPreviewUIView: UIView {
   private func syncVideoOutputConnection() {
     guard let frameRouter else { return }
 
-    if let previewConnection = previewLayer?.connection {
-      if #available(iOS 17.0, *) {
-        frameRouter.syncPreviewVideoOutputConnection(
-          rotationAngle: previewConnection.videoRotationAngle,
-          orientation: nil,
-          isMirrored: previewConnection.isVideoMirroringSupported
-            ? previewConnection.isVideoMirrored : false
-        )
-      } else {
-        let legacyOrientation: PreviewVideoOrientation
-        switch previewConnection.videoOrientation {
-        case .portrait:
-          legacyOrientation = .portrait
-        case .portraitUpsideDown:
-          legacyOrientation = .portraitUpsideDown
-        case .landscapeRight:
-          legacyOrientation = .landscapeRight
-        case .landscapeLeft:
-          legacyOrientation = .landscapeLeft
-        @unknown default:
-          legacyOrientation = .portrait
-        }
-        frameRouter.syncPreviewVideoOutputConnection(
-          rotationAngle: nil,
-          orientation: legacyOrientation,
-          isMirrored: previewConnection.isVideoMirroringSupported
-            ? previewConnection.isVideoMirrored : false
-        )
-      }
-      return
-    }
-
     let currentDevice = getCurrentCameraDevice()
     let isExternalCamera = currentDevice?.deviceType == .external
     let isFrontCamera = currentDevice?.position == .front
-    let isMirrored = !isExternalCamera && isFrontCamera
+    let previewMirrored = previewLayer?.connection?.isVideoMirroringSupported == true
+      ? (previewLayer?.connection?.isVideoMirrored ?? false)
+      : (!isExternalCamera && isFrontCamera)
 
     frameRouter.syncPreviewVideoOutputConnection(
-      rotationAngle: 0,
-      orientation: .portrait,
-      isMirrored: isMirrored
+      rotationAngle: videoOutputRotationAngle,
+      orientation: videoOutputOrientation,
+      isMirrored: previewMirrored
     )
   }
 
@@ -404,6 +628,8 @@ final class CameraPreviewUIView: UIView {
     } else {
       keyComponents.append("preview:none")
     }
+
+    keyComponents.append("streamOrientation:\(activeStreamingSettings.streamOrientation.rawValue)")
 
     if let currentDevice = getCurrentCameraDevice() {
       keyComponents.append("device:\(currentDevice.uniqueID)")
@@ -538,36 +764,15 @@ final class CameraPreviewUIView: UIView {
     logInfo("AVFoundation 프리뷰 레이어 설정 중...", category: .camera)
 
     let newPreviewLayer = AVCaptureVideoPreviewLayer(session: session)
+    let previewFrame = calculatePreviewFrame(in: bounds)
+    newPreviewLayer.bounds = previewLayerBounds(for: previewFrame)
+    newPreviewLayer.position = CGPoint(x: previewFrame.midX, y: previewFrame.midY)
 
-    // 16:9 비율 계산 및 적용
-    let aspectRatio: CGFloat = 16.0 / 9.0
-    let viewBounds = bounds
+    // 프리뷰는 카메라 원본 방향을 유지하고 남는 영역은 검은색으로 둡니다.
+    newPreviewLayer.videoGravity = .resizeAspect
 
-    // 16:9 비율에 맞는 프레임 계산
-    let previewFrame: CGRect
-    if viewBounds.width / viewBounds.height > aspectRatio {
-      // 세로가 기준: 높이에 맞춰서 너비 계산
-      let width = viewBounds.height * aspectRatio
-      let offsetX = (viewBounds.width - width) / 2
-      previewFrame = CGRect(x: offsetX, y: 0, width: width, height: viewBounds.height)
-    } else {
-      // 가로가 기준: 너비에 맞춰서 높이 계산
-      let height = viewBounds.width / aspectRatio
-      let offsetY = (viewBounds.height - height) / 2
-      previewFrame = CGRect(x: 0, y: offsetY, width: viewBounds.width, height: height)
-    }
-
-    newPreviewLayer.frame = previewFrame
-
-    // 실제 송출 영역과 일치: resizeAspectFill 사용
-    // 카메라 이미지가 프레임을 완전히 채우도록 설정
-    newPreviewLayer.videoGravity = .resizeAspectFill
-
-    if #available(iOS 17.0, *) {
-      newPreviewLayer.connection?.videoRotationAngle = 0
-    } else {
-      newPreviewLayer.connection?.videoOrientation = .portrait
-    }
+    applyPreviewConnectionOrientation(to: newPreviewLayer.connection)
+    newPreviewLayer.setAffineTransform(.identity)
 
     // 🔄 카메라 타입에 따른 미러링 설정 (외장 카메라 좌우 반전 문제 해결)
     if let connection = newPreviewLayer.connection {
@@ -607,62 +812,93 @@ final class CameraPreviewUIView: UIView {
 
     layer.insertSublayer(newPreviewLayer, at: 0)
     previewLayer = newPreviewLayer
+    previewGeometryConfigKey = makePreviewGeometryConfigKey()
     invalidateVideoOutputConnectionConfigCache()
-    refreshVideoOutputConnectionIfNeeded()
+    updatePreviewPresentation(forceConnectionRefresh: true)
+    logPreviewDebugSnapshot(context: "setupAVFoundationPreview")
 
     logInfo("AVFoundation 프리뷰 레이어 설정 완료", category: .camera)
-    logDebug("16:9 비율 프레임: \(previewFrame)", category: .camera)
-    logDebug("videoGravity: resizeAspectFill (송출 영역과 일치)", category: .camera)
+    logDebug("송출 비율 프레임: \(previewFrame)", category: .camera)
+    logDebug("videoGravity: resizeAspect (카메라 원본 비율 유지)", category: .camera)
   }
+
+  #if DEBUG
+    private func logPreviewDebugSnapshot(context: String) {
+      let previewFrame = calculatePreviewFrame(in: bounds)
+      let connectionDescription: String = {
+        guard let connection = previewLayer?.connection else { return "none" }
+
+        if #available(iOS 17.0, *) {
+          return "angle=\(Int(connection.videoRotationAngle))"
+        }
+
+        return "orientation=\(connection.videoOrientation.rawValue)"
+      }()
+
+      let snapshot = [
+        "context=\(context)",
+        "stream=\(activeStreamingSettings.streamOrientation.rawValue)",
+        "interface=\(currentInterfaceOrientation?.rawValue ?? -1)",
+        "previewFrame=\(Int(previewFrame.width))x\(Int(previewFrame.height))",
+        "layerBounds=\(Int(previewLayer?.bounds.width ?? 0))x\(Int(previewLayer?.bounds.height ?? 0))",
+        "visualTurn=\(previewNeedsVisualQuarterTurn)",
+        "visualAngle=\(Int(previewVisualRotationAngle * 180 / .pi))",
+        "connection=\(connectionDescription)",
+      ].joined(separator: " | ")
+
+      guard snapshot != lastPreviewDebugSnapshot else { return }
+      lastPreviewDebugSnapshot = snapshot
+
+      let message = "\(ISO8601DateFormatter().string(from: Date())) | \(snapshot)\n"
+      persistPreviewDebugMessage(message)
+      logDebug("프리뷰 디버그: \(snapshot)", category: .camera)
+    }
+
+    private func persistPreviewDebugMessage(_ message: String) {
+      DispatchQueue.global(qos: .utility).async {
+        guard
+          let documentsURL = FileManager.default.urls(
+            for: .documentDirectory,
+            in: .userDomainMask
+          ).first
+        else {
+          return
+        }
+
+        let fileURL = documentsURL.appendingPathComponent("preview-debug.log")
+        let data = Data(message.utf8)
+
+        if FileManager.default.fileExists(atPath: fileURL.path) == false {
+          try? data.write(to: fileURL, options: .atomic)
+          return
+        }
+
+        if let handle = try? FileHandle(forWritingTo: fileURL) {
+          defer { try? handle.close() }
+          try? handle.seekToEnd()
+          try? handle.write(contentsOf: data)
+        }
+      }
+    }
+  #else
+    private func logPreviewDebugSnapshot(context: String) {}
+  #endif
 
   override func layoutSubviews() {
     super.layoutSubviews()
+    refreshPreviewLayerGeometryIfNeeded()
+  }
 
-    // 프리뷰 레이어 프레임 업데이트 (16:9 비율 유지)
-    DispatchQueue.main.async { [weak self] in
-      guard let self = self else { return }
-
-      // 16:9 비율 계산
-      let aspectRatio: CGFloat = 16.0 / 9.0
-      let viewBounds = self.bounds
-
-      // 16:9 비율에 맞는 프레임 재계산
-      let previewFrame: CGRect
-      if viewBounds.width / viewBounds.height > aspectRatio {
-        // 세로가 기준: 높이에 맞춰서 너비 계산
-        let width = viewBounds.height * aspectRatio
-        let offsetX = (viewBounds.width - width) / 2
-        previewFrame = CGRect(x: offsetX, y: 0, width: width, height: viewBounds.height)
-      } else {
-        // 가로가 기준: 너비에 맞춰서 높이 계산
-        let height = viewBounds.width / aspectRatio
-        let offsetY = (viewBounds.height - height) / 2
-        previewFrame = CGRect(x: 0, y: offsetY, width: viewBounds.width, height: height)
-      }
-
-      // 프리뷰 레이어 프레임 업데이트 (16:9 비율 적용)
-      self.previewLayer?.frame = previewFrame
-      self.hkPreviewLayer?.frame = previewFrame
-
-      // 레이어가 올바르게 표시되도록 강제 레이아웃 업데이트
-      if let layer = self.previewLayer {
-        layer.setNeedsLayout()
-        layer.layoutIfNeeded()
-      }
-
-      self.refreshVideoOutputConnectionIfNeeded()
-      logDebug("레이아웃 업데이트 - 16:9 프레임: \(previewFrame)", category: .camera)
-    }
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    refreshPreviewLayerGeometryIfNeeded(force: true)
   }
 
   // MARK: - Gesture Handlers
 
   @objc private func handleFocusTap(_ gesture: UITapGestureRecognizer) {
     let point = gesture.location(in: self)
-    let focusPoint = CGPoint(
-      x: point.x / bounds.width,
-      y: point.y / bounds.height
-    )
+    let focusPoint = previewLayerPointToDevicePoint(point)
 
     setFocusPoint(focusPoint)
     showFocusIndicator(at: point)
@@ -670,10 +906,7 @@ final class CameraPreviewUIView: UIView {
 
   @objc private func handleExposureDoubleTap(_ gesture: UITapGestureRecognizer) {
     let point = gesture.location(in: self)
-    let exposurePoint = CGPoint(
-      x: point.x / bounds.width,
-      y: point.y / bounds.height
-    )
+    let exposurePoint = previewLayerPointToDevicePoint(point)
 
     setExposurePoint(exposurePoint)
     showExposureIndicator(at: point)

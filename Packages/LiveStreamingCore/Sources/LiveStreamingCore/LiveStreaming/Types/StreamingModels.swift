@@ -5,6 +5,7 @@
 //  Created by EUN YEON on 5/25/25.
 //
 
+import CoreGraphics
 import Foundation
 
 // MARK: - YouTube Live Preset Enum
@@ -44,18 +45,32 @@ public enum YouTubeLivePreset: String, CaseIterable, Identifiable {
         case .custom: return "slider.horizontal.3"
         }
     }
+
+    public var resolutionClass: StreamResolutionClass {
+        switch self {
+        case .sd480p: return .p480
+        case .hd720p: return .p720
+        case .fhd1080p: return .p1080
+        case .custom: return .custom
+        }
+    }
     
     /// 유튜브 표준 설정값 반환
     public var settings: (width: Int, height: Int, frameRate: Int, videoBitrate: Int, audioBitrate: Int, keyframeInterval: Int) {
+        settings(for: .landscape)
+    }
+
+    public func settings(for orientation: StreamOrientation) -> (width: Int, height: Int, frameRate: Int, videoBitrate: Int, audioBitrate: Int, keyframeInterval: Int) {
+        let size = StreamResolutionDescriptor.presetSize(for: resolutionClass, orientation: orientation)
         switch self {
         case .sd480p:
-            return (848, 480, 30, 1500, 128, 2) // 16의 배수 호환성 개선
+            return (size?.width ?? 848, size?.height ?? 480, 30, 1500, 128, 2)
         case .hd720p:
-            return (1280, 720, 30, 2500, 128, 2) // 권장 기본값 (LiveStreamSettings 기본값과 일치)
+            return (size?.width ?? 1280, size?.height ?? 720, 30, 2500, 128, 2)
         case .fhd1080p:
-            return (1920, 1080, 30, 4500, 128, 2) // 권장 기본값 (유튜브 표준)
+            return (size?.width ?? 1920, size?.height ?? 1080, 30, 4500, 128, 2)
         case .custom:
-            return (1920, 1080, 30, 4500, 128, 2) // 기본값
+            return (1920, 1080, 30, 4500, 128, 2)
         }
     }
     
@@ -78,6 +93,26 @@ public enum LiveStreamingCoreNamespace {
     
     /// 라이브 스트리밍 설정
     public struct LiveStreamSettings: Codable, Sendable {
+        enum CodingKeys: String, CodingKey {
+            case streamTitle
+            case rtmpURL
+            case streamKey
+            case videoBitrate
+            case audioBitrate
+            case videoWidth
+            case videoHeight
+            case streamOrientation
+            case frameRate
+            case autoReconnect
+            case isEnabled
+            case videoEncoder
+            case audioEncoder
+            case useHardwareAcceleration
+            case h264ProfileLevel
+            case bufferSize
+            case connectionTimeout
+        }
+
         /// 스트림 제목
         public var streamTitle: String
         
@@ -98,6 +133,9 @@ public enum LiveStreamingCoreNamespace {
         
         /// 비디오 높이
         public var videoHeight: Int
+
+        /// 송출 방향
+        public var streamOrientation: StreamOrientation
         
         /// 프레임 레이트
         public var frameRate: Int
@@ -135,6 +173,7 @@ public enum LiveStreamingCoreNamespace {
             self.audioBitrate = 128
             self.videoWidth = 1920
             self.videoHeight = 1080
+            self.streamOrientation = .landscape
             self.frameRate = 30
             self.autoReconnect = true
             self.isEnabled = true
@@ -144,6 +183,49 @@ public enum LiveStreamingCoreNamespace {
             self.h264ProfileLevel = "High"
             self.bufferSize = 3
             self.connectionTimeout = 30
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.streamTitle = try container.decodeIfPresent(String.self, forKey: .streamTitle) ?? ""
+            self.rtmpURL = try container.decodeIfPresent(String.self, forKey: .rtmpURL) ?? "rtmp://a.rtmp.youtube.com/live2"
+            self.streamKey = try container.decodeIfPresent(String.self, forKey: .streamKey) ?? ""
+            self.videoBitrate = try container.decodeIfPresent(Int.self, forKey: .videoBitrate) ?? 4500
+            self.audioBitrate = try container.decodeIfPresent(Int.self, forKey: .audioBitrate) ?? 128
+            self.videoWidth = try container.decodeIfPresent(Int.self, forKey: .videoWidth) ?? 1920
+            self.videoHeight = try container.decodeIfPresent(Int.self, forKey: .videoHeight) ?? 1080
+            self.streamOrientation = try container.decodeIfPresent(StreamOrientation.self, forKey: .streamOrientation)
+                ?? (self.videoHeight > self.videoWidth ? .portrait : .landscape)
+            self.frameRate = try container.decodeIfPresent(Int.self, forKey: .frameRate) ?? 30
+            self.autoReconnect = try container.decodeIfPresent(Bool.self, forKey: .autoReconnect) ?? true
+            self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+            self.videoEncoder = try container.decodeIfPresent(String.self, forKey: .videoEncoder) ?? "H.264"
+            self.audioEncoder = try container.decodeIfPresent(String.self, forKey: .audioEncoder) ?? "AAC"
+            self.useHardwareAcceleration = try container.decodeIfPresent(Bool.self, forKey: .useHardwareAcceleration) ?? true
+            self.h264ProfileLevel = try container.decodeIfPresent(String.self, forKey: .h264ProfileLevel) ?? "High"
+            self.bufferSize = try container.decodeIfPresent(Int.self, forKey: .bufferSize) ?? 3
+            self.connectionTimeout = try container.decodeIfPresent(Int.self, forKey: .connectionTimeout) ?? 30
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(streamTitle, forKey: .streamTitle)
+            try container.encode(rtmpURL, forKey: .rtmpURL)
+            try container.encode(streamKey, forKey: .streamKey)
+            try container.encode(videoBitrate, forKey: .videoBitrate)
+            try container.encode(audioBitrate, forKey: .audioBitrate)
+            try container.encode(videoWidth, forKey: .videoWidth)
+            try container.encode(videoHeight, forKey: .videoHeight)
+            try container.encode(streamOrientation, forKey: .streamOrientation)
+            try container.encode(frameRate, forKey: .frameRate)
+            try container.encode(autoReconnect, forKey: .autoReconnect)
+            try container.encode(isEnabled, forKey: .isEnabled)
+            try container.encode(videoEncoder, forKey: .videoEncoder)
+            try container.encode(audioEncoder, forKey: .audioEncoder)
+            try container.encode(useHardwareAcceleration, forKey: .useHardwareAcceleration)
+            try container.encode(h264ProfileLevel, forKey: .h264ProfileLevel)
+            try container.encode(bufferSize, forKey: .bufferSize)
+            try container.encode(connectionTimeout, forKey: .connectionTimeout)
         }
         
         /// YouTube Live 안정성을 위한 추천 설정
@@ -157,16 +239,79 @@ public enum LiveStreamingCoreNamespace {
             settings.autoReconnect = true
             return settings
         }
+
+        public var resolutionDescriptor: StreamResolutionDescriptor {
+            let dimensions = normalizedVideoDimensions
+            return StreamResolutionDescriptor(width: dimensions.width, height: dimensions.height)
+        }
+
+        public var normalizedResolutionClass: StreamResolutionClass {
+            resolutionDescriptor.resolutionClass
+        }
+
+        public var streamLayoutProfile: StreamLayoutProfile {
+            streamOrientation.layoutProfile
+        }
+
+        public var normalizedVideoDimensions: (width: Int, height: Int) {
+            guard videoWidth > 0, videoHeight > 0 else {
+                return (videoWidth, videoHeight)
+            }
+
+            let isPortraitDimensions = videoHeight > videoWidth
+            guard isPortraitDimensions != streamOrientation.isPortrait else {
+                return (videoWidth, videoHeight)
+            }
+
+            return (videoHeight, videoWidth)
+        }
+
+        public var streamAspectRatio: CGFloat {
+            let dimensions = normalizedVideoDimensions
+            guard dimensions.width > 0, dimensions.height > 0 else {
+                return streamLayoutProfile.aspectRatio
+            }
+            return CGFloat(dimensions.width) / CGFloat(dimensions.height)
+        }
+
+        public mutating func normalizeVideoDimensionsForOrientation() {
+            let dimensions = normalizedVideoDimensions
+            videoWidth = dimensions.width
+            videoHeight = dimensions.height
+        }
+
+        public mutating func setStreamOrientation(_ orientation: StreamOrientation) {
+            guard streamOrientation != orientation else { return }
+            streamOrientation = orientation
+            normalizeVideoDimensionsForOrientation()
+        }
+
+        public mutating func applyResolutionClass(_ resolutionClass: StreamResolutionClass) {
+            guard let size = StreamResolutionDescriptor.presetSize(
+                for: resolutionClass,
+                orientation: streamOrientation
+            ) else {
+                return
+            }
+            videoWidth = size.width
+            videoHeight = size.height
+            normalizeVideoDimensionsForOrientation()
+        }
+
+        public func matchesResolutionClass(_ resolutionClass: StreamResolutionClass) -> Bool {
+            normalizedResolutionClass == resolutionClass
+        }
         
         /// 유튜브 라이브 스트리밍 표준 프리셋 적용
         public mutating func applyYouTubeLivePreset(_ preset: YouTubeLivePreset) {
-            let settings = preset.settings
+            let settings = preset.settings(for: streamOrientation)
             
             videoWidth = settings.width
             videoHeight = settings.height
             frameRate = settings.frameRate
             videoBitrate = settings.videoBitrate
             audioBitrate = settings.audioBitrate
+            normalizeVideoDimensionsForOrientation()
             // keyframeInterval은 LiveStreamSettings에 없으므로 생략
             
             // 유튜브 최적화 기본 설정
@@ -182,12 +327,10 @@ public enum LiveStreamingCoreNamespace {
             for preset in YouTubeLivePreset.allCases {
                 if preset == .custom { continue }
                 
-                let presetSettings = preset.settings
                 let bitrateRange = preset.bitrateRange
                 
-                if videoWidth == presetSettings.width &&
-                   videoHeight == presetSettings.height &&
-                   frameRate == presetSettings.frameRate &&
+                if normalizedResolutionClass == preset.resolutionClass &&
+                   frameRate == preset.settings(for: streamOrientation).frameRate &&
                    videoBitrate >= bitrateRange.min &&
                    videoBitrate <= bitrateRange.max {
                     return preset
@@ -198,11 +341,17 @@ public enum LiveStreamingCoreNamespace {
         
         /// 해상도별 추천 비트레이트
         public var recommendedVideoBitrate: Int {
-            switch (videoWidth, videoHeight) {
-            case (1920, 1080): return 4500  // 1080p: 4500-9000 kbps (유튜브 표준)
-            case (1280, 720): return 2500   // 720p: 2500-5000 kbps (유튜브 표준)
-            case (854, 480), (848, 480): return 1500    // 480p: 1000-2000 kbps (유튜브 표준)
-            default: return 2500
+            switch normalizedResolutionClass {
+            case .p1080:
+                return 4500
+            case .p720:
+                return 2500
+            case .p480:
+                return 1500
+            case .p4k:
+                return 15000
+            case .custom:
+                return 2500
             }
         }
         

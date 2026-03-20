@@ -102,7 +102,11 @@ struct AudioSettingsSectionView: View {
 
                     Slider(value: Binding(
                         get: { Double(viewModel.settings.audioBitrate) },
-                        set: { viewModel.settings.audioBitrate = Int($0) }
+                        set: { newValue in
+                            viewModel.updateSettings { settings in
+                                settings.audioBitrate = Int(newValue)
+                            }
+                        }
                     ), in: 64...320, step: 32)
 
                     // 권장 비트레이트 가이드

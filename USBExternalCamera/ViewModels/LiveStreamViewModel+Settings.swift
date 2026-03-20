@@ -7,6 +7,20 @@ import SwiftUI
 
 extension LiveStreamViewModel {
   // MARK: - Public Methods - Settings
+  func updateSettings(
+    _ mutation: (inout LiveStreamSettings) -> Void,
+    updateStreamingAvailability shouldUpdateStreamingAvailability: Bool = true
+  ) {
+    var updatedSettings = settings
+    mutation(&updatedSettings)
+    updatedSettings.normalizeVideoDimensionsForOrientation()
+    settings = updatedSettings
+
+    if shouldUpdateStreamingAvailability {
+      updateStreamingAvailability()
+    }
+  }
+
   /// 스트리밍 설정 저장
   func saveSettings() {
     logDebug("💾 [SETTINGS] Saving stream settings...", category: .streaming)
@@ -75,15 +89,19 @@ extension LiveStreamViewModel {
   /// - Parameter preset: 적용할 프리셋
   func applyPreset(_ preset: StreamingPreset) {
     let presetSettings = Self.createPresetSettings(preset)
-    settings.videoWidth = presetSettings.videoWidth
-    settings.videoHeight = presetSettings.videoHeight
-    settings.videoBitrate = presetSettings.videoBitrate
-    settings.audioBitrate = presetSettings.audioBitrate
-    settings.frameRate = presetSettings.frameRate
-    // keyframeInterval, videoEncoder, audioEncoder는 LiveStreamSettings에 없음
+    updateSettings { settings in
+      settings.applyResolutionClass(presetSettings.normalizedResolutionClass)
+      settings.videoBitrate = presetSettings.videoBitrate
+      settings.audioBitrate = presetSettings.audioBitrate
+      settings.frameRate = presetSettings.frameRate
+      // keyframeInterval, videoEncoder, audioEncoder는 LiveStreamSettings에 없음
+    }
+  }
 
-    // 스트리밍 가능 여부 업데이트
-    updateStreamingAvailability()
+  func updateStreamOrientation(_ orientation: StreamOrientation) {
+    updateSettings { settings in
+      settings.setStreamOrientation(orientation)
+    }
   }
 
   /// 설정 초기화 (저장된 설정도 삭제)
@@ -102,17 +120,17 @@ extension LiveStreamViewModel {
   /// 유튜브 라이브 스트리밍 표준 프리셋 적용
   func applyYouTubePreset(_ preset: YouTubeLivePreset) {
     logDebug("🎯 [PRESET] Applying YouTube preset: \(preset.displayName)", category: .streaming)
-    settings.applyYouTubeLivePreset(preset)
-    settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
-      width: settings.videoWidth,
-      height: settings.videoHeight,
-      frameRate: settings.frameRate
-    )
-    settings.audioBitrate = Constants.defaultAudioBitrate
+    updateSettings { settings in
+      settings.applyYouTubeLivePreset(preset)
+      settings.videoBitrate = YouTubeBitrateAdvisor.recommendedH264Bitrate(
+        width: settings.videoWidth,
+        height: settings.videoHeight,
+        frameRate: settings.frameRate
+      )
+      settings.audioBitrate = Constants.defaultAudioBitrate
+    }
     // 설정 즉시 저장
     autoSaveSettings()
-    // 스트리밍 가능 여부 업데이트
-    updateStreamingAvailability()
     logDebug("✅ [PRESET] YouTube preset applied successfully", category: .streaming)
     logDebug(
       "📊 [PRESET] Resolution: \(settings.videoWidth)×\(settings.videoHeight)", category: .streaming)
@@ -133,6 +151,7 @@ extension LiveStreamViewModel {
       "LiveStream.videoBitrate",
       "LiveStream.videoWidth",
       "LiveStream.videoHeight",
+      "LiveStream.streamOrientation",
       "LiveStream.frameRate",
       "LiveStream.audioBitrate",
       "LiveStream.autoReconnect",
@@ -148,7 +167,6 @@ extension LiveStreamViewModel {
     }
     // Keychain에서 스트림 키 삭제 (보안 향상)
     KeychainManager.shared.deleteStreamKey()
-    defaults.synchronize()
     logDebug("🗑️ [CLEAR] Saved settings cleared", category: .streaming)
   }
 }

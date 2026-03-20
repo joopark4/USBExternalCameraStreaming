@@ -22,6 +22,14 @@ private enum CameraStreamingCompositionContext {
 // MARK: - Rendering Helpers Extension for CameraPreviewUIView
 
 extension CameraPreviewUIView {
+  private func orientedCameraImageForStreaming(_ image: CIImage) -> CIImage {
+    image
+  }
+
+  private func orientedUIImageForCurrentStream(_ image: UIImage) -> UIImage {
+    image
+  }
+
   func makeStreamingOverlaySnapshot(streamingSize: CGSize) -> CGImage? {
     let width = Int(streamingSize.width)
     let height = Int(streamingSize.height)
@@ -84,11 +92,14 @@ extension CameraPreviewUIView {
     }
 
     let backgroundImage: CIImage
+    let backgroundCanvas = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1))
+      .cropped(to: CGRect(origin: .zero, size: streamingSize))
     if let cameraFrame {
-      backgroundImage = aspectFillImage(CIImage(cvPixelBuffer: cameraFrame), targetSize: streamingSize)
+      let sourceImage = orientedCameraImageForStreaming(CIImage(cvPixelBuffer: cameraFrame))
+      backgroundImage = aspectFitImage(sourceImage, targetSize: streamingSize)
+        .composited(over: backgroundCanvas)
     } else {
-      backgroundImage = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1))
-        .cropped(to: CGRect(origin: .zero, size: streamingSize))
+      backgroundImage = backgroundCanvas
     }
 
     let composedImage: CIImage
@@ -130,7 +141,7 @@ extension CameraPreviewUIView {
     return pixelBuffer
   }
 
-  private func aspectFillImage(_ image: CIImage, targetSize: CGSize) -> CIImage {
+  private func aspectFitImage(_ image: CIImage, targetSize: CGSize) -> CIImage {
     let sourceRect = image.extent
     guard sourceRect.width > 0, sourceRect.height > 0 else {
       return image.cropped(to: CGRect(origin: .zero, size: targetSize))
@@ -138,7 +149,7 @@ extension CameraPreviewUIView {
 
     let scaleX = targetSize.width / sourceRect.width
     let scaleY = targetSize.height / sourceRect.height
-    let scale = max(scaleX, scaleY)
+    let scale = min(scaleX, scaleY)
     let scaledWidth = sourceRect.width * scale
     let scaledHeight = sourceRect.height * scale
     let offsetX = (targetSize.width - scaledWidth) / 2.0
@@ -150,6 +161,37 @@ extension CameraPreviewUIView {
           .translatedBy(x: offsetX / scale, y: offsetY / scale)
       )
       .cropped(to: CGRect(origin: .zero, size: targetSize))
+  }
+
+  private func aspectFitRect(for imageSize: CGSize, inside targetRect: CGRect) -> CGRect {
+    guard imageSize.width > 0, imageSize.height > 0, targetRect.width > 0, targetRect.height > 0 else {
+      return targetRect
+    }
+
+    let imageAspectRatio = imageSize.width / imageSize.height
+    let targetAspectRatio = targetRect.width / targetRect.height
+
+    if imageAspectRatio > targetAspectRatio {
+      let drawWidth = targetRect.width
+      let drawHeight = drawWidth / imageAspectRatio
+      let offsetY = targetRect.origin.y + (targetRect.height - drawHeight) / 2
+      return CGRect(
+        x: targetRect.origin.x,
+        y: offsetY,
+        width: drawWidth,
+        height: drawHeight
+      )
+    }
+
+    let drawHeight = targetRect.height
+    let drawWidth = drawHeight * imageAspectRatio
+    let offsetX = targetRect.origin.x + (targetRect.width - drawWidth) / 2
+    return CGRect(
+      x: offsetX,
+      y: targetRect.origin.y,
+      width: drawWidth,
+      height: drawHeight
+    )
   }
 
   /// 송출용 고해상도 카메라 프레임과 UI 합성
@@ -164,10 +206,11 @@ extension CameraPreviewUIView {
   {
 
     // Step 1: 카메라 프레임을 UIImage로 변환
-    guard let cameraImage = cameraFrame.toUIImage() else {
+    guard let rawCameraImage = cameraFrame.toUIImage() else {
       logError("카메라 프레임 → UIImage 변환 실패", category: .performance)
       return nil
     }
+    let cameraImage = orientedUIImageForCurrentStream(rawCameraImage)
     // Step 2: UI 오버레이를 고해상도로 생성 (1:1 → 16:9 비율 강제 변환)
     // 단말 크기에서 송출 크기로 스케일링 비율 계산
     let currentSize = bounds.size
@@ -208,28 +251,10 @@ extension CameraPreviewUIView {
     // UI와 카메라를 동일한 Aspect Fill 변환으로 맞춤
     let scaledCameraRect = mapRectToStreamingSpace(cameraPreviewRect, from: currentSize, to: streamingSize)
 
-      // 카메라 이미지를 스케일된 영역에 맞춰 그리기 (Aspect Fill 방식)
-      // Aspect Fill로 그려서 카메라 이미지가 잘리지 않도록 함
-      let cameraAspectRatio = cameraImage.size.width / cameraImage.size.height
-      let rectAspectRatio = scaledCameraRect.width / scaledCameraRect.height
+      context.cgContext.setFillColor(UIColor.black.cgColor)
+      context.cgContext.fill(rect)
 
-      let drawRect: CGRect
-      if cameraAspectRatio > rectAspectRatio {
-        // 카메라가 더 넓음: 높이를 맞추고 가로는 넘침
-        let drawHeight = scaledCameraRect.height
-        let drawWidth = drawHeight * cameraAspectRatio
-        let offsetX = scaledCameraRect.origin.x + (scaledCameraRect.width - drawWidth) / 2
-        drawRect = CGRect(
-          x: offsetX, y: scaledCameraRect.origin.y, width: drawWidth, height: drawHeight)
-      } else {
-        // 카메라가 더 높음: 너비를 맞추고 세로는 넘침
-        let drawWidth = scaledCameraRect.width
-        let drawHeight = drawWidth / cameraAspectRatio
-        let offsetY = scaledCameraRect.origin.y + (scaledCameraRect.height - drawHeight) / 2
-        drawRect = CGRect(
-          x: scaledCameraRect.origin.x, y: offsetY, width: drawWidth, height: drawHeight)
-      }
-
+      let drawRect = aspectFitRect(for: cameraImage.size, inside: scaledCameraRect)
       cameraImage.draw(in: drawRect)
 
       // 3-2: UI 오버레이를 전체 화면에 합성
@@ -266,16 +291,16 @@ extension CameraPreviewUIView {
     return mappedRect
   }
 
-  /// 단말 화면에서 카메라 프리뷰가 차지하는 16:9 영역 계산
-  ///
-  /// 실제 송출되는 16:9 비율 영역을 계산합니다.
+  /// 단말 화면에서 카메라 프리뷰가 차지하는 송출 비율 영역 계산
   /// 이를 통해 프리뷰와 송출 화면이 정확히 일치하도록 합니다.
   ///
   /// - Parameter containerSize: 컨테이너 뷰의 크기 (단말 화면 크기)
-  /// - Returns: 16:9 비율로 계산된 카메라 프리뷰 영역
+  /// - Returns: 현재 송출 비율로 계산된 카메라 프리뷰 영역
   func calculateCameraPreviewRect(in containerSize: CGSize) -> CGRect {
-    // 16:9 비율로 고정된 송출 영역 계산
-    let aspectRatio: CGFloat = 16.0 / 9.0
+    let settings = streamingSettings ?? haishinKitManager?.getCurrentSettings() ?? LiveStreamSettings()
+    let aspectRatio = settings.streamAspectRatio > 0
+      ? settings.streamAspectRatio
+      : settings.streamLayoutProfile.aspectRatio
 
     let previewFrame: CGRect
     if containerSize.width / containerSize.height > aspectRatio {
@@ -290,7 +315,7 @@ extension CameraPreviewUIView {
       previewFrame = CGRect(x: 0, y: offsetY, width: containerSize.width, height: height)
     }
 
-    logDebug("16:9 비율 송출 영역: \(previewFrame)", category: .camera)
+    logDebug("송출 비율 영역: \(previewFrame)", category: .camera)
     return previewFrame
   }
 
@@ -453,10 +478,11 @@ extension CameraPreviewUIView {
   func renderCameraFrameWithUI(cameraFrame: CVPixelBuffer, viewSize: CGSize) -> UIImage? {
 
     // Step 1: 카메라 프레임을 UIImage로 변환
-    guard let cameraImage = cameraFrame.toUIImage() else {
+    guard let rawCameraImage = cameraFrame.toUIImage() else {
       logError("카메라 프레임 → UIImage 변환 실패", category: .performance)
       return nil
     }
+    let cameraImage = orientedUIImageForCurrentStream(rawCameraImage)
     logDebug("카메라 이미지 변환 성공: \(cameraImage.size)", category: .performance)
 
     // Step 2: UI 오버레이 생성 (카메라 프리뷰 레이어 제외)
@@ -476,26 +502,10 @@ extension CameraPreviewUIView {
     let compositeImage = finalRenderer.image { context in
       let rect = CGRect(origin: .zero, size: viewSize)
 
-      // 3-1: 카메라 이미지를 뷰 크기에 맞게 그리기 (aspect fill 적용)
-      // Aspect Fill: 원본 비율을 유지하면서 전체 영역을 채움 (일부 잘림 가능하지만 화면 꽉 채움)
-      let cameraAspectRatio = cameraImage.size.width / cameraImage.size.height
-      let rectAspectRatio = rect.width / rect.height
+      context.cgContext.setFillColor(UIColor.black.cgColor)
+      context.cgContext.fill(rect)
 
-      let drawRect: CGRect
-      if cameraAspectRatio > rectAspectRatio {
-        // 카메라가 더 넓음: 높이를 맞추고 가로는 넘침
-        let drawHeight = rect.height
-        let drawWidth = drawHeight * cameraAspectRatio
-        let offsetX = (rect.width - drawWidth) / 2
-        drawRect = CGRect(x: offsetX, y: 0, width: drawWidth, height: drawHeight)
-      } else {
-        // 카메라가 더 높음: 너비를 맞추고 세로는 넘침
-        let drawWidth = rect.width
-        let drawHeight = drawWidth / cameraAspectRatio
-        let offsetY = (rect.height - drawHeight) / 2
-        drawRect = CGRect(x: 0, y: offsetY, width: drawWidth, height: drawHeight)
-      }
-
+      let drawRect = aspectFitRect(for: cameraImage.size, inside: rect)
       cameraImage.draw(in: drawRect)
 
       // 3-2: UI 오버레이를 전체 화면에 합성
@@ -507,15 +517,7 @@ extension CameraPreviewUIView {
     return compositeImage
   }
 
-  /// 송출 해상도에 따른 최적 캡처 사이즈 계산 (16:9 비율 고정)
-  ///
-  /// **16:9 비율 강제 적용:**
-  /// - 480p(854x480) → 16:9 비율로 수정 후 2배 업스케일
-  /// - 720p(1280x720) → 2배 업스케일
-  /// - 1080p(1920x1080) → 동일 해상도 캡처
-  /// - 모든 해상도를 16:9 비율로 강제 변환
-  ///
-  /// - Returns: 16:9 비율이 보장된 최적 캡처 해상도
+  /// 송출 해상도에 따른 최적 캡처 사이즈 계산
   func getOptimalCaptureSize() -> CGSize {
     var streamWidth: Int = 0
     var streamHeight: Int = 0
@@ -534,7 +536,7 @@ extension CameraPreviewUIView {
       guard let manager = haishinKitManager,
         let settings = manager.getCurrentSettings()
       else {
-        // 기본값: 720p (16:9 비율)
+        // 기본값: 720p landscape
         return CGSize(width: 1280, height: 720)
       }
 
@@ -542,46 +544,9 @@ extension CameraPreviewUIView {
       streamHeight = settings.videoHeight
     }
 
-    // 16:9 비율 강제 적용 (유튜브 라이브 표준)
-    let aspectRatio: CGFloat = 16.0 / 9.0
-
-    // 송출 해상도를 16:9 비율로 수정
-    let correctedStreamSize: CGSize
-    let currentAspectRatio = CGFloat(streamWidth) / CGFloat(streamHeight)
-
-    if abs(currentAspectRatio - aspectRatio) > 0.1 {
-      // 비율이 16:9가 아니면 강제로 수정
-      let correctedHeight = CGFloat(streamWidth) / aspectRatio
-      correctedStreamSize = CGSize(width: streamWidth, height: Int(correctedHeight))
-    } else {
-      correctedStreamSize = CGSize(width: streamWidth, height: streamHeight)
-    }
-
-    // 16:9 비율 기반 최적 캡처 해상도 계산
-    let captureSize: CGSize
-    let width = Int(correctedStreamSize.width)
-    let height = Int(correctedStreamSize.height)
-
-    switch (width, height) {
-    case (640...854, 360...480):
-      // 480p 계열: 업스케일 없이 목표 해상도 사용 (프레임 안정성 우선)
-      captureSize = CGSize(width: width, height: height)
-
-    case (1280, 720):
-      // 720p: 업스케일 제거로 렌더링 부하 완화
-      captureSize = CGSize(width: 1280, height: 720)
-
-    case (1920, 1080):
-      // 1080p는 송출 해상도와 동일 크기 유지 (안정성 우선)
-      captureSize = CGSize(width: 1920, height: 1080)
-
-    default:
-      // 사용자 정의: 보정된 목표 해상도 그대로 사용
-      captureSize = CGSize(width: width, height: height)
-    }
-
-    // 1080p 표준 해상도는 그대로 유지해 불필요한 리사이즈 오버헤드를 줄임
-    if Int(captureSize.width) == 1920 && Int(captureSize.height) == 1080 {
+    let captureSize = CGSize(width: streamWidth, height: streamHeight)
+    let resolutionClass = StreamResolutionDescriptor(width: streamWidth, height: streamHeight).resolutionClass
+    if resolutionClass != .custom {
       return captureSize
     }
 

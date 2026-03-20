@@ -16,13 +16,16 @@ struct SidebarView: View {
     /// MainViewModel 참조 (ObservedObject로 상태 변화 감지)
     @ObservedObject var viewModel: MainViewModel
     let onPrimarySelection: () -> Void
+    let onShowLiveStreamSettings: () -> Void
 
     init(
         viewModel: MainViewModel,
-        onPrimarySelection: @escaping () -> Void = {}
+        onPrimarySelection: @escaping () -> Void = {},
+        onShowLiveStreamSettings: @escaping () -> Void = {}
     ) {
         self.viewModel = viewModel
         self.onPrimarySelection = onPrimarySelection
+        self.onShowLiveStreamSettings = onShowLiveStreamSettings
     }
     
     var body: some View {
@@ -36,7 +39,7 @@ struct SidebarView: View {
             // 라이브 스트리밍 섹션: 라이브 스트리밍 관련 메뉴
             LiveStreamSectionView(
                 viewModel: viewModel.liveStreamViewModel,
-                onShowSettings: { viewModel.showLiveStreamSettings() }
+                onShowSettings: onShowLiveStreamSettings
             )
         }
         .navigationTitle(NSLocalizedString("menu", comment: "메뉴"))

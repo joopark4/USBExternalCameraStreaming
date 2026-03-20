@@ -3,6 +3,7 @@ import Combine
 import Foundation
 import SwiftData
 import SwiftUI
+import LiveStreamingCore
 
 
 // MARK: - Supporting Types
@@ -46,14 +47,29 @@ enum StreamingPreset: String, CaseIterable {
 enum YouTubeBitrateAdvisor {
   static func recommendedH264Bitrate(width: Int, height: Int, frameRate: Int) -> Int {
     let is60fps = frameRate >= 50
-    if width >= 3840 && height >= 2160 {
+    let resolutionClass = StreamResolutionDescriptor(width: width, height: height).resolutionClass
+
+    switch resolutionClass {
+    case .p4k:
       return is60fps ? 51_000 : 35_000
-    } else if width >= 2560 && height >= 1440 {
-      return is60fps ? 24_000 : 16_000
-    } else if width >= 1920 && height >= 1080 {
+    case .p1080:
       return is60fps ? 9_000 : 4_500
-    } else {
+    case .p720:
       return is60fps ? 6_000 : 2_500
+    case .p480:
+      return is60fps ? 6_000 : 2_500
+    case .custom:
+      let longEdge = max(width, height)
+      let shortEdge = min(width, height)
+      if longEdge >= 3840 && shortEdge >= 2160 {
+        return is60fps ? 51_000 : 35_000
+      } else if longEdge >= 2560 && shortEdge >= 1440 {
+        return is60fps ? 24_000 : 16_000
+      } else if longEdge >= 1920 && shortEdge >= 1080 {
+        return is60fps ? 9_000 : 4_500
+      } else {
+        return is60fps ? 6_000 : 2_500
+      }
     }
   }
 }
