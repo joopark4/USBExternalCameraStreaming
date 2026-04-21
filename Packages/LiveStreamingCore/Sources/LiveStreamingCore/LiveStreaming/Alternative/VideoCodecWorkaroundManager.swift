@@ -1,5 +1,6 @@
 import Foundation
 import HaishinKit
+import RTMPHaishinKit
 import AVFoundation
 import VideoToolbox
 import UIKit
@@ -124,10 +125,9 @@ public class VideoCodecWorkaroundManager: NSObject, ObservableObject {
         videoSettings.allowFrameReordering = false // 실시간 스트리밍 최적화
         videoSettings.maxKeyFrameIntervalDuration = 2 // 키프레임 간격
         
-        // 하드웨어 가속 활성화
-        videoSettings.isHardwareEncoderEnabled = true
-        
-        await stream.setVideoSettings(videoSettings)
+        // 하드웨어 가속은 HaishinKit 2.x에서 기본적으로 활성화됨
+
+        try await stream.setVideoSettings(videoSettings)
         
         logger.info("✅ VideoCodec 사전 초기화 완료: \(safeWidth)x\(safeHeight) (VideoToolbox 하드웨어 가속)")
         isVideoCodecPreinitialized = true

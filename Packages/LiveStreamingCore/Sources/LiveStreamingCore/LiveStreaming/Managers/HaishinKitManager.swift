@@ -4,6 +4,7 @@ import Combine
 import CoreImage
 import Foundation
 import HaishinKit
+import RTMPHaishinKit
 import Network
 import UIKit
 import VideoToolbox
@@ -381,8 +382,11 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
   let logger = StreamingLogger.shared
 
   /// **MediaMixer (Examples 패턴)**
+  /// captureSessionMode: .single — 표준 AVCaptureSession을 사용해 마이크 캡처 경로를 유지.
+  /// 비디오 프레임은 RTMPStream.append로 수동 주입하므로 비디오 디바이스는 attach하지 않음.
+  /// (HaishinKit 2.2.5의 `.manual`은 NullCaptureSession이라 오디오 입력이 불가능.)
   lazy var mixer = MediaMixer(
-    multiCamSessionEnabled: false, multiTrackAudioMixingEnabled: false, useManualCapture: true)
+    captureSessionMode: .single, multiTrackAudioMixingEnabled: false)
 
   /// MediaMixer 인스턴스 저장 용도
   var mediaMixer: MediaMixer?

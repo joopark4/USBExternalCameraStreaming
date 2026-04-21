@@ -307,7 +307,7 @@ extension LiveStreamViewModel {
   }
 }
 
-final class StreamAudioPeakOutputObserver: NSObject, HKStreamOutput, @unchecked Sendable {
+final class StreamAudioPeakOutputObserver: NSObject, StreamOutput, @unchecked Sendable {
   private let onPeak: @Sendable (Float, Float) -> Void
   private let lock = NSLock()
   private var previousLevel: Float = 0
@@ -316,7 +316,7 @@ final class StreamAudioPeakOutputObserver: NSObject, HKStreamOutput, @unchecked 
     self.onPeak = onPeak
   }
 
-  nonisolated func stream(_ stream: some HKStream, didOutput audio: AVAudioBuffer, when: AVAudioTime)
+  nonisolated func stream(_ stream: some StreamConvertible, didOutput audio: AVAudioBuffer, when: AVAudioTime)
   {
     guard let pcmBuffer = audio as? AVAudioPCMBuffer else { return }
 
@@ -330,7 +330,7 @@ final class StreamAudioPeakOutputObserver: NSObject, HKStreamOutput, @unchecked 
     onPeak(smoothed, decibels)
   }
 
-  nonisolated func stream(_ stream: some HKStream, didOutput video: CMSampleBuffer) {}
+  nonisolated func stream(_ stream: some StreamConvertible, didOutput video: CMSampleBuffer) {}
 
   static func measurePeak(from buffer: AVAudioPCMBuffer) -> (Float, Float) {
     let frameCount = Int(buffer.frameLength)

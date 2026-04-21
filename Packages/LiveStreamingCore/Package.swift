@@ -13,13 +13,14 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/HaishinKit/HaishinKit.swift", from: "2.0.0")
+        .package(url: "https://github.com/HaishinKit/HaishinKit.swift", .upToNextMinor(from: "2.2.5"))
     ],
     targets: [
         .target(
             name: "LiveStreamingCore",
             dependencies: [
-                .product(name: "HaishinKit", package: "HaishinKit.swift")
+                .product(name: "HaishinKit", package: "HaishinKit.swift"),
+                .product(name: "RTMPHaishinKit", package: "HaishinKit.swift")
             ],
             path: "Sources",
             exclude: [],
