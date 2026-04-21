@@ -15,7 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/joopark4/LiveStreamingCore.git",
       "state" : {
-        "revision" : "c8fc73ddae7459cada554651b79960e9fe878554"
+        "revision" : "c8fc73ddae7459cada554651b79960e9fe878554",
+        "version" : "2.0.0"
       }
     },
     {
