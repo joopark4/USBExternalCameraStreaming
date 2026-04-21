@@ -33,18 +33,15 @@ extension LiveStreamViewModel {
       startSettings.setStreamOrientation(resolvedOrientation)
     }
 
-    // Console.app / Xcode 콘솔에서 모두 보이도록 NSLog 사용 (privacy 필터 영향 없음)
+    // Console.app / Xcode 콘솔에서 모두 보이도록 NSLog + Swift 문자열 보간 사용.
+    // (Int 는 64bit 이므로 printf-style %d 대신 문자열 보간이 안전.)
     NSLog(
-      "[USBCam] 송출 시작 방향 동기화: resolved=%@, stored=%@, "
-        + "startSettings=%@ %dx%d (fg=%@, any=%@, device=%@)",
-      resolvedOrientation?.rawValue ?? "nil",
-      settings.streamOrientation.rawValue,
-      startSettings.streamOrientation.rawValue,
-      startSettings.videoWidth,
-      startSettings.videoHeight,
-      describeForegroundInterfaceOrientation(),
-      describeAnyInterfaceOrientation(),
-      describeCurrentDeviceOrientation()
+      "[USBCam] 송출 시작 방향 동기화: resolved=\(resolvedOrientation?.rawValue ?? "nil"), "
+        + "stored=\(settings.streamOrientation.rawValue), "
+        + "startSettings=\(startSettings.streamOrientation.rawValue) "
+        + "\(startSettings.videoWidth)x\(startSettings.videoHeight) "
+        + "(keyScene=\(describeKeySceneInterfaceOrientation()), "
+        + "device=\(describeCurrentDeviceOrientation()))"
     )
 
     // UI 에도 반영 (다음 스트림 시작 시 기본값으로 사용되고, 설정 화면에도 최신 상태 표시)
@@ -76,10 +73,9 @@ extension LiveStreamViewModel {
     guard settings.streamOrientation != resolved else { return }
 
     NSLog(
-      "[USBCam] orientation observer: %@ → %@ (device=%@)",
-      settings.streamOrientation.rawValue,
-      resolved.rawValue,
-      describeCurrentDeviceOrientation()
+      "[USBCam] orientation observer: "
+        + "\(settings.streamOrientation.rawValue) → \(resolved.rawValue) "
+        + "(device=\(describeCurrentDeviceOrientation()))"
     )
 
     updateSettings(
@@ -90,51 +86,58 @@ extension LiveStreamViewModel {
 
   @MainActor
   private func detectDeviceStreamOrientation() -> StreamOrientation? {
-    // 우선순위: foregroundActive scene.interfaceOrientation → 다른 scene → UIDevice.orientation
-    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-    if let fg = scenes.first(where: { $0.activationState == .foregroundActive }),
-      fg.interfaceOrientation != .unknown
-    {
-      return streamOrientation(from: fg.interfaceOrientation)
+    // 우선순위:
+    //  1) keyWindow 를 호스팅하는 foregroundActive UIWindowScene
+    //     - `connectedScenes` 는 unordered set 이므로 멀티윈도우/Stage Manager 환경에서
+    //       key 를 가진 scene 을 명시적으로 골라야 현재 스트리밍 UI 가 속한 scene 을 얻을 수 있음
+    //  2) 아무 foregroundActive scene
+    //  3) orientation 이 확정된 아무 scene
+    //  4) UIDevice.current.orientation
+    if let keyScene = keyWindowScene(), let orientation = streamOrientation(from: keyScene.interfaceOrientation) {
+      return orientation
     }
-    if let any = scenes.first(where: { $0.interfaceOrientation != .unknown }) {
-      return streamOrientation(from: any.interfaceOrientation)
+
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    if let fg = scenes.first(where: { $0.activationState == .foregroundActive && $0.interfaceOrientation != .unknown }),
+      let orientation = streamOrientation(from: fg.interfaceOrientation)
+    {
+      return orientation
+    }
+    if let any = scenes.first(where: { $0.interfaceOrientation != .unknown }),
+      let orientation = streamOrientation(from: any.interfaceOrientation)
+    {
+      return orientation
     }
     return streamOrientation(from: UIDevice.current.orientation)
   }
 
+  /// keyWindow 를 호스팅하는 UIWindowScene. Stage Manager / 멀티윈도우에서
+  /// 현재 사용자 상호작용 대상이 되는 scene 을 명확히 지정하기 위한 헬퍼.
+  @MainActor
+  private func keyWindowScene() -> UIWindowScene? {
+    return UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first(where: { scene in
+        scene.activationState == .foregroundActive
+          && scene.windows.contains(where: { $0.isKeyWindow })
+      })
+  }
+
   private func streamOrientation(from interface: UIInterfaceOrientation) -> StreamOrientation? {
-    switch interface {
-    case .portrait, .portraitUpsideDown: return .portrait
-    case .landscapeLeft, .landscapeRight: return .landscape
-    default: return nil
-    }
+    if interface.isPortrait { return .portrait }
+    if interface.isLandscape { return .landscape }
+    return nil
   }
 
   private func streamOrientation(from device: UIDeviceOrientation) -> StreamOrientation? {
-    switch device {
-    case .portrait, .portraitUpsideDown: return .portrait
-    case .landscapeLeft, .landscapeRight: return .landscape
-    default: return nil
-    }
+    if device.isPortrait { return .portrait }
+    if device.isLandscape { return .landscape }
+    return nil
   }
 
   @MainActor
-  private func describeForegroundInterfaceOrientation() -> String {
-    let orientation = UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .first(where: { $0.activationState == .foregroundActive })?
-      .interfaceOrientation
-    return describe(orientation)
-  }
-
-  @MainActor
-  private func describeAnyInterfaceOrientation() -> String {
-    let orientation = UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .map { $0.interfaceOrientation }
-      .first(where: { $0 != .unknown })
-    return describe(orientation)
+  private func describeKeySceneInterfaceOrientation() -> String {
+    describe(keyWindowScene()?.interfaceOrientation)
   }
 
   private func describeCurrentDeviceOrientation() -> String {

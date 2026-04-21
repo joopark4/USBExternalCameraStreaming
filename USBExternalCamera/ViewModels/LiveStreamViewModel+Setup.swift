@@ -118,6 +118,8 @@ extension LiveStreamViewModel {
 
     // 디바이스가 회전하면(그리고 송출 중이 아닐 때만) streamOrientation 을 즉시 동기화.
     // 다음에 라이브 시작을 눌렀을 때 stale 한 이전 세션의 방향이 남아 있지 않도록 보장.
+    // (초기 1회 동기화는 `loadInitialSettings` 완료 직후에 수행 — async 설정 로드가
+    //  뒤늦게 settings 를 덮어써서 우리 sync 가 무시되는 race 방지.)
     NotificationCenter.default
       .publisher(for: UIDevice.orientationDidChangeNotification)
       .receive(on: DispatchQueue.main)
@@ -125,11 +127,6 @@ extension LiveStreamViewModel {
         self?.syncStreamOrientationFromDeviceIfIdle()
       }
       .store(in: &cancellables)
-
-    // 앱 실행 직후에도 한 번은 동기화해두기 (회전 없이 바로 시작하는 경우 대비).
-    DispatchQueue.main.async { [weak self] in
-      self?.syncStreamOrientationFromDeviceIfIdle()
-    }
 
     logDebug("✅ [AUTO-SAVE] 설정 자동 저장 바인딩 완료", category: .streaming)
   }
@@ -159,6 +156,10 @@ extension LiveStreamViewModel {
         }
         self.updateStreamingAvailability()
         self.updateNetworkRecommendations()
+
+        // 설정 로드가 끝난 지금 시점에 안전하게 디바이스 방향과 동기화.
+        // (setupBindings 에서 바로 호출하면 이 블록에 의해 덮어써질 수 있음)
+        self.syncStreamOrientationFromDeviceIfIdle()
       }
     }
   }

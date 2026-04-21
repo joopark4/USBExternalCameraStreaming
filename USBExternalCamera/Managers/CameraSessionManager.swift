@@ -171,36 +171,38 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
         isMirrored: Bool
     ) {
         sessionQueue.async { [weak self] in
-            guard let self, let connection = self.videoOutput.connection(with: .video) else { return }
-
-            let configurationKey = self.makeVideoOutputConfigurationKey(
-                connection: connection,
+            self?.applyVideoOutputConfigurationOnSessionQueue(
                 rotationAngle: rotationAngle,
                 orientation: orientation,
                 isMirrored: isMirrored
             )
+        }
+    }
 
-            guard self.lastAppliedVideoOutputConfigurationKey != configurationKey else {
-                return
-            }
+    /// `updateVideoOutputConfiguration` 의 실제 구현. 호출자는 반드시 `sessionQueue` 위에 있어야 한다.
+    /// `switchToCamera` 처럼 이미 sessionQueue 위에서 실행 중인 경우, 재-dispatch 로 인한 한 틱 지연을
+    /// 피하기 위해 이 메서드를 직접 호출해 같은 block 내에서 동기 적용한다.
+    private func applyVideoOutputConfigurationOnSessionQueue(
+        rotationAngle: CGFloat?,
+        orientation: PreviewVideoOrientation?,
+        isMirrored: Bool
+    ) {
+        guard let connection = self.videoOutput.connection(with: .video) else { return }
 
-            if #available(iOS 17.0, *) {
-                if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
-                    connection.videoRotationAngle = rotationAngle
-                } else if let orientation, connection.isVideoOrientationSupported {
-                    switch orientation {
-                    case .portrait:
-                        connection.videoOrientation = .portrait
-                    case .portraitUpsideDown:
-                        connection.videoOrientation = .portraitUpsideDown
-                    case .landscapeRight:
-                        connection.videoOrientation = .landscapeRight
-                    case .landscapeLeft:
-                        connection.videoOrientation = .landscapeLeft
-                    }
-                } else if connection.isVideoRotationAngleSupported(0) {
-                    connection.videoRotationAngle = 0
-                }
+        let configurationKey = self.makeVideoOutputConfigurationKey(
+            connection: connection,
+            rotationAngle: rotationAngle,
+            orientation: orientation,
+            isMirrored: isMirrored
+        )
+
+        guard self.lastAppliedVideoOutputConfigurationKey != configurationKey else {
+            return
+        }
+
+        if #available(iOS 17.0, *) {
+            if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
+                connection.videoRotationAngle = rotationAngle
             } else if let orientation, connection.isVideoOrientationSupported {
                 switch orientation {
                 case .portrait:
@@ -212,19 +214,32 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
                 case .landscapeLeft:
                     connection.videoOrientation = .landscapeLeft
                 }
+            } else if connection.isVideoRotationAngleSupported(0) {
+                connection.videoRotationAngle = 0
             }
-
-            if connection.isVideoMirroringSupported {
-                connection.automaticallyAdjustsVideoMirroring = false
-                connection.isVideoMirrored = isMirrored
+        } else if let orientation, connection.isVideoOrientationSupported {
+            switch orientation {
+            case .portrait:
+                connection.videoOrientation = .portrait
+            case .portraitUpsideDown:
+                connection.videoOrientation = .portraitUpsideDown
+            case .landscapeRight:
+                connection.videoOrientation = .landscapeRight
+            case .landscapeLeft:
+                connection.videoOrientation = .landscapeLeft
             }
-
-            self.lastAppliedVideoOutputConfigurationKey = configurationKey
-            self.lastRequestedRotationAngle = rotationAngle
-            self.lastRequestedOrientation = orientation
-            self.lastRequestedIsMirrored = isMirrored
-            self.hasLastRequestedConfiguration = true
         }
+
+        if connection.isVideoMirroringSupported {
+            connection.automaticallyAdjustsVideoMirroring = false
+            connection.isVideoMirrored = isMirrored
+        }
+
+        self.lastAppliedVideoOutputConfigurationKey = configurationKey
+        self.lastRequestedRotationAngle = rotationAngle
+        self.lastRequestedOrientation = orientation
+        self.lastRequestedIsMirrored = isMirrored
+        self.hasLastRequestedConfiguration = true
     }
 
     private func makeVideoOutputConfigurationKey(
@@ -504,16 +519,15 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
 
             // 새 입력과 함께 생성되는 AVCaptureConnection 은 기본 orientation 을 갖기 때문에,
             // 직전까지 적용돼 있던 rotation / orientation / mirroring 을 다시 씌워준다.
+            // 이미 sessionQueue 위에서 실행 중이므로 재-dispatch 로 한 틱 밀리지 않도록
+            // 동기 헬퍼를 직접 호출해 같은 block 내에서 즉시 적용.
             // 캐시 키는 connection ObjectIdentifier 기반이라 새 connection 에서는 자동으로 무효화된다.
             self.lastAppliedVideoOutputConfigurationKey = nil
             if self.hasLastRequestedConfiguration {
-                let rotation = self.lastRequestedRotationAngle
-                let orientation = self.lastRequestedOrientation
-                let mirrored = self.lastRequestedIsMirrored
-                self.updateVideoOutputConfiguration(
-                    rotationAngle: rotation,
-                    orientation: orientation,
-                    isMirrored: mirrored
+                self.applyVideoOutputConfigurationOnSessionQueue(
+                    rotationAngle: self.lastRequestedRotationAngle,
+                    orientation: self.lastRequestedOrientation,
+                    isMirrored: self.lastRequestedIsMirrored
                 )
             }
 
