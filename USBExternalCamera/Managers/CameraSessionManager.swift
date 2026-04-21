@@ -9,6 +9,14 @@ public enum PreviewVideoOrientation: Sendable {
     case landscapeLeft
 }
 
+extension Notification.Name {
+    /// CameraSessionManager 가 새 카메라로 입력 교체를 마쳤을 때 발송.
+    /// userInfo["device"] 에 새로 연결된 AVCaptureDevice 가 포함된다.
+    static let cameraSessionDidSwitchCamera = Notification.Name(
+        "com.heavyarm.usbexternalcamera.cameraSessionDidSwitchCamera"
+    )
+}
+
 /// 카메라 전환 완료를 알리는 델리게이트
 public protocol CameraSwitchDelegate: AnyObject {
     /// 카메라 전환이 완료되었을 때 호출
@@ -86,6 +94,13 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
 
     /// 마지막으로 적용한 비디오 출력 연결 설정 (중복 적용 방지용 캐시)
     private var lastAppliedVideoOutputConfigurationKey: String?
+
+    /// 카메라 전환 직후에도 방향/미러링을 복원할 수 있도록 최근 입력값을 보관.
+    /// `updateVideoOutputConfiguration` 이 적용에 성공할 때마다 갱신된다.
+    private var lastRequestedRotationAngle: CGFloat?
+    private var lastRequestedOrientation: PreviewVideoOrientation?
+    private var lastRequestedIsMirrored: Bool = false
+    private var hasLastRequestedConfiguration: Bool = false
     
     /// 초기화 및 기본 세션 설정
     /// - 세션 프리셋과 비디오 출력을 초기화
@@ -205,6 +220,10 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             }
 
             self.lastAppliedVideoOutputConfigurationKey = configurationKey
+            self.lastRequestedRotationAngle = rotationAngle
+            self.lastRequestedOrientation = orientation
+            self.lastRequestedIsMirrored = isMirrored
+            self.hasLastRequestedConfiguration = true
         }
     }
 
@@ -482,12 +501,35 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             self.lastFrameTime = CACurrentMediaTime()
             
             logInfo("🎥 카메라 전환 완료: \(camera.name)", category: .camera)
-            
+
+            // 새 입력과 함께 생성되는 AVCaptureConnection 은 기본 orientation 을 갖기 때문에,
+            // 직전까지 적용돼 있던 rotation / orientation / mirroring 을 다시 씌워준다.
+            // 캐시 키는 connection ObjectIdentifier 기반이라 새 connection 에서는 자동으로 무효화된다.
+            self.lastAppliedVideoOutputConfigurationKey = nil
+            if self.hasLastRequestedConfiguration {
+                let rotation = self.lastRequestedRotationAngle
+                let orientation = self.lastRequestedOrientation
+                let mirrored = self.lastRequestedIsMirrored
+                self.updateVideoOutputConfiguration(
+                    rotationAngle: rotation,
+                    orientation: orientation,
+                    isMirrored: mirrored
+                )
+            }
+
             // 카메라 전환 완료를 델리게이트에 알림 (스트리밍 동기화용)
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 await self.switchDelegate?.didSwitchCamera(to: camera.device, session: self.captureSession)
             }
+
+            // 프리뷰 레이어는 AVCaptureVideoPreviewLayer 의 connection 이 새 입력에 맞춰 재생성될 수 있으므로,
+            // 뷰 측에서 orientation 을 다시 적용하도록 notification 을 발송.
+            NotificationCenter.default.post(
+                name: .cameraSessionDidSwitchCamera,
+                object: self,
+                userInfo: ["device": camera.device]
+            )
         }
     }
     
