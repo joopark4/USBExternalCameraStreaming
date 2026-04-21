@@ -192,6 +192,15 @@ final class CameraPreviewUIView: UIView {
       name: .stopScreenCapture,
       object: nil
     )
+
+    // 카메라 입력이 교체되면 새 AVCaptureConnection 이 기본 orientation 으로 만들어지므로
+    // 프리뷰 레이어의 회전/방향을 다시 적용해야 함 (세로 모드 회귀 방지).
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleCameraDidSwitch(_:)),
+      name: .cameraSessionDidSwitchCamera,
+      object: nil
+    )
   }
 
   @objc private func handleStartScreenCapture(_ notification: Notification) {
@@ -210,6 +219,20 @@ final class CameraPreviewUIView: UIView {
     logDebug("화면 캡처 중지 notification 수신", category: .streaming)
     clearStreamingTargetSize()
     stopScreenCapture()
+  }
+
+  @objc private func handleCameraDidSwitch(_ notification: Notification) {
+    logInfo("카메라 전환 notification 수신 - 프리뷰 연결 재적용", category: .camera)
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      // 새 AVCaptureDeviceInput 으로 갈아끼워지면 프리뷰 레이어 connection 은 기본 orientation 으로
+      // 재생성될 수 있다. 캐시 키를 무효화한 뒤 강제 refresh 를 요청하면
+      // `performPreviewPresentationUpdate` 내부에서 프리뷰 connection 재적용과
+      // `refreshVideoOutputConnectionIfNeeded(force:)` 가 함께 수행된다.
+      self.invalidatePreviewGeometryConfigCache()
+      self.invalidateVideoOutputConnectionConfigCache()
+      self.requestPreviewPresentationUpdate(forceConnectionRefresh: true)
+    }
   }
 
   private func setupConstraints() {

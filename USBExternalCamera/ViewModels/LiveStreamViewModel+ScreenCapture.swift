@@ -25,12 +25,149 @@ extension LiveStreamViewModel {
 
     try await prepareAudioCapturePrerequisites()
 
+    // 현재 디바이스 방향과 저장된 streamOrientation 을 비교해 **로컬 struct** 에서 명시적으로 덮어쓰고
+    // 그대로 매니저에 전달. @Published settings 반영 타이밍과 무관하게 즉시 반영되도록 구성.
+    let resolvedOrientation = detectDeviceStreamOrientation()
+    var startSettings = settings
+    if let resolvedOrientation, startSettings.streamOrientation != resolvedOrientation {
+      startSettings.setStreamOrientation(resolvedOrientation)
+    }
+
+    logInfo(
+      "송출 시작 방향 동기화: resolved=\(resolvedOrientation?.rawValue ?? "nil"), "
+        + "stored=\(settings.streamOrientation.rawValue), "
+        + "startSettings=\(startSettings.streamOrientation.rawValue) "
+        + "\(startSettings.videoWidth)×\(startSettings.videoHeight) "
+        + "(keyScene=\(keyWindowSceneOrientationDescription()), "
+        + "device=\(describeCurrentDeviceOrientation()))",
+      category: .streaming)
+
+    // UI 에도 반영 (다음 스트림 시작 시 기본값으로 사용되고, 설정 화면에도 최신 상태 표시)
+    if settings.streamOrientation != startSettings.streamOrientation
+      || settings.videoWidth != startSettings.videoWidth
+      || settings.videoHeight != startSettings.videoHeight
+    {
+      settings = startSettings
+    }
+
     logDebug("🔄 [화면캡처] 화면 캡처 스트리밍 시작 중...", category: .streaming)
-    // 화면 캡처 전용 스트리밍 시작 (일반 스트리밍과 다른 메서드 사용)
-    try await haishinKitManager.startScreenCaptureStreaming(with: settings)
+    // 화면 캡처 전용 스트리밍 시작 — 반드시 `startSettings`(로컬) 로 전달.
+    try await haishinKitManager.startScreenCaptureStreaming(with: startSettings)
     // 데이터 모니터링 시작 (네트워크 상태, FPS 등)
     startDataMonitoring()
     logInfo("✅ [화면캡처] 화면 캡처 스트리밍 서비스 시작 완료", category: .streaming)
+  }
+
+  /// 디바이스가 회전했을 때 호출되는 상시 동기화. 송출 중이 아닐 때만 settings 를 갱신한다.
+  @MainActor
+  func syncStreamOrientationFromDeviceIfIdle() {
+    switch status {
+    case .streaming, .connecting:
+      return
+    default:
+      break
+    }
+    guard let resolved = detectDeviceStreamOrientation() else { return }
+    guard settings.streamOrientation != resolved else { return }
+
+    logDebug(
+      "방향 observer: \(settings.streamOrientation.rawValue) → \(resolved.rawValue) "
+        + "(device=\(describeCurrentDeviceOrientation()))",
+      category: .streaming)
+
+    updateSettings(
+      { $0.setStreamOrientation(resolved) },
+      updateStreamingAvailability: false
+    )
+  }
+
+  /// `UIApplication.connectedScenes` 는 unordered set 이라 Stage Manager / 멀티윈도우 환경에서
+  /// 현재 스트리밍 UI 가 속한 scene 을 정확히 찾으려면 keyWindow 우선으로 골라야 함.
+  /// 한 번만 순회하도록 후보 scene 들을 단일 pass 로 수집한 뒤 우선순위로 선택한다.
+  @MainActor
+  private func detectDeviceStreamOrientation() -> StreamOrientation? {
+    var keySceneOrientation: UIInterfaceOrientation?
+    var anyForegroundOrientation: UIInterfaceOrientation?
+    var anyOrientation: UIInterfaceOrientation?
+
+    for scene in UIApplication.shared.connectedScenes {
+      guard let windowScene = scene as? UIWindowScene else { continue }
+      let interfaceOrientation = windowScene.interfaceOrientation
+      guard interfaceOrientation != .unknown else { continue }
+
+      let isForeground = windowScene.activationState == .foregroundActive
+      if isForeground,
+        keySceneOrientation == nil,
+        windowScene.windows.contains(where: { $0.isKeyWindow })
+      {
+        keySceneOrientation = interfaceOrientation
+      }
+      if isForeground, anyForegroundOrientation == nil {
+        anyForegroundOrientation = interfaceOrientation
+      }
+      if anyOrientation == nil {
+        anyOrientation = interfaceOrientation
+      }
+    }
+
+    // 우선순위: keyWindow scene > foreground scene > 아무 scene > UIDevice
+    if let resolved = keySceneOrientation ?? anyForegroundOrientation ?? anyOrientation,
+      let orientation = streamOrientation(from: resolved)
+    {
+      return orientation
+    }
+    return streamOrientation(from: UIDevice.current.orientation)
+  }
+
+  /// 진단 로그용 — 현재 key scene 의 interfaceOrientation 문자열 표현.
+  @MainActor
+  private func keyWindowSceneOrientationDescription() -> String {
+    let orientation = UIApplication.shared.connectedScenes
+      .lazy
+      .compactMap { $0 as? UIWindowScene }
+      .first(where: { scene in
+        scene.activationState == .foregroundActive
+          && scene.windows.contains(where: { $0.isKeyWindow })
+      })?
+      .interfaceOrientation
+    return describe(orientation)
+  }
+
+  private func streamOrientation(from interface: UIInterfaceOrientation) -> StreamOrientation? {
+    if interface.isPortrait { return .portrait }
+    if interface.isLandscape { return .landscape }
+    return nil
+  }
+
+  private func streamOrientation(from device: UIDeviceOrientation) -> StreamOrientation? {
+    if device.isPortrait { return .portrait }
+    if device.isLandscape { return .landscape }
+    return nil
+  }
+
+  private func describeCurrentDeviceOrientation() -> String {
+    switch UIDevice.current.orientation {
+    case .portrait: return "portrait"
+    case .portraitUpsideDown: return "portraitUpsideDown"
+    case .landscapeLeft: return "landscapeLeft"
+    case .landscapeRight: return "landscapeRight"
+    case .faceUp: return "faceUp"
+    case .faceDown: return "faceDown"
+    case .unknown: return "unknown"
+    @unknown default: return "unknownFuture"
+    }
+  }
+
+  private func describe(_ interface: UIInterfaceOrientation?) -> String {
+    switch interface {
+    case .portrait: return "portrait"
+    case .portraitUpsideDown: return "portraitUpsideDown"
+    case .landscapeLeft: return "landscapeLeft"
+    case .landscapeRight: return "landscapeRight"
+    case .unknown: return "unknown"
+    case .none: return "nil"
+    @unknown default: return "unknownFuture"
+    }
   }
   /// 화면 캡처 스트리밍 시작 성공 후처리 (내부 메서드)
   /// **수행 작업:**

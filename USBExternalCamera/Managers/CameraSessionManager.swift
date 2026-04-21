@@ -9,6 +9,15 @@ public enum PreviewVideoOrientation: Sendable {
     case landscapeLeft
 }
 
+extension Notification.Name {
+    /// CameraSessionManager 가 새 카메라로 입력 교체를 마쳤을 때 발송.
+    /// 입력 교체와 함께 새 AVCaptureConnection 이 생성되므로 뷰/매니저 측에서
+    /// 프리뷰 orientation·비디오 출력 config 를 다시 적용할 기회를 얻기 위한 용도.
+    static let cameraSessionDidSwitchCamera = Notification.Name(
+        "com.heavyarm.usbexternalcamera.cameraSessionDidSwitchCamera"
+    )
+}
+
 /// 카메라 전환 완료를 알리는 델리게이트
 public protocol CameraSwitchDelegate: AnyObject {
     /// 카메라 전환이 완료되었을 때 호출
@@ -86,6 +95,15 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
 
     /// 마지막으로 적용한 비디오 출력 연결 설정 (중복 적용 방지용 캐시)
     private var lastAppliedVideoOutputConfigurationKey: String?
+
+    /// 카메라 전환 직후에도 방향/미러링을 복원할 수 있도록 최근 입력값을 묶어 보관.
+    /// `updateVideoOutputConfiguration` 이 적용에 성공할 때마다 갱신된다.
+    private struct CachedVideoOutputConfiguration {
+        let rotationAngle: CGFloat?
+        let orientation: PreviewVideoOrientation?
+        let isMirrored: Bool
+    }
+    private var cachedVideoOutputConfiguration: CachedVideoOutputConfiguration?
     
     /// 초기화 및 기본 세션 설정
     /// - 세션 프리셋과 비디오 출력을 초기화
@@ -156,56 +174,80 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
         isMirrored: Bool
     ) {
         sessionQueue.async { [weak self] in
-            guard let self, let connection = self.videoOutput.connection(with: .video) else { return }
-
-            let configurationKey = self.makeVideoOutputConfigurationKey(
-                connection: connection,
+            self?.applyVideoOutputConfigurationOnSessionQueue(
                 rotationAngle: rotationAngle,
                 orientation: orientation,
                 isMirrored: isMirrored
             )
-
-            guard self.lastAppliedVideoOutputConfigurationKey != configurationKey else {
-                return
-            }
-
-            if #available(iOS 17.0, *) {
-                if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
-                    connection.videoRotationAngle = rotationAngle
-                } else if let orientation, connection.isVideoOrientationSupported {
-                    switch orientation {
-                    case .portrait:
-                        connection.videoOrientation = .portrait
-                    case .portraitUpsideDown:
-                        connection.videoOrientation = .portraitUpsideDown
-                    case .landscapeRight:
-                        connection.videoOrientation = .landscapeRight
-                    case .landscapeLeft:
-                        connection.videoOrientation = .landscapeLeft
-                    }
-                } else if connection.isVideoRotationAngleSupported(0) {
-                    connection.videoRotationAngle = 0
-                }
-            } else if let orientation, connection.isVideoOrientationSupported {
-                switch orientation {
-                case .portrait:
-                    connection.videoOrientation = .portrait
-                case .portraitUpsideDown:
-                    connection.videoOrientation = .portraitUpsideDown
-                case .landscapeRight:
-                    connection.videoOrientation = .landscapeRight
-                case .landscapeLeft:
-                    connection.videoOrientation = .landscapeLeft
-                }
-            }
-
-            if connection.isVideoMirroringSupported {
-                connection.automaticallyAdjustsVideoMirroring = false
-                connection.isVideoMirrored = isMirrored
-            }
-
-            self.lastAppliedVideoOutputConfigurationKey = configurationKey
         }
+    }
+
+    /// `updateVideoOutputConfiguration` 의 실제 구현. 호출자는 반드시 `sessionQueue` 위에 있어야 한다.
+    /// `switchToCamera` 처럼 이미 sessionQueue 위에서 실행 중인 경우, 재-dispatch 로 인한 한 틱 지연을
+    /// 피하기 위해 이 메서드를 직접 호출해 같은 block 내에서 동기 적용한다.
+    private func applyVideoOutputConfigurationOnSessionQueue(
+        rotationAngle: CGFloat?,
+        orientation: PreviewVideoOrientation?,
+        isMirrored: Bool
+    ) {
+        guard let connection = self.videoOutput.connection(with: .video) else { return }
+
+        let configurationKey = self.makeVideoOutputConfigurationKey(
+            connection: connection,
+            rotationAngle: rotationAngle,
+            orientation: orientation,
+            isMirrored: isMirrored
+        )
+
+        guard self.lastAppliedVideoOutputConfigurationKey != configurationKey else {
+            return
+        }
+
+        if #available(iOS 17.0, *) {
+            if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
+                connection.videoRotationAngle = rotationAngle
+            } else if !applyLegacyVideoOrientation(orientation, to: connection),
+                connection.isVideoRotationAngleSupported(0)
+            {
+                connection.videoRotationAngle = 0
+            }
+        } else {
+            _ = applyLegacyVideoOrientation(orientation, to: connection)
+        }
+
+        if connection.isVideoMirroringSupported {
+            connection.automaticallyAdjustsVideoMirroring = false
+            connection.isVideoMirrored = isMirrored
+        }
+
+        self.lastAppliedVideoOutputConfigurationKey = configurationKey
+        self.cachedVideoOutputConfiguration = CachedVideoOutputConfiguration(
+            rotationAngle: rotationAngle,
+            orientation: orientation,
+            isMirrored: isMirrored
+        )
+    }
+
+    /// `PreviewVideoOrientation` 을 `connection.videoOrientation` 에 적용.
+    /// iOS 17 이상에서는 회전 각도 API 가 우선이고 이 경로는 fallback 으로만 사용된다.
+    /// @discardableResult 를 붙여 iOS 17+ 분기에서 "미적용 여부" 판별에 활용.
+    @discardableResult
+    private func applyLegacyVideoOrientation(
+        _ orientation: PreviewVideoOrientation?,
+        to connection: AVCaptureConnection
+    ) -> Bool {
+        guard let orientation, connection.isVideoOrientationSupported else { return false }
+        switch orientation {
+        case .portrait:
+            connection.videoOrientation = .portrait
+        case .portraitUpsideDown:
+            connection.videoOrientation = .portraitUpsideDown
+        case .landscapeRight:
+            connection.videoOrientation = .landscapeRight
+        case .landscapeLeft:
+            connection.videoOrientation = .landscapeLeft
+        }
+        return true
     }
 
     private func makeVideoOutputConfigurationKey(
@@ -482,12 +524,30 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             self.lastFrameTime = CACurrentMediaTime()
             
             logInfo("🎥 카메라 전환 완료: \(camera.name)", category: .camera)
-            
+
+            // 새 입력과 함께 생성되는 AVCaptureConnection 은 기본 orientation 을 갖기 때문에,
+            // 직전까지 적용돼 있던 rotation / orientation / mirroring 을 다시 씌워준다.
+            // 이미 sessionQueue 위에서 실행 중이므로 재-dispatch 로 한 틱 밀리지 않도록
+            // 동기 헬퍼를 직접 호출해 같은 block 내에서 즉시 적용.
+            // 캐시 키는 connection ObjectIdentifier 기반이라 새 connection 에서는 자동으로 무효화된다.
+            self.lastAppliedVideoOutputConfigurationKey = nil
+            if let cached = self.cachedVideoOutputConfiguration {
+                self.applyVideoOutputConfigurationOnSessionQueue(
+                    rotationAngle: cached.rotationAngle,
+                    orientation: cached.orientation,
+                    isMirrored: cached.isMirrored
+                )
+            }
+
             // 카메라 전환 완료를 델리게이트에 알림 (스트리밍 동기화용)
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 await self.switchDelegate?.didSwitchCamera(to: camera.device, session: self.captureSession)
             }
+
+            // 프리뷰 레이어는 AVCaptureVideoPreviewLayer 의 connection 이 새 입력에 맞춰 재생성될 수 있으므로,
+            // 뷰 측에서 orientation 을 다시 적용하도록 notification 을 발송.
+            NotificationCenter.default.post(name: .cameraSessionDidSwitchCamera, object: self)
         }
     }
     
