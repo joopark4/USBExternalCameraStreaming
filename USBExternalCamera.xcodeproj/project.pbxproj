@@ -629,7 +629,7 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/HaishinKit/HaishinKit.swift";
 			requirement = {
-				kind = upToNextMinorVersion;
+				kind = upToNextMajorVersion;
 				minimumVersion = 2.0.8;
 			};
 		};

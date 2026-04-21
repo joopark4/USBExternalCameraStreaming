@@ -47,7 +47,7 @@ extension HaishinKitManager {
     // 720p 전용 인코딩 설정
     videoSettings.profileLevel = kVTProfileLevel_H264_Main_AutoLevel as String
 
-    await stream.setVideoSettings(videoSettings)
+    try? await stream.setVideoSettings(videoSettings)
 
     logger.info("✅ 720p 버퍼링 최적화 완료", category: .system)
   }

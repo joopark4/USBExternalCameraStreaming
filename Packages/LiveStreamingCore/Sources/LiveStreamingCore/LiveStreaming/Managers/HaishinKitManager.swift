@@ -4,6 +4,7 @@ import Combine
 import CoreImage
 import Foundation
 import HaishinKit
+import RTMPHaishinKit
 import Network
 import UIKit
 import VideoToolbox
@@ -382,7 +383,7 @@ public class HaishinKitManager: NSObject, @preconcurrency HaishinKitManagerProto
 
   /// **MediaMixer (Examples 패턴)**
   lazy var mixer = MediaMixer(
-    multiCamSessionEnabled: false, multiTrackAudioMixingEnabled: false, useManualCapture: true)
+    captureSessionMode: .manual, multiTrackAudioMixingEnabled: false)
 
   /// MediaMixer 인스턴스 저장 용도
   var mediaMixer: MediaMixer?
