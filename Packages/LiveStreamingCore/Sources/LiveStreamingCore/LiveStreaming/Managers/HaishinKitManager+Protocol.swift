@@ -127,6 +127,14 @@ extension HaishinKitManager {
       settings.videoHeight = videoHeight
     }
 
+    if let rawOrientation = defaults.string(forKey: "LiveStream.streamOrientation"),
+       let orientation = StreamOrientation(rawValue: rawOrientation)
+    {
+      settings.streamOrientation = orientation
+    } else {
+      settings.streamOrientation = settings.videoHeight > settings.videoWidth ? .portrait : .landscape
+    }
+
     let frameRate = defaults.integer(forKey: "LiveStream.frameRate")
     if frameRate > 0 {
       settings.frameRate = frameRate
@@ -167,6 +175,8 @@ extension HaishinKitManager {
       settings.audioEncoder = audioEncoder
     }
 
+    settings.normalizeVideoDimensionsForOrientation()
+
     logger.info("✅ 스트리밍 설정 로드 완료", category: .system)
     return settings
   }
@@ -175,11 +185,15 @@ extension HaishinKitManager {
   public func saveSettings(_ settings: LiveStreamSettings) {
     logger.info("💾 스트리밍 설정 저장 시작", category: .system)
 
+    var normalizedSettings = settings
+    normalizedSettings.normalizeVideoDimensionsForOrientation()
+
     // 현재 설정과 비교하여 변경된 경우에만 스트리밍 중 실시간 적용
-    let settingsChanged = (currentSettings != nil) && !isSettingsEqual(currentSettings!, settings)
+    let previousSettings = currentSettings
+    let settingsChanged = (previousSettings != nil) && !isSettingsEqual(previousSettings!, normalizedSettings)
     if settingsChanged && isStreaming {
       logger.info("🔄 스트리밍 중 설정 변경 감지 - 실시간 적용 시작", category: .system)
-      currentSettings = settings
+      currentSettings = normalizedSettings
 
       // 비동기로 실시간 설정 적용
       Task {
@@ -191,54 +205,55 @@ extension HaishinKitManager {
       }
     } else {
       // 설정 업데이트 (스트리밍 중이 아니거나 변경사항 없음)
-      currentSettings = settings
+      currentSettings = normalizedSettings
     }
 
     let defaults = UserDefaults.standard
 
     // 기본 스트리밍 설정
-    defaults.set(settings.rtmpURL, forKey: "LiveStream.rtmpURL")
+    defaults.set(normalizedSettings.rtmpURL, forKey: "LiveStream.rtmpURL")
 
     // 스트림 키는 Keychain에 저장 (보안 향상)
-    if !settings.streamKey.isEmpty {
-      if !KeychainManager.shared.saveStreamKey(settings.streamKey) {
+    let shouldPersistStreamKey = !normalizedSettings.streamKey.isEmpty
+      && previousSettings?.streamKey != normalizedSettings.streamKey
+    if shouldPersistStreamKey {
+      if !KeychainManager.shared.saveStreamKey(normalizedSettings.streamKey) {
         logger.error("❌ 스트림 키 Keychain 저장 실패", category: .system)
       }
     }
 
-    defaults.set(settings.streamTitle, forKey: "LiveStream.streamTitle")
+    defaults.set(normalizedSettings.streamTitle, forKey: "LiveStream.streamTitle")
 
     // 비디오 설정
-    defaults.set(settings.videoBitrate, forKey: "LiveStream.videoBitrate")
-    defaults.set(settings.videoWidth, forKey: "LiveStream.videoWidth")
-    defaults.set(settings.videoHeight, forKey: "LiveStream.videoHeight")
-    defaults.set(settings.frameRate, forKey: "LiveStream.frameRate")
+    defaults.set(normalizedSettings.videoBitrate, forKey: "LiveStream.videoBitrate")
+    defaults.set(normalizedSettings.videoWidth, forKey: "LiveStream.videoWidth")
+    defaults.set(normalizedSettings.videoHeight, forKey: "LiveStream.videoHeight")
+    defaults.set(normalizedSettings.streamOrientation.rawValue, forKey: "LiveStream.streamOrientation")
+    defaults.set(normalizedSettings.frameRate, forKey: "LiveStream.frameRate")
 
     // 오디오 설정
-    defaults.set(settings.audioBitrate, forKey: "LiveStream.audioBitrate")
+    defaults.set(normalizedSettings.audioBitrate, forKey: "LiveStream.audioBitrate")
 
     // 고급 설정
-    defaults.set(settings.autoReconnect, forKey: "LiveStream.autoReconnect")
-    defaults.set(settings.isEnabled, forKey: "LiveStream.isEnabled")
-    defaults.set(settings.bufferSize, forKey: "LiveStream.bufferSize")
-    defaults.set(settings.connectionTimeout, forKey: "LiveStream.connectionTimeout")
-    defaults.set(settings.videoEncoder, forKey: "LiveStream.videoEncoder")
-    defaults.set(settings.audioEncoder, forKey: "LiveStream.audioEncoder")
+    defaults.set(normalizedSettings.autoReconnect, forKey: "LiveStream.autoReconnect")
+    defaults.set(normalizedSettings.isEnabled, forKey: "LiveStream.isEnabled")
+    defaults.set(normalizedSettings.bufferSize, forKey: "LiveStream.bufferSize")
+    defaults.set(normalizedSettings.connectionTimeout, forKey: "LiveStream.connectionTimeout")
+    defaults.set(normalizedSettings.videoEncoder, forKey: "LiveStream.videoEncoder")
+    defaults.set(normalizedSettings.audioEncoder, forKey: "LiveStream.audioEncoder")
 
     // 저장 시점 기록
     defaults.set(Date(), forKey: "LiveStream.savedAt")
 
-    // 즉시 디스크에 동기화
-    defaults.synchronize()
-
     logger.info("✅ 스트리밍 설정 저장 완료", category: .system)
     logger.debug("💾 저장된 설정:", category: .system)
     logger.debug("  📍 RTMP URL: [설정됨]", category: .system)
-    logger.debug("  🔑 스트림 키 길이: \(settings.streamKey.count)자", category: .system)
+    logger.debug("  🔑 스트림 키 길이: \(normalizedSettings.streamKey.count)자", category: .system)
     logger.debug(
-      "  📊 비디오: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.videoBitrate)kbps",
+      "  📊 비디오: \(normalizedSettings.videoWidth)×\(normalizedSettings.videoHeight) @ \(normalizedSettings.videoBitrate)kbps",
       category: .system)
-    logger.debug("  🎵 오디오: \(settings.audioBitrate)kbps", category: .system)
+    logger.debug("  ↕️ 송출 방향: \(normalizedSettings.streamOrientation.rawValue)", category: .system)
+    logger.debug("  🎵 오디오: \(normalizedSettings.audioBitrate)kbps", category: .system)
   }
 
   /// 두 설정이 동일한지 비교 (실시간 적용 여부 결정용)
@@ -248,6 +263,7 @@ extension HaishinKitManager {
   ) -> Bool {
     return settings1.videoWidth == settings2.videoWidth
       && settings1.videoHeight == settings2.videoHeight
+      && settings1.streamOrientation == settings2.streamOrientation
       && settings1.videoBitrate == settings2.videoBitrate
       && settings1.audioBitrate == settings2.audioBitrate
       && settings1.frameRate == settings2.frameRate

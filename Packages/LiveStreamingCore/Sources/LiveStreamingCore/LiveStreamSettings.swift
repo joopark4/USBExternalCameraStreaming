@@ -33,6 +33,9 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
     
     /// 비디오 높이
     public var videoHeight: Int = 1080
+
+    /// 송출 방향
+    public var streamOrientation: StreamOrientation = StreamOrientation.landscape
     
     /// 프레임 레이트
     public var frameRate: Int = 30
@@ -95,6 +98,7 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
         videoBitrate: Int = 4500,
         videoWidth: Int = 1920,
         videoHeight: Int = 1080,
+        streamOrientation: StreamOrientation = StreamOrientation.landscape,
         frameRate: Int = 30,
         keyframeInterval: Int = 2,
         videoEncoder: String = "H.264",
@@ -115,6 +119,7 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
         self.videoBitrate = videoBitrate
         self.videoWidth = videoWidth
         self.videoHeight = videoHeight
+        self.streamOrientation = streamOrientation
         self.frameRate = frameRate
         self.keyframeInterval = keyframeInterval
         self.videoEncoder = videoEncoder
@@ -131,6 +136,10 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
     /// 비디오 해상도 문자열
     public var resolutionString: String {
         return "\(videoWidth)×\(videoHeight)"
+    }
+
+    public var normalizedResolutionClass: StreamResolutionClass {
+        StreamResolutionDescriptor(width: videoWidth, height: videoHeight).resolutionClass
     }
     
     /// 설정 유효성 검사
@@ -165,6 +174,7 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
             videoBitrate: videoBitrate,
             videoWidth: videoWidth,
             videoHeight: videoHeight,
+            streamOrientation: streamOrientation,
             frameRate: frameRate,
             keyframeInterval: keyframeInterval,
             videoEncoder: videoEncoder,
@@ -201,6 +211,9 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
             self.videoBitrate = importData.videoBitrate
             self.videoWidth = importData.videoWidth
             self.videoHeight = importData.videoHeight
+            self.streamOrientation = importData.streamOrientation ?? (
+                importData.videoHeight > importData.videoWidth ? .portrait : .landscape
+            )
             self.frameRate = importData.frameRate
             self.keyframeInterval = importData.keyframeInterval
             self.videoEncoder = importData.videoEncoder
@@ -294,25 +307,30 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
     
     /// 해상도 프리셋 적용
     public func applyResolutionPreset(_ preset: ResolutionPreset) {
+        let orientation = streamOrientation
         switch preset {
         case .sd480p:
-            videoWidth = 848  // 16의 배수 호환성 개선
-            videoHeight = 480
+            let size = StreamResolutionDescriptor.presetSize(for: .p480, orientation: orientation)
+            videoWidth = size?.width ?? 848
+            videoHeight = size?.height ?? 480
             frameRate = 30
             videoBitrate = 1500
         case .hd720p:
-            videoWidth = 1280
-            videoHeight = 720
+            let size = StreamResolutionDescriptor.presetSize(for: .p720, orientation: orientation)
+            videoWidth = size?.width ?? 1280
+            videoHeight = size?.height ?? 720
             frameRate = 30
             videoBitrate = 2500
         case .fhd1080p:
-            videoWidth = 1920
-            videoHeight = 1080
+            let size = StreamResolutionDescriptor.presetSize(for: .p1080, orientation: orientation)
+            videoWidth = size?.width ?? 1920
+            videoHeight = size?.height ?? 1080
             frameRate = 30
             videoBitrate = 4500
         case .uhd4k:
-            videoWidth = 3840
-            videoHeight = 2160
+            let size = StreamResolutionDescriptor.presetSize(for: .p4k, orientation: orientation)
+            videoWidth = size?.width ?? 3840
+            videoHeight = size?.height ?? 2160
             frameRate = 30
             videoBitrate = 15000
         case .custom:
@@ -368,7 +386,7 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
     
     /// 유튜브 라이브 스트리밍 표준 프리셋 적용
     public func applyYouTubeLivePreset(_ preset: YouTubeLivePreset) {
-        let settings = preset.settings
+        let settings = preset.settings(for: streamOrientation)
         
         videoWidth = settings.width
         videoHeight = settings.height
@@ -390,12 +408,10 @@ public final class LiveStreamSettingsModel: @unchecked Sendable {
         for preset in YouTubeLivePreset.allCases {
             if preset == .custom { continue }
             
-            let presetSettings = preset.settings
             let bitrateRange = preset.bitrateRange
             
-            if videoWidth == presetSettings.width &&
-               videoHeight == presetSettings.height &&
-               frameRate == presetSettings.frameRate &&
+            if normalizedResolutionClass == preset.resolutionClass &&
+               frameRate == preset.settings(for: streamOrientation).frameRate &&
                videoBitrate >= bitrateRange.min &&
                videoBitrate <= bitrateRange.max {
                 return preset
@@ -463,6 +479,7 @@ private struct ExportData: Codable {
     let videoBitrate: Int
     let videoWidth: Int
     let videoHeight: Int
+    let streamOrientation: StreamOrientation?
     let frameRate: Int
     let keyframeInterval: Int
     let videoEncoder: String

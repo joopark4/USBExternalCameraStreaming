@@ -16,7 +16,7 @@ import LiveStreamingCore
 struct CameraPreviewView: UIViewRepresentable {
   let session: AVCaptureSession
   let cameraViewModel: CameraPreviewFrameRouting
-  var streamViewModel: LiveStreamViewModel?
+  let streamingSettings: LiveStreamSettings
   var haishinKitManager: HaishinKitManager?
 
   // 텍스트 오버레이 관련 프로퍼티
@@ -26,14 +26,14 @@ struct CameraPreviewView: UIViewRepresentable {
   init(
     session: AVCaptureSession,
     cameraViewModel: CameraPreviewFrameRouting,
-    streamViewModel: LiveStreamViewModel? = nil,
+    streamingSettings: LiveStreamSettings,
     haishinKitManager: HaishinKitManager? = nil,
     showTextOverlay: Bool = false,
     overlayText: String = ""
   ) {
     self.session = session
     self.cameraViewModel = cameraViewModel
-    self.streamViewModel = streamViewModel
+    self.streamingSettings = streamingSettings
     self.haishinKitManager = haishinKitManager
     self.showTextOverlay = showTextOverlay
     self.overlayText = overlayText
@@ -44,20 +44,9 @@ struct CameraPreviewView: UIViewRepresentable {
     view.captureSession = session
     view.frameRouter = cameraViewModel
     view.haishinKitManager = haishinKitManager
+    view.streamingSettings = streamingSettings
     view.showTextOverlay = showTextOverlay
     view.overlayText = overlayText
-
-    // 여백을 4픽셀로 설정하고 화면에 꽉차게 설정
-    view.translatesAutoresizingMaskIntoConstraints = false
-    NSLayoutConstraint.activate([
-      view.topAnchor.constraint(equalTo: view.superview?.topAnchor ?? view.topAnchor, constant: 4),
-      view.bottomAnchor.constraint(
-        equalTo: view.superview?.bottomAnchor ?? view.bottomAnchor, constant: -4),
-      view.leadingAnchor.constraint(
-        equalTo: view.superview?.leadingAnchor ?? view.leadingAnchor, constant: 4),
-      view.trailingAnchor.constraint(
-        equalTo: view.superview?.trailingAnchor ?? view.trailingAnchor, constant: -4),
-    ])
 
     return view
   }
@@ -70,20 +59,22 @@ struct CameraPreviewView: UIViewRepresentable {
       let textOverlayChanged =
         previewView.showTextOverlay != showTextOverlay || previewView.overlayText != overlayText
 
+      previewView.streamingSettings = streamingSettings
+
       if sessionChanged {
-        logInfo("캡처 세션 변경 감지 - 업데이트", category: .camera)
+        logDebug("캡처 세션 변경 감지 - 업데이트", category: .camera)
         previewView.captureSession = session
       }
 
       previewView.frameRouter = cameraViewModel
 
       if managerChanged {
-        logInfo("HaishinKit 매니저 변경 감지 - 업데이트", category: .camera)
+        logDebug("HaishinKit 매니저 변경 감지 - 업데이트", category: .camera)
         previewView.haishinKitManager = haishinKitManager
       }
 
       if textOverlayChanged {
-        logInfo("텍스트 오버레이 변경 감지 - 업데이트", category: .camera)
+        logDebug("텍스트 오버레이 변경 감지 - 업데이트", category: .camera)
         previewView.showTextOverlay = showTextOverlay
         previewView.overlayText = overlayText
 
@@ -92,9 +83,6 @@ struct CameraPreviewView: UIViewRepresentable {
           haishinKitManager.updateTextOverlay(show: showTextOverlay, text: overlayText)
         }
       }
-
-      // 프리뷰 새로고침은 하지 않음 (안정성 향상)
-      logInfo("업데이트 완료 - 프리뷰 새로고침 건너뜀", category: .camera)
     }
   }
 

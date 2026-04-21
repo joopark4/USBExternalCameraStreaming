@@ -31,7 +31,7 @@ extension HaishinKitManager {
   func optimize720pBuffering() async {
     guard let stream = await streamSwitcher.stream,
       let settings = currentSettings,
-      settings.videoWidth == 1280 && settings.videoHeight == 720
+      settings.normalizedResolutionClass == .p720
     else {
       return
     }

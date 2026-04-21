@@ -7,22 +7,33 @@
 
 import SwiftUI
 import LiveStreamingCore
+import Combine
 
 // MARK: - Detail View Components
 
 /// 상세 화면 View 컴포넌트
 /// 선택된 사이드바 항목에 따라 적절한 콘텐츠를 표시하는 컴포넌트입니다.
 struct DetailView: View {
-  @ObservedObject var viewModel: MainViewModel
+  private let viewModel: MainViewModel
+  @StateObject private var detailUIState: DetailUIState
   var onShowSidebar: () -> Void = {}
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
+  init(viewModel: MainViewModel, onShowSidebar: @escaping () -> Void = {}) {
+    self.viewModel = viewModel
+    self._detailUIState = StateObject(wrappedValue: DetailUIState(viewModel: viewModel))
+    self.onShowSidebar = onShowSidebar
+  }
+
   var body: some View {
     Group {
-      switch viewModel.selectedSidebarItem {
+      switch detailUIState.selectedSidebarItem {
       case .cameras:
         // 카메라 상세 화면
-        CameraDetailContentView(viewModel: viewModel)
+        CameraDetailContentView(
+          viewModel: viewModel,
+          currentUIState: detailUIState.currentUIState
+        )
       case .none:
         // 아무것도 선택되지 않은 상태
         VStack {
@@ -53,10 +64,11 @@ struct DetailView: View {
 /// 카메라 상세 콘텐츠 View 컴포넌트
 /// 현재 UI 상태에 따라 적절한 카메라 관련 화면을 표시합니다.
 struct CameraDetailContentView: View {
-  @ObservedObject var viewModel: MainViewModel
+  let viewModel: MainViewModel
+  let currentUIState: UIState
 
   var body: some View {
-    switch viewModel.currentUIState {
+    switch currentUIState {
     case .loading:
       // 로딩 상태
       LoadingView()
@@ -78,11 +90,38 @@ struct CameraDetailContentView: View {
 /// 16:9 비율로 제한하여 실제 송출되는 영역만 표시합니다.
 /// 키보드가 올라와도 레이아웃이 변경되지 않습니다.
 struct CameraPreviewContainerView: View {
-  @ObservedObject var viewModel: MainViewModel
+  @ObservedObject private var cameraViewModel: CameraViewModel
+  @StateObject private var liveStreamUIState: CameraPreviewLiveState
+  @StateObject private var textOverlayUIState: CameraPreviewTextOverlayState
+  @StateObject private var layoutState = CameraPreviewLayoutState()
+  private let liveStreamViewModel: LiveStreamViewModel
+  private let toggleScreenCaptureStreamingAction: () -> Void
+  private let switchToNextCameraAction: () -> Void
+  private let toggleTextOverlayAction: () -> Void
+  private let showTextSettingsAction: () -> Void
   @State private var isAdvancedPanelExpanded = false
 
+  init(viewModel: MainViewModel) {
+    self._cameraViewModel = ObservedObject(wrappedValue: viewModel.cameraViewModel)
+    self.liveStreamViewModel = viewModel.liveStreamViewModel
+    self.toggleScreenCaptureStreamingAction = { viewModel.toggleScreenCaptureStreaming() }
+    self.switchToNextCameraAction = { viewModel.switchToNextCamera() }
+    self.toggleTextOverlayAction = { viewModel.toggleTextOverlay() }
+    self.showTextSettingsAction = { viewModel.showTextSettings() }
+    self._liveStreamUIState = StateObject(
+      wrappedValue: CameraPreviewLiveState(viewModel: viewModel.liveStreamViewModel)
+    )
+    self._textOverlayUIState = StateObject(
+      wrappedValue: CameraPreviewTextOverlayState(viewModel: viewModel)
+    )
+  }
+
   private var isFocusModeActive: Bool {
-    viewModel.liveStreamViewModel.isScreenCaptureStreaming
+    liveStreamUIState.isScreenCaptureStreaming
+  }
+
+  private var streamLayoutProfile: StreamLayoutProfile {
+    liveStreamUIState.settings.streamLayoutProfile
   }
 
   private var shouldShowAdvancedPanels: Bool {
@@ -90,13 +129,13 @@ struct CameraPreviewContainerView: View {
   }
 
   private var isActionLocked: Bool {
-    viewModel.liveStreamViewModel.status == .connecting
-      || viewModel.liveStreamViewModel.status == .disconnecting
-      || viewModel.liveStreamViewModel.isLoading
+    liveStreamUIState.status == .connecting
+      || liveStreamUIState.status == .disconnecting
+      || liveStreamUIState.isLoading
   }
 
   private var selectedCameraTitle: String {
-    viewModel.cameraViewModel.selectedCamera?.name
+    cameraViewModel.selectedCamera?.name
       ?? NSLocalizedString("select_camera", comment: "카메라 선택")
   }
 
@@ -115,13 +154,33 @@ struct CameraPreviewContainerView: View {
   }
 
   private func verticalPreviewHeightRatio(
-    for containerSize: CGSize,
-    showsTextControls: Bool
+    for containerSize: CGSize
   ) -> CGFloat {
     if isCompactDetailWidth(containerSize) {
-      return showsTextControls ? 0.40 : 0.46
+      return 0.66
     }
-    return showsTextControls ? 0.34 : 0.40
+    return 0.58
+  }
+
+  private func horizontalPreviewTargetWidthRatio() -> CGFloat {
+    0.58
+  }
+
+  private func widePreviewHeightRatio() -> CGFloat {
+    switch liveStreamUIState.settings.streamOrientation {
+    case .landscape:
+      return 0.84
+    case .portrait:
+      return 0.84
+    }
+  }
+
+  private func defaultIsWideScreen(for containerSize: CGSize) -> Bool {
+    containerSize.width >= containerSize.height
+  }
+
+  private func defaultShowsSupplementaryInfo(for containerSize: CGSize) -> Bool {
+    shouldShowAdvancedPanels && defaultIsWideScreen(for: containerSize)
   }
 
   var body: some View {
@@ -130,15 +189,49 @@ struct CameraPreviewContainerView: View {
 
       GeometryReader { geometry in
         let containerSize = geometry.size
-        let isWideScreen = containerSize.width >= 980
-          && containerSize.width > containerSize.height * 1.15  // 가로가 긴 화면 판단
+        let fallbackIsWideScreen = defaultIsWideScreen(for: containerSize)
+        let isWideScreen = layoutState.hasResolvedLayout
+          ? layoutState.isWideScreen
+          : fallbackIsWideScreen
+        let showsSupplementaryInfo = layoutState.hasResolvedLayout
+          ? layoutState.showsSupplementaryInfo
+          : defaultShowsSupplementaryInfo(for: containerSize)
 
-        if isWideScreen {
-          // 가로로 긴 화면 (iPad, Mac): 수평 분할
-          horizontalLayout(containerSize: containerSize)
-        } else {
-          // 세로로 긴 화면 (iPhone): 수직 분할
-          verticalLayout(containerSize: containerSize)
+        let rootLayout = isWideScreen
+          ? AnyLayout(HStackLayout(spacing: 8))
+          : AnyLayout(VStackLayout(spacing: 7))
+
+        rootLayout {
+          previewColumn(
+            containerSize: containerSize,
+            isWideScreen: isWideScreen
+          )
+
+          studioSection(
+            containerSize: containerSize,
+            isWideScreen: isWideScreen,
+            showsSupplementaryInfo: showsSupplementaryInfo
+          )
+        }
+        .onAppear {
+          layoutState.scheduleUpdate(
+            for: containerSize,
+            shouldShowAdvancedPanels: shouldShowAdvancedPanels,
+            force: true
+          )
+        }
+        .onChange(of: containerSize) { _, newSize in
+          layoutState.scheduleUpdate(
+            for: newSize,
+            shouldShowAdvancedPanels: shouldShowAdvancedPanels
+          )
+        }
+        .onChange(of: shouldShowAdvancedPanels) { _, newValue in
+          layoutState.scheduleUpdate(
+            for: containerSize,
+            shouldShowAdvancedPanels: newValue,
+            force: true
+          )
         }
       }
     }
@@ -152,7 +245,7 @@ struct CameraPreviewContainerView: View {
       UIApplication.shared.sendAction(
         #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-    .onChange(of: viewModel.liveStreamViewModel.status) { oldStatus, newStatus in
+    .onChange(of: liveStreamUIState.status) { oldStatus, newStatus in
       if newStatus == .streaming, oldStatus != .streaming {
         withAnimation(.easeInOut(duration: 0.2)) {
           isAdvancedPanelExpanded = false
@@ -172,20 +265,20 @@ struct CameraPreviewContainerView: View {
     VStack(spacing: 10) {
       HStack(spacing: 10) {
         Button {
-          viewModel.toggleScreenCaptureStreaming()
+          toggleScreenCaptureStreamingAction()
         } label: {
           Label(
-            viewModel.liveStreamViewModel.streamingButtonText,
-            systemImage: viewModel.liveStreamViewModel.isScreenCaptureStreaming
+            liveStreamUIState.streamingButtonText,
+            systemImage: liveStreamUIState.isScreenCaptureStreaming
               ? "stop.fill" : "play.fill"
           )
           .frame(maxWidth: .infinity, minHeight: 50)
         }
-        .buttonStyle(FocusActionButtonStyle(tint: viewModel.liveStreamViewModel.isScreenCaptureStreaming ? .red : .blue))
-        .disabled(isActionLocked || !viewModel.liveStreamViewModel.isScreenCaptureButtonEnabled)
+        .buttonStyle(FocusActionButtonStyle(tint: liveStreamUIState.isScreenCaptureStreaming ? .red : .blue))
+        .disabled(isActionLocked || !liveStreamUIState.isScreenCaptureButtonEnabled)
 
         Button {
-          viewModel.switchToNextCamera()
+          switchToNextCameraAction()
         } label: {
           Label(selectedCameraTitle, systemImage: "arrow.triangle.2.circlepath.camera")
             .lineLimit(1)
@@ -193,40 +286,43 @@ struct CameraPreviewContainerView: View {
             .frame(maxWidth: .infinity, minHeight: 50)
         }
         .buttonStyle(FocusActionButtonStyle(tint: .indigo))
-        .disabled(isActionLocked || !viewModel.canSwitchCameraQuickly)
+        .disabled(
+          isActionLocked
+            || (cameraViewModel.builtInCameras + cameraViewModel.externalCameras).count <= 1
+        )
       }
 
       HStack(spacing: 8) {
         FocusMetricChip(
           title: NSLocalizedString("status", comment: "상태"),
-          value: viewModel.liveStreamViewModel.status.description,
+          value: liveStreamUIState.status.description,
           icon: "dot.radiowaves.left.and.right",
           tint: isFocusModeActive ? .red : .gray
         )
         .frame(maxWidth: .infinity)
 
         Button {
-          viewModel.liveStreamViewModel.toggleMicrophoneMute()
+          liveStreamViewModel.toggleMicrophoneMute()
         } label: {
           Label(
-            viewModel.liveStreamViewModel.isMicrophoneMuted
+            liveStreamUIState.isMicrophoneMuted
               ? NSLocalizedString("microphone_unmute", comment: "마이크 음소거 해제")
               : NSLocalizedString("microphone_mute", comment: "마이크 음소거"),
-            systemImage: viewModel.liveStreamViewModel.isMicrophoneMuted ? "mic.slash.fill" : "mic.fill"
+            systemImage: liveStreamUIState.isMicrophoneMuted ? "mic.slash.fill" : "mic.fill"
           )
           .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(
           FocusActionButtonStyle(
-            tint: viewModel.liveStreamViewModel.isMicrophoneMuted ? .orange : .teal))
+            tint: liveStreamUIState.isMicrophoneMuted ? .orange : .teal))
         .disabled(
-          viewModel.liveStreamViewModel.status == .connecting
-            || viewModel.liveStreamViewModel.status == .disconnecting
+          liveStreamUIState.status == .connecting
+            || liveStreamUIState.status == .disconnecting
         )
 
         FocusMetricChip(
           title: NSLocalizedString("video_bitrate", comment: "비디오 비트레이트"),
-          value: "\(viewModel.liveStreamViewModel.settings.videoBitrate) kbps",
+          value: "\(liveStreamUIState.settings.videoBitrate) kbps",
           icon: "speedometer",
           tint: .blue
         )
@@ -265,61 +361,45 @@ struct CameraPreviewContainerView: View {
   }
 
   @ViewBuilder
-  private func horizontalLayout(containerSize: CGSize) -> some View {
-    let showsTextControls = shouldShowTextControls(for: containerSize, isHorizontal: true)
-    let previewAspect: CGFloat = 16.0 / 9.0
-    let controlsReservedHeight: CGFloat = showsTextControls ? 136 : 0
-    let previewAvailableHeight = max(1, containerSize.height - 40 - controlsReservedHeight)
-    let previewMaxWidthByHeight = previewAvailableHeight * previewAspect
-    let targetLeftWidth = showsTextControls ? containerSize.width * 0.64 : containerSize.width * 0.72
-    let previewWidth = min(targetLeftWidth, previewMaxWidthByHeight)
-    let leftColumnWidth = previewWidth
-    let columnSpacing: CGFloat = 8
+  private func previewColumn(
+    containerSize: CGSize,
+    isWideScreen: Bool
+  ) -> some View {
+    let showsTextControls = shouldShowTextControls(
+      for: containerSize,
+      isHorizontal: isWideScreen
+    )
 
-    HStack(spacing: columnSpacing) {
-      // 왼쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역
+    if isWideScreen {
+      let previewAvailableHeight = max(1, containerSize.height * widePreviewHeightRatio())
+      let previewSlotWidth = containerSize.width * horizontalPreviewTargetWidthRatio()
+
       VStack(spacing: 8) {
-        // 카메라 프리뷰
         cameraPreviewSection(
           availableSize: CGSize(
-            width: previewWidth,
+            width: previewSlotWidth,
             height: previewAvailableHeight
           )
         )
 
         if showsTextControls {
-          // 메뉴 접힘 상태에서도 프리뷰를 가리지 않도록 하단에 배치
-          TextOverlayControlView(viewModel: viewModel)
+          TextOverlayControlView(
+            isTextOverlayVisible: textOverlayUIState.showTextOverlay,
+            onToggleTextOverlay: toggleTextOverlayAction,
+            onShowTextSettings: showTextSettingsAction
+          )
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
       }
-      .frame(width: leftColumnWidth, alignment: .leading)
+      .frame(width: previewSlotWidth, alignment: .leading)
       .frame(maxHeight: .infinity, alignment: .topLeading)
+    } else {
+      let previewHeightRatio = verticalPreviewHeightRatio(for: containerSize)
+      let previewAvailableHeight = max(
+        120,
+        containerSize.height * previewHeightRatio
+      )
 
-      // 오른쪽: YouTube Studio 영역 (더 크게)
-      VStack(spacing: 0) {
-        YouTubeStudioAccessView(
-          viewModel: viewModel,
-          showsSupplementaryInfo: shouldShowAdvancedPanels && !isCompactDetailWidth(containerSize)
-        )
-          .frame(maxHeight: .infinity)
-      }
-      .frame(maxWidth: .infinity)
-    }
-  }
-
-  @ViewBuilder
-  private func verticalLayout(containerSize: CGSize) -> some View {
-    let showsTextControls = shouldShowTextControls(for: containerSize, isHorizontal: false)
-    let previewHeightRatio = verticalPreviewHeightRatio(
-      for: containerSize,
-      showsTextControls: showsTextControls
-    )
-    let controlsReservedHeight: CGFloat = showsTextControls ? 136 : 0
-    let previewAvailableHeight = max(120, containerSize.height * previewHeightRatio - controlsReservedHeight)
-
-    VStack(spacing: 7) {  // 간격을 4에서 7픽셀로 조정
-      // 위쪽: 카메라 프리뷰 + 텍스트 컨트롤 영역 (iPhone 포함 하단 배치)
       VStack(alignment: .trailing, spacing: 8) {
         cameraPreviewSection(
           availableSize: CGSize(
@@ -329,26 +409,38 @@ struct CameraPreviewContainerView: View {
         )
 
         if showsTextControls {
-          TextOverlayControlView(viewModel: viewModel)
+          TextOverlayControlView(
+            isTextOverlayVisible: textOverlayUIState.showTextOverlay,
+            onToggleTextOverlay: toggleTextOverlayAction,
+            onShowTextSettings: showTextSettingsAction
+          )
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
       }
-      .layoutPriority(0)  // 낮은 우선순위로 설정
-
-      // 아래쪽: YouTube Studio 영역 (남은 공간 모두 차지)
-      YouTubeStudioAccessView(
-        viewModel: viewModel,
-        showsSupplementaryInfo: shouldShowAdvancedPanels && !isCompactDetailWidth(containerSize)
-      )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)  // 남은 공간 모두 차지
-        .layoutPriority(1)  // 높은 우선순위로 확장
+      .layoutPriority(0)
     }
   }
 
   @ViewBuilder
+  private func studioSection(
+    containerSize: CGSize,
+    isWideScreen: Bool,
+    showsSupplementaryInfo: Bool
+  ) -> some View {
+    YouTubeStudioAccessView(
+      streamingStatusDescription: liveStreamUIState.status.description,
+      isStreaming: liveStreamUIState.status == .streaming,
+      isValidStreamKey: liveStreamUIState.isValidStreamKey,
+      showsSupplementaryInfo: showsSupplementaryInfo
+    )
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .layoutPriority(isWideScreen ? 0 : 1)
+  }
+
+  @ViewBuilder
   private func cameraPreviewSection(availableSize: CGSize) -> some View {
-    // 16:9 비율 계산 (유튜브 라이브 표준)
-    let aspectRatio: CGFloat = 16.0 / 9.0
+    let liveStreamSettings = liveStreamUIState.settings
+    let aspectRatio = streamLayoutProfile.aspectRatio
     let audioMeterHeight: CGFloat = 40
     let maxWidth = availableSize.width
     let maxHeight = max(120, availableSize.height - audioMeterHeight)  // 하단 오디오 피크 영역 확보
@@ -365,18 +457,17 @@ struct CameraPreviewContainerView: View {
         return CGSize(width: maxWidth, height: height)
       }
     }()
-
     VStack(spacing: 6) {
       // 16:9 프리뷰 영역 (프리뷰 정보 텍스트 제거하여 간격 최소화)
       ZStack {
         // 카메라 프리뷰
         CameraPreviewView(
-          session: viewModel.cameraViewModel.captureSession,
-          cameraViewModel: viewModel.cameraViewModel,
-          streamViewModel: viewModel.liveStreamViewModel,
-          haishinKitManager: viewModel.liveStreamViewModel.streamingService as? HaishinKitManager,
-          showTextOverlay: viewModel.showTextOverlay,
-          overlayText: viewModel.currentOverlayText
+          session: cameraViewModel.captureSession,
+          cameraViewModel: cameraViewModel,
+          streamingSettings: liveStreamSettings,
+          haishinKitManager: liveStreamViewModel.streamingService as? HaishinKitManager,
+          showTextOverlay: textOverlayUIState.showTextOverlay,
+          overlayText: textOverlayUIState.currentOverlayText
         )
         .aspectRatio(aspectRatio, contentMode: .fit)
         .frame(width: previewSize.width, height: previewSize.height)
@@ -388,36 +479,42 @@ struct CameraPreviewContainerView: View {
         )
         .onAppear {
           // HaishinKitManager에 텍스트 오버레이 정보 전달
-          if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
+          if let haishinKitManager = liveStreamViewModel.streamingService
             as? HaishinKitManager
           {
             haishinKitManager.updateTextOverlay(
-              show: viewModel.showTextOverlay, settings: viewModel.textOverlaySettings)
+              show: textOverlayUIState.showTextOverlay,
+              settings: textOverlayUIState.settings
+            )
           }
         }
-        .onChange(of: viewModel.textOverlaySettings) { _, newSettings in
+        .onChange(of: textOverlayUIState.settings) { _, newSettings in
           // 텍스트 설정 변경 시 HaishinKitManager 업데이트
-          if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
+          if let haishinKitManager = liveStreamViewModel.streamingService
             as? HaishinKitManager
           {
             haishinKitManager.updateTextOverlay(
-              show: viewModel.showTextOverlay, settings: newSettings)
+              show: textOverlayUIState.showTextOverlay,
+              settings: newSettings
+            )
           }
         }
-        .onChange(of: viewModel.showTextOverlay) { _, newValue in
+        .onChange(of: textOverlayUIState.showTextOverlay) { _, newValue in
           // 텍스트 표시 상태 변경 시 HaishinKitManager 업데이트
-          if let haishinKitManager = viewModel.liveStreamViewModel.streamingService
+          if let haishinKitManager = liveStreamViewModel.streamingService
             as? HaishinKitManager
           {
             haishinKitManager.updateTextOverlay(
-              show: newValue, settings: viewModel.textOverlaySettings)
+              show: newValue,
+              settings: textOverlayUIState.settings
+            )
           }
         }
 
         // 텍스트 오버레이
-        if viewModel.showTextOverlay {
+        if textOverlayUIState.showTextOverlay {
           TextOverlayDisplayView(
-            settings: viewModel.textOverlaySettings,
+            settings: textOverlayUIState.settings,
             previewSize: previewSize
           )
         }
@@ -430,17 +527,299 @@ struct CameraPreviewContainerView: View {
       }
 
       AudioPeakMeterView(
-        level: viewModel.liveStreamViewModel.microphonePeakLevel,
-        decibels: viewModel.liveStreamViewModel.microphonePeakDecibels,
-        isMuted: viewModel.liveStreamViewModel.isMicrophoneMuted,
-        isStreaming: viewModel.liveStreamViewModel.status == .streaming,
-        diagnosticMessage: viewModel.liveStreamViewModel.audioPeakDiagnosticMessage,
-        inputSummary: viewModel.liveStreamViewModel.activeMicrophoneDisplaySummary
+        viewModel: liveStreamViewModel
       )
       .frame(width: previewSize.width)
     }
+    .frame(width: availableSize.width, height: availableSize.height, alignment: .top)
   }
 
+}
+
+@MainActor
+private final class CameraPreviewLiveState: ObservableObject {
+  @Published private var snapshot: CameraPreviewLiveSnapshot
+
+  private let viewModel: LiveStreamViewModel
+  private var cancellables = Set<AnyCancellable>()
+
+  init(viewModel: LiveStreamViewModel) {
+    self.viewModel = viewModel
+    self.snapshot = CameraPreviewLiveSnapshot(
+      settings: viewModel.settings,
+      status: viewModel.status,
+      isLoading: viewModel.isLoading,
+      isMicrophoneMuted: viewModel.isMicrophoneMuted,
+      isScreenCaptureStreaming: viewModel.isScreenCaptureStreaming,
+      streamingButtonText: viewModel.streamingButtonText,
+      isScreenCaptureButtonEnabled: viewModel.isScreenCaptureButtonEnabled,
+      isValidStreamKey: Self.makeIsValidStreamKey(from: viewModel.settings)
+    )
+
+    bind()
+  }
+
+  var settings: LiveStreamSettings { snapshot.settings }
+  var status: LiveStreamStatus { snapshot.status }
+  var isLoading: Bool { snapshot.isLoading }
+  var isMicrophoneMuted: Bool { snapshot.isMicrophoneMuted }
+  var isScreenCaptureStreaming: Bool { snapshot.isScreenCaptureStreaming }
+  var streamingButtonText: String { snapshot.streamingButtonText }
+  var isScreenCaptureButtonEnabled: Bool { snapshot.isScreenCaptureButtonEnabled }
+  var isValidStreamKey: Bool { snapshot.isValidStreamKey }
+
+  private func bind() {
+    viewModel.$settings
+      .removeDuplicates(by: { lhs, rhs in
+        lhs.videoWidth == rhs.videoWidth
+          && lhs.videoHeight == rhs.videoHeight
+          && lhs.videoBitrate == rhs.videoBitrate
+          && lhs.frameRate == rhs.frameRate
+          && lhs.streamOrientation == rhs.streamOrientation
+          && lhs.streamKey == rhs.streamKey
+      })
+      .sink { [weak self] settings in
+        self?.updateSnapshot { snapshot in
+          snapshot.settings = settings
+          snapshot.isValidStreamKey = Self.makeIsValidStreamKey(from: settings)
+          Self.applyDerivedStreamingState(from: self?.viewModel, to: &snapshot)
+        }
+      }
+      .store(in: &cancellables)
+
+    viewModel.$status
+      .removeDuplicates()
+      .sink { [weak self] status in
+        self?.updateSnapshot { snapshot in
+          snapshot.status = status
+          Self.applyDerivedStreamingState(from: self?.viewModel, to: &snapshot)
+        }
+      }
+      .store(in: &cancellables)
+
+    viewModel.$isLoading
+      .removeDuplicates()
+      .sink { [weak self] isLoading in
+        self?.updateSnapshot { snapshot in
+          snapshot.isLoading = isLoading
+          Self.applyDerivedStreamingState(from: self?.viewModel, to: &snapshot)
+        }
+      }
+      .store(in: &cancellables)
+
+    viewModel.$isMicrophoneMuted
+      .removeDuplicates()
+      .sink { [weak self] isMuted in
+        self?.updateSnapshot { snapshot in
+          snapshot.isMicrophoneMuted = isMuted
+        }
+      }
+      .store(in: &cancellables)
+
+    viewModel.$canStartStreaming
+      .removeDuplicates()
+      .sink { [weak self] _ in
+        self?.updateSnapshot { snapshot in
+          Self.applyDerivedStreamingState(from: self?.viewModel, to: &snapshot)
+        }
+      }
+      .store(in: &cancellables)
+  }
+
+  private func updateSnapshot(_ mutate: (inout CameraPreviewLiveSnapshot) -> Void) {
+    var updatedSnapshot = snapshot
+    mutate(&updatedSnapshot)
+    guard updatedSnapshot != snapshot else { return }
+    snapshot = updatedSnapshot
+  }
+
+  private static func applyDerivedStreamingState(
+    from viewModel: LiveStreamViewModel?,
+    to snapshot: inout CameraPreviewLiveSnapshot
+  ) {
+    guard let viewModel else { return }
+    snapshot.isScreenCaptureStreaming = viewModel.isScreenCaptureStreaming
+    snapshot.streamingButtonText = viewModel.streamingButtonText
+    snapshot.isScreenCaptureButtonEnabled = viewModel.isScreenCaptureButtonEnabled
+  }
+
+  private static func makeIsValidStreamKey(from settings: LiveStreamSettings) -> Bool {
+    !settings.streamKey.isEmpty && settings.streamKey != "YOUR_YOUTUBE_STREAM_KEY_HERE"
+  }
+}
+
+@MainActor
+private final class CameraPreviewTextOverlayState: ObservableObject {
+  @Published private var snapshot: CameraPreviewTextOverlaySnapshot
+
+  private var cancellables = Set<AnyCancellable>()
+
+  init(viewModel: MainViewModel) {
+    self.snapshot = CameraPreviewTextOverlaySnapshot(
+      showTextOverlay: viewModel.showTextOverlay,
+      settings: viewModel.textOverlaySettings
+    )
+
+    viewModel.$showTextOverlay
+      .combineLatest(viewModel.$textOverlaySettings)
+      .map { showTextOverlay, settings in
+        CameraPreviewTextOverlaySnapshot(
+          showTextOverlay: showTextOverlay,
+          settings: settings
+        )
+      }
+      .removeDuplicates()
+      .sink { [weak self] snapshot in
+        self?.snapshot = snapshot
+      }
+      .store(in: &cancellables)
+  }
+
+  var showTextOverlay: Bool { snapshot.showTextOverlay }
+  var settings: TextOverlaySettings { snapshot.settings }
+  var currentOverlayText: String { snapshot.settings.text }
+}
+
+@MainActor
+private final class DetailUIState: ObservableObject {
+  @Published private(set) var selectedSidebarItem: SidebarItem?
+  @Published private(set) var currentUIState: UIState
+
+  private var cancellables = Set<AnyCancellable>()
+
+  init(viewModel: MainViewModel) {
+    self.selectedSidebarItem = viewModel.selectedSidebarItem
+    self.currentUIState = viewModel.currentUIState
+
+    viewModel.$selectedSidebarItem
+      .removeDuplicates()
+      .sink { [weak self] selectedSidebarItem in
+        self?.selectedSidebarItem = selectedSidebarItem
+      }
+      .store(in: &cancellables)
+
+    viewModel.$currentUIState
+      .removeDuplicates()
+      .sink { [weak self] currentUIState in
+        self?.currentUIState = currentUIState
+      }
+      .store(in: &cancellables)
+  }
+}
+
+private struct CameraPreviewLiveSnapshot: Equatable {
+  var settings: LiveStreamSettings
+  var status: LiveStreamStatus
+  var isLoading: Bool
+  var isMicrophoneMuted: Bool
+  var isScreenCaptureStreaming: Bool
+  var streamingButtonText: String
+  var isScreenCaptureButtonEnabled: Bool
+  var isValidStreamKey: Bool
+
+  static func == (lhs: CameraPreviewLiveSnapshot, rhs: CameraPreviewLiveSnapshot) -> Bool {
+    lhs.status == rhs.status
+      && lhs.isLoading == rhs.isLoading
+      && lhs.isMicrophoneMuted == rhs.isMicrophoneMuted
+      && lhs.isScreenCaptureStreaming == rhs.isScreenCaptureStreaming
+      && lhs.streamingButtonText == rhs.streamingButtonText
+      && lhs.isScreenCaptureButtonEnabled == rhs.isScreenCaptureButtonEnabled
+      && lhs.isValidStreamKey == rhs.isValidStreamKey
+      && lhs.settings.videoWidth == rhs.settings.videoWidth
+      && lhs.settings.videoHeight == rhs.settings.videoHeight
+      && lhs.settings.videoBitrate == rhs.settings.videoBitrate
+      && lhs.settings.frameRate == rhs.settings.frameRate
+      && lhs.settings.streamOrientation == rhs.settings.streamOrientation
+      && lhs.settings.streamKey == rhs.settings.streamKey
+  }
+}
+
+private struct CameraPreviewTextOverlaySnapshot: Equatable {
+  var showTextOverlay: Bool
+  var settings: TextOverlaySettings
+}
+
+@MainActor
+private final class CameraPreviewLayoutState: ObservableObject {
+  @Published private(set) var hasResolvedLayout = false
+  @Published private(set) var isWideScreen = false
+  @Published private(set) var showsSupplementaryInfo = true
+
+  private var pendingUpdate: DispatchWorkItem?
+  private let debounceInterval: TimeInterval = 0.04
+
+  deinit {
+    pendingUpdate?.cancel()
+  }
+
+  func scheduleUpdate(
+    for containerSize: CGSize,
+    shouldShowAdvancedPanels: Bool,
+    force: Bool = false
+  ) {
+    pendingUpdate?.cancel()
+
+    let workItem = DispatchWorkItem { [weak self] in
+      self?.applyResolvedLayout(
+        for: containerSize,
+        shouldShowAdvancedPanels: shouldShowAdvancedPanels
+      )
+    }
+
+    pendingUpdate = workItem
+    let delay = force ? 0 : debounceInterval
+    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+  }
+
+  private func applyResolvedLayout(
+    for containerSize: CGSize,
+    shouldShowAdvancedPanels: Bool
+  ) {
+    let resolvedIsWideScreen = makeResolvedWideScreenValue(for: containerSize)
+    let resolvedShowsSupplementaryInfo = shouldShowAdvancedPanels && resolvedIsWideScreen
+
+    let layoutChanged =
+      !hasResolvedLayout
+      || isWideScreen != resolvedIsWideScreen
+      || showsSupplementaryInfo != resolvedShowsSupplementaryInfo
+
+    hasResolvedLayout = true
+    guard layoutChanged else { return }
+
+    isWideScreen = resolvedIsWideScreen
+    showsSupplementaryInfo = resolvedShowsSupplementaryInfo
+  }
+
+  private func makeResolvedWideScreenValue(for containerSize: CGSize) -> Bool {
+    let aspectRatio = containerSize.width / max(containerSize.height, 1)
+    let aspectThreshold: CGFloat = 1.0
+    let aspectHysteresis: CGFloat = 0.04
+
+    if !hasResolvedLayout {
+      return aspectRatio >= aspectThreshold
+    }
+
+    if isWideScreen {
+      return aspectRatio >= (aspectThreshold - aspectHysteresis)
+    }
+
+    return aspectRatio >= (aspectThreshold + aspectHysteresis)
+  }
+}
+
+private struct AudioPeakMeterView: View {
+  @ObservedObject var viewModel: LiveStreamViewModel
+
+  var body: some View {
+    AudioPeakMeterContentView(
+      level: viewModel.microphonePeakLevel,
+      decibels: viewModel.microphonePeakDecibels,
+      isMuted: viewModel.isMicrophoneMuted,
+      isStreaming: viewModel.status == .streaming,
+      diagnosticMessage: viewModel.audioPeakDiagnosticMessage,
+      inputSummary: viewModel.activeMicrophoneDisplaySummary
+    )
+  }
 }
 
 private struct FocusActionButtonStyle: ButtonStyle {

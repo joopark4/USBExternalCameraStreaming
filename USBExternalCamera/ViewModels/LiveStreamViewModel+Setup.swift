@@ -127,6 +127,7 @@ extension LiveStreamViewModel {
         || defaults.object(forKey: "LiveStream.videoBitrate") != nil
         || defaults.object(forKey: "LiveStream.videoWidth") != nil
         || defaults.object(forKey: "LiveStream.videoHeight") != nil
+        || defaults.object(forKey: "LiveStream.streamOrientation") != nil
         || defaults.object(forKey: "LiveStream.frameRate") != nil
 
       await MainActor.run {

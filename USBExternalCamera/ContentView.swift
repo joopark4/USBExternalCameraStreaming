@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var modelContainerError: Bool = false
     @State private var splitViewVisibility: NavigationSplitViewVisibility = .automatic
     @State private var preferredCompactColumn: NavigationSplitViewColumn = .detail
+    @State private var showingLiveStreamSettings = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     // MARK: - Initialization
@@ -77,7 +78,8 @@ struct ContentView: View {
         ) {
             SidebarView(
                 viewModel: mainViewModel,
-                onPrimarySelection: showDetailColumnOnCompact
+                onPrimarySelection: showDetailColumnOnCompact,
+                onShowLiveStreamSettings: presentLiveStreamSettings
             )
         } detail: {
             DetailView(
@@ -88,7 +90,7 @@ struct ContentView: View {
         .sheet(isPresented: $mainViewModel.showingPermissionAlert) {
             PermissionSettingsView(viewModel: mainViewModel.permissionViewModel)
         }
-        .sheet(isPresented: $mainViewModel.showingLiveStreamSettings) {
+        .sheet(isPresented: $showingLiveStreamSettings, onDismiss: dismissLiveStreamSettings) {
             LiveStreamSettingsView(viewModel: mainViewModel.liveStreamViewModel)
         }
         .sheet(isPresented: $mainViewModel.showingLoggingSettings) {
@@ -120,6 +122,15 @@ struct ContentView: View {
             splitViewVisibility = .all
             preferredCompactColumn = .sidebar
         }
+    }
+
+    private func presentLiveStreamSettings() {
+        mainViewModel.setLiveStreamSettingsPresented(true)
+        showingLiveStreamSettings = true
+    }
+
+    private func dismissLiveStreamSettings() {
+        mainViewModel.setLiveStreamSettingsPresented(false)
     }
 }
 

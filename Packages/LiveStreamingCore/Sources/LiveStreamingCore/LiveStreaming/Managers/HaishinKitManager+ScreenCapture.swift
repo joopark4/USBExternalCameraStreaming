@@ -97,7 +97,7 @@ extension HaishinKitManager {
     }
 
     // 🎯 720p 특화 최적화 적용 (사용자 설정 유지, 내부 최적화만)
-    if settings.videoWidth == 1280 && settings.videoHeight == 720 {
+    if settings.normalizedResolutionClass == .p720 {
       // 사용자 설정은 변경하지 않고, 내부 최적화만 적용
       _ = performanceOptimizer.optimize720pStreaming(settings: userSettings)
       logger.info("🎯 720p 특화 내부 최적화 적용됨 (사용자 설정 유지)", category: .system)
@@ -185,13 +185,13 @@ extension HaishinKitManager {
     var recommendations: [String] = []
 
     // 성능 권장사항만 제공, 강제 변경하지 않음
-    if settings.videoWidth >= 1920 && settings.videoHeight >= 1080 {
+    if settings.normalizedResolutionClass == .p1080 || settings.normalizedResolutionClass == .p4k {
       recommendations.append("⚠️ 1080p는 높은 성능을 요구합니다. 프레임 드롭이 발생할 수 있습니다.")
       recommendations.append("💡 권장: 720p (1280x720)로 설정하면 더 안정적입니다.")
     }
 
     if settings.frameRate > 30 {
-      if settings.videoWidth == 1280 && settings.videoHeight == 720 && settings.frameRate <= 60 {
+      if settings.normalizedResolutionClass == .p720 && settings.frameRate <= 60 {
         recommendations.append("ℹ️ 720p는 60fps까지 지원하지만 CPU/GPU 사용량이 크게 증가합니다.")
         recommendations.append("💡 안정성이 우선이면 30fps를 권장합니다.")
       } else {

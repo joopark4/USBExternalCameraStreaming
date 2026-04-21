@@ -26,9 +26,6 @@ final class MainViewModel: ObservableObject {
     /// 권한 설정 시트 표시 여부
     @Published var showingPermissionAlert = false
     
-    /// 라이브 스트리밍 설정 시트 표시 여부
-    @Published var showingLiveStreamSettings = false
-    
     /// 로깅 설정 시트 표시 여부 (개발용)
     @Published var showingLoggingSettings = false
     
@@ -120,11 +117,9 @@ final class MainViewModel: ObservableObject {
         logDebug("🔧 MainViewModel: showingPermissionAlert set to \(showingPermissionAlert)", category: .ui)
     }
     
-    /// 라이브 스트리밍 설정 화면 표시
-    func showLiveStreamSettings() {
-        logDebug("📺 MainViewModel: showLiveStreamSettings() called", category: .ui)
-        showingLiveStreamSettings = true
-        logDebug("📺 MainViewModel: showingLiveStreamSettings set to \(showingLiveStreamSettings)", category: .ui)
+    /// 라이브 스트리밍 설정 시트 표시 상태 갱신
+    func setLiveStreamSettingsPresented(_ isPresented: Bool) {
+        logDebug("📺 MainViewModel: isPresentingLiveStreamSettings set to \(isPresented)", category: .ui)
     }
     
     /// 로깅 설정 화면 표시 (개발용)
@@ -336,15 +331,6 @@ final class MainViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // LiveStreamViewModel 내부 상태 변경(피크/음소거/진단 등)을
-        // MainViewModel 관찰 체인으로 전달해 UI가 사용자 입력 없이 즉시 갱신되도록 보장
-        liveStreamViewModel.objectWillChange
-            .receive(on: DispatchQueue.main)
-            .throttle(for: .milliseconds(33), scheduler: DispatchQueue.main, latest: true)
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
-            }
-            .store(in: &cancellables)
     }
     
     /// 현재 상태에 따른 UI 상태 업데이트

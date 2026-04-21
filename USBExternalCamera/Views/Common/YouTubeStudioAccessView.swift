@@ -26,7 +26,9 @@ import WebKit
 /// - 웹사이트 데이터 지속성 (로그인 상태 유지)
 /// - iOS 버전별 최신 웹 기능 활성화
 struct YouTubeStudioAccessView: View {
-    @ObservedObject var viewModel: MainViewModel
+    let streamingStatusDescription: String
+    let isStreaming: Bool
+    let isValidStreamKey: Bool
     var showsSupplementaryInfo: Bool = true
     @StateObject private var keyboardAccessoryManager = KeyboardAccessoryManager()
     
@@ -93,9 +95,6 @@ struct YouTubeStudioAccessView: View {
     
     @ViewBuilder
     private var streamingStatusCard: some View {
-        let streamingStatus = viewModel.liveStreamViewModel.status
-        let isStreaming = (streamingStatus == .streaming)
-        
         HStack {
             // 라이브 상태 표시
             Circle()
@@ -111,7 +110,7 @@ struct YouTubeStudioAccessView: View {
                     .fontWeight(.bold)
                     .foregroundColor(isStreaming ? .red : .secondary)
                 
-                Text(streamingStatus.description)
+                Text(streamingStatusDescription)
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -129,9 +128,6 @@ struct YouTubeStudioAccessView: View {
     
     @ViewBuilder
     private var streamKeyStatusIndicator: some View {
-        let hasStreamKey = !viewModel.liveStreamViewModel.settings.streamKey.isEmpty
-        let isValidStreamKey = viewModel.liveStreamViewModel.settings.streamKey != "YOUR_YOUTUBE_STREAM_KEY_HERE" && hasStreamKey
-        
         Image(systemName: isValidStreamKey ? "key.fill" : "key.slash")
             .foregroundColor(isValidStreamKey ? .green : .red)
             .font(.caption)

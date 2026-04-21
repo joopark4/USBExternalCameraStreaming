@@ -189,7 +189,7 @@ public final class StreamingValidation {
         
         // 일반적인 종횡비 검사 (경고만)
         let aspectRatio = Double(width) / Double(height)
-        let commonRatios = [16.0/9.0, 4.0/3.0, 21.0/9.0] // 16:9, 4:3, 21:9
+        let commonRatios = [16.0/9.0, 9.0/16.0, 4.0/3.0, 3.0/4.0, 21.0/9.0, 9.0/21.0]
         let tolerance = 0.1
         
         let isCommonRatio = commonRatios.contains { abs(aspectRatio - $0) < tolerance }

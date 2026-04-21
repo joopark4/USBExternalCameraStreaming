@@ -49,7 +49,7 @@ extension LiveStreamViewModel {
     logInfo("✅ [화면캡처] 스트리밍 시작 성공", category: .streaming)
     logInfo(
       "요청 설정값: \(settings.videoWidth)×\(settings.videoHeight) @ \(settings.frameRate)fps, "
-        + "\(settings.videoBitrate)kbps",
+        + "\(settings.videoBitrate)kbps, orientation=\(settings.streamOrientation.rawValue)",
       category: .streaming)
 
     var appliedVideoWidth = settings.videoWidth
@@ -62,7 +62,7 @@ extension LiveStreamViewModel {
       appliedVideoHeight = activeSettings.videoHeight
       logInfo(
         "매니저 반영 설정값: \(activeSettings.videoWidth)×\(activeSettings.videoHeight) @ \(activeSettings.frameRate)fps, "
-          + "\(activeSettings.videoBitrate)kbps",
+          + "\(activeSettings.videoBitrate)kbps, orientation=\(activeSettings.streamOrientation.rawValue)",
         category: .streaming)
       if activeSettings.videoWidth != settings.videoWidth || activeSettings.videoHeight != settings.videoHeight {
         logWarning(
