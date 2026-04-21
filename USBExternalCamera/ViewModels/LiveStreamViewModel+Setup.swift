@@ -116,6 +116,21 @@ extension LiveStreamViewModel {
       logDebug("✅ [BINDING] HaishinKitManager와 바인딩 완료", category: .streaming)
     }
 
+    // 디바이스가 회전하면(그리고 송출 중이 아닐 때만) streamOrientation 을 즉시 동기화.
+    // 다음에 라이브 시작을 눌렀을 때 stale 한 이전 세션의 방향이 남아 있지 않도록 보장.
+    NotificationCenter.default
+      .publisher(for: UIDevice.orientationDidChangeNotification)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.syncStreamOrientationFromDeviceIfIdle()
+      }
+      .store(in: &cancellables)
+
+    // 앱 실행 직후에도 한 번은 동기화해두기 (회전 없이 바로 시작하는 경우 대비).
+    DispatchQueue.main.async { [weak self] in
+      self?.syncStreamOrientationFromDeviceIfIdle()
+    }
+
     logDebug("✅ [AUTO-SAVE] 설정 자동 저장 바인딩 완료", category: .streaming)
   }
   func loadInitialSettings() {
