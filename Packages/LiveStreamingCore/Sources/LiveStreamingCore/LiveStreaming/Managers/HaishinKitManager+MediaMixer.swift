@@ -18,7 +18,8 @@ extension HaishinKitManager {
 
     // Examples와 동일한 MediaMixer 설정
     let mediaMixer = MediaMixer(
-      captureSessionMode: .manual,  // 수동 캡처 모드 (화면 캡처용)
+      // .single: 마이크 오디오를 위해 표준 AVCaptureSession 사용 (비디오는 수동 주입)
+      captureSessionMode: .single,
       multiTrackAudioMixingEnabled: true
     )
 
