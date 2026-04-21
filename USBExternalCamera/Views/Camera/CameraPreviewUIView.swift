@@ -226,11 +226,12 @@ final class CameraPreviewUIView: UIView {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       // 새 AVCaptureDeviceInput 으로 갈아끼워지면 프리뷰 레이어 connection 은 기본 orientation 으로
-      // 재생성될 수 있다. 캐시 키를 무효화하고 현재 인터페이스 방향 기준으로 orientation 을 강제 재적용.
+      // 재생성될 수 있다. 캐시 키를 무효화한 뒤 강제 refresh 를 요청하면
+      // `performPreviewPresentationUpdate` 내부에서 프리뷰 connection 재적용과
+      // `refreshVideoOutputConnectionIfNeeded(force:)` 가 함께 수행된다.
       self.invalidatePreviewGeometryConfigCache()
       self.invalidateVideoOutputConnectionConfigCache()
       self.requestPreviewPresentationUpdate(forceConnectionRefresh: true)
-      self.refreshVideoOutputConnectionIfNeeded(force: true)
     }
   }
 

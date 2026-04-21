@@ -11,7 +11,8 @@ public enum PreviewVideoOrientation: Sendable {
 
 extension Notification.Name {
     /// CameraSessionManager 가 새 카메라로 입력 교체를 마쳤을 때 발송.
-    /// userInfo["device"] 에 새로 연결된 AVCaptureDevice 가 포함된다.
+    /// 입력 교체와 함께 새 AVCaptureConnection 이 생성되므로 뷰/매니저 측에서
+    /// 프리뷰 orientation·비디오 출력 config 를 다시 적용할 기회를 얻기 위한 용도.
     static let cameraSessionDidSwitchCamera = Notification.Name(
         "com.heavyarm.usbexternalcamera.cameraSessionDidSwitchCamera"
     )
@@ -95,12 +96,14 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
     /// 마지막으로 적용한 비디오 출력 연결 설정 (중복 적용 방지용 캐시)
     private var lastAppliedVideoOutputConfigurationKey: String?
 
-    /// 카메라 전환 직후에도 방향/미러링을 복원할 수 있도록 최근 입력값을 보관.
+    /// 카메라 전환 직후에도 방향/미러링을 복원할 수 있도록 최근 입력값을 묶어 보관.
     /// `updateVideoOutputConfiguration` 이 적용에 성공할 때마다 갱신된다.
-    private var lastRequestedRotationAngle: CGFloat?
-    private var lastRequestedOrientation: PreviewVideoOrientation?
-    private var lastRequestedIsMirrored: Bool = false
-    private var hasLastRequestedConfiguration: Bool = false
+    private struct CachedVideoOutputConfiguration {
+        let rotationAngle: CGFloat?
+        let orientation: PreviewVideoOrientation?
+        let isMirrored: Bool
+    }
+    private var cachedVideoOutputConfiguration: CachedVideoOutputConfiguration?
     
     /// 초기화 및 기본 세션 설정
     /// - 세션 프리셋과 비디오 출력을 초기화
@@ -203,31 +206,13 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
         if #available(iOS 17.0, *) {
             if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
                 connection.videoRotationAngle = rotationAngle
-            } else if let orientation, connection.isVideoOrientationSupported {
-                switch orientation {
-                case .portrait:
-                    connection.videoOrientation = .portrait
-                case .portraitUpsideDown:
-                    connection.videoOrientation = .portraitUpsideDown
-                case .landscapeRight:
-                    connection.videoOrientation = .landscapeRight
-                case .landscapeLeft:
-                    connection.videoOrientation = .landscapeLeft
-                }
-            } else if connection.isVideoRotationAngleSupported(0) {
+            } else if !applyLegacyVideoOrientation(orientation, to: connection),
+                connection.isVideoRotationAngleSupported(0)
+            {
                 connection.videoRotationAngle = 0
             }
-        } else if let orientation, connection.isVideoOrientationSupported {
-            switch orientation {
-            case .portrait:
-                connection.videoOrientation = .portrait
-            case .portraitUpsideDown:
-                connection.videoOrientation = .portraitUpsideDown
-            case .landscapeRight:
-                connection.videoOrientation = .landscapeRight
-            case .landscapeLeft:
-                connection.videoOrientation = .landscapeLeft
-            }
+        } else {
+            _ = applyLegacyVideoOrientation(orientation, to: connection)
         }
 
         if connection.isVideoMirroringSupported {
@@ -236,10 +221,33 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
         }
 
         self.lastAppliedVideoOutputConfigurationKey = configurationKey
-        self.lastRequestedRotationAngle = rotationAngle
-        self.lastRequestedOrientation = orientation
-        self.lastRequestedIsMirrored = isMirrored
-        self.hasLastRequestedConfiguration = true
+        self.cachedVideoOutputConfiguration = CachedVideoOutputConfiguration(
+            rotationAngle: rotationAngle,
+            orientation: orientation,
+            isMirrored: isMirrored
+        )
+    }
+
+    /// `PreviewVideoOrientation` 을 `connection.videoOrientation` 에 적용.
+    /// iOS 17 이상에서는 회전 각도 API 가 우선이고 이 경로는 fallback 으로만 사용된다.
+    /// @discardableResult 를 붙여 iOS 17+ 분기에서 "미적용 여부" 판별에 활용.
+    @discardableResult
+    private func applyLegacyVideoOrientation(
+        _ orientation: PreviewVideoOrientation?,
+        to connection: AVCaptureConnection
+    ) -> Bool {
+        guard let orientation, connection.isVideoOrientationSupported else { return false }
+        switch orientation {
+        case .portrait:
+            connection.videoOrientation = .portrait
+        case .portraitUpsideDown:
+            connection.videoOrientation = .portraitUpsideDown
+        case .landscapeRight:
+            connection.videoOrientation = .landscapeRight
+        case .landscapeLeft:
+            connection.videoOrientation = .landscapeLeft
+        }
+        return true
     }
 
     private func makeVideoOutputConfigurationKey(
@@ -523,11 +531,11 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
             // 동기 헬퍼를 직접 호출해 같은 block 내에서 즉시 적용.
             // 캐시 키는 connection ObjectIdentifier 기반이라 새 connection 에서는 자동으로 무효화된다.
             self.lastAppliedVideoOutputConfigurationKey = nil
-            if self.hasLastRequestedConfiguration {
+            if let cached = self.cachedVideoOutputConfiguration {
                 self.applyVideoOutputConfigurationOnSessionQueue(
-                    rotationAngle: self.lastRequestedRotationAngle,
-                    orientation: self.lastRequestedOrientation,
-                    isMirrored: self.lastRequestedIsMirrored
+                    rotationAngle: cached.rotationAngle,
+                    orientation: cached.orientation,
+                    isMirrored: cached.isMirrored
                 )
             }
 
@@ -539,11 +547,7 @@ public final class CameraSessionManager: NSObject, CameraSessionManaging, @unche
 
             // 프리뷰 레이어는 AVCaptureVideoPreviewLayer 의 connection 이 새 입력에 맞춰 재생성될 수 있으므로,
             // 뷰 측에서 orientation 을 다시 적용하도록 notification 을 발송.
-            NotificationCenter.default.post(
-                name: .cameraSessionDidSwitchCamera,
-                object: self,
-                userInfo: ["device": camera.device]
-            )
+            NotificationCenter.default.post(name: .cameraSessionDidSwitchCamera, object: self)
         }
     }
     
