@@ -6,10 +6,9 @@
 //
 
 import AVFoundation
-import HaishinKit
+import LiveStreamingCore
 import SwiftUI
 import UIKit
-import LiveStreamingCore
 
 /// 실제 카메라 미리보기를 담당하는 UIView
 final class CameraPreviewUIView: UIView {

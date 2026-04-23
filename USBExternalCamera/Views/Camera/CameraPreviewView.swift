@@ -7,10 +7,9 @@
 
 import AVFoundation
 import Foundation
-import HaishinKit
+import LiveStreamingCore
 import SwiftUI
 import UIKit
-import LiveStreamingCore
 
 /// **실제 HaishinKit RTMP 스트리밍을 위한 카메라 미리보기**
 struct CameraPreviewView: UIViewRepresentable {

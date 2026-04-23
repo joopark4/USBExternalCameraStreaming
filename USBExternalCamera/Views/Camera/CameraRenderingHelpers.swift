@@ -7,10 +7,9 @@
 
 import AVFoundation
 import CoreImage
-import HaishinKit
+import LiveStreamingCore
 import SwiftUI
 import UIKit
-import LiveStreamingCore
 
 private enum CameraStreamingCompositionContext {
   static let ciContext = CIContext(options: [

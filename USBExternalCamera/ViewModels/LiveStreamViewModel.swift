@@ -102,8 +102,6 @@ final class LiveStreamViewModel: ObservableObject {
   public var streamingService: HaishinKitManagerProtocol? {
     return liveStreamService
   }
-  /// 스트림 오디오 피크 분석용 출력 옵저버
-  var audioPeakObserver: StreamAudioPeakOutputObserver?
   /// 피크 미터의 자연 감쇠 타이머
   var audioPeakDecayTimer: Timer?
   /// 오디오 피크 마지막 샘플 수신 시각
