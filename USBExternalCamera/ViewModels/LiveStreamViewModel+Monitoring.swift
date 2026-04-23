@@ -49,7 +49,13 @@ extension LiveStreamViewModel {
       Task { @MainActor in
         guard self.isStreaming else {
           logDebug("⏹️ [MONITOR] Stopping monitoring - streaming ended", category: .streaming)
-          self.stopDataMonitoring()
+          // 항상 "지금 발화한 타이머" 만 끝낸다.
+          // rapid stop/start 경계에서 `self.dataMonitoringTimer` 는 이미 새 세션의
+          // 타이머를 가리킬 수 있으므로, identity 가 일치할 때만 shared 참조도 정리.
+          timer.invalidate()
+          if self.dataMonitoringTimer === timer {
+            self.dataMonitoringTimer = nil
+          }
           return
         }
         await self.checkCurrentDataTransmission()
