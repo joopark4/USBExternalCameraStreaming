@@ -37,6 +37,10 @@ final class LiveStreamViewModel: ObservableObject {
   @Published var streamStats: StreamStats = StreamStats()
   /// 설정 뷰 표시 여부
   @Published var showingSettings: Bool = false
+  /// 라이브 스트림 설정 시트가 열려 있는지 여부.
+  /// 열려 있는 동안에는 디바이스 회전으로 `settings.streamOrientation` 을 자동으로 덮어쓰지 않는다
+  /// (사용자가 수동으로 토글 중일 수 있음).
+  @Published var isSettingsSheetPresented: Bool = false
   /// 오류 알림 표시 여부
   @Published var showingErrorAlert: Bool = false
   /// 현재 오류 메시지
@@ -112,6 +116,9 @@ final class LiveStreamViewModel: ObservableObject {
   var isIdleMicrophonePeakMonitoringSuspended: Bool = false
   /// 오디오 라우트 변경 감지 옵저버
   var audioRouteChangeObserver: NSObjectProtocol?
+  /// 실시간 데이터 모니터링 타이머 (송출 중일 때만 동작).
+  /// 과거에는 로컬 변수라 스트림 중지 시점에 invalidate 되지 않고, VM dealloc 까지 살아남을 수 있었음.
+  var dataMonitoringTimer: Timer?
   /// Combine 구독 저장소
   var cancellables = Set<AnyCancellable>()
   // MARK: - Initialization
@@ -136,6 +143,8 @@ final class LiveStreamViewModel: ObservableObject {
     audioPeakDecayTimer = nil
     audioPeakHealthCheckTask?.cancel()
     audioPeakHealthCheckTask = nil
+    dataMonitoringTimer?.invalidate()
+    dataMonitoringTimer = nil
     idleMicrophonePeakMonitor?.stop()
     idleMicrophonePeakMonitor = nil
 
