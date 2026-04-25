@@ -20,28 +20,34 @@ jobs:
     name: Build (generic iOS)
     # 이 프로젝트는 Xcode 26.x / iPhoneOS 26.x SDK 가 필요 (HaishinKit 2.2.5 의
     # `kVTCompressionPropertyKey_VariableBitRate` 가 `@available(iOS 26.0, *)` 로 gated).
-    # macos-15 runner 는 Xcode 16.4 / iPhoneOS 18.5 SDK 라 빌드 실패. macos-latest 가
-    # Xcode 26 runner image 로 승급되면 자동으로 통과.
+    # macos-latest runner 에는 Xcode 26.0 ~ 26.3 이 함께 설치돼 있으므로 명시 선택.
     runs-on: macos-latest
     timeout-minutes: 30
-    # GitHub Actions 가 Xcode 26 runner image 를 제공하기 전까지는 회귀 안내선 정도로
-    # 두고 PR 머지를 막지 않는다. Xcode 26 SDK 도착 후 이 옵션을 제거하면 CI 가
-    # 정식 게이트로 격상된다.
-    continue-on-error: true
     env:
       SCHEME: USBExternalCamera
       PROJECT: USBExternalCamera.xcodeproj
       DERIVED_DATA: build-ci
+      # iPhoneOS 26.x SDK 를 가진 가장 높은 Xcode 26 마이너 버전을 선택. runner 가 26.4+ 를
+      # 제공하기 시작하면 이 값만 갱신.
+      XCODE_APP: /Applications/Xcode_26.3.app
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode 26.x
+        run: |
+          if [[ ! -d "$XCODE_APP" ]]; then
+            echo "❌ $XCODE_APP not found on runner. Available Xcode apps:"
+            ls /Applications | grep -i Xcode || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+
       - name: Show toolchain
         run: |
           xcodebuild -version
           xcrun --show-sdk-path --sdk iphoneos
-          ls /Applications | grep -i Xcode || true
 
       - name: Cache SwiftPM artifacts
         # checkouts 는 다시 받더라도 XCFramework(libsrt 등) 아티팩트는 캐시 효과가 큼.
