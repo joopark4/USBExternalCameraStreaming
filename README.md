@@ -5,7 +5,7 @@
 ![iOS](https://img.shields.io/badge/iOS-17.0+-blue.svg?style=flat&logo=ios)
 ![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg?style=flat&logo=swift)
 ![Xcode](https://img.shields.io/badge/Xcode-16.3+-blue.svg?style=flat&logo=xcode)
-![HaishinKit](https://img.shields.io/badge/HaishinKit-2.0.8-red.svg?style=flat)
+![HaishinKit](https://img.shields.io/badge/HaishinKit-2.2.5-red.svg?style=flat)
 
 **Professional live streaming app with USB external camera support and real-time RTMP streaming**
 
@@ -15,7 +15,7 @@
 
 ## 🎥 Overview
 
-USB External Camera is a professional iOS application that enables iPad-optimized live streaming using UVC-compatible USB external cameras. Built with HaishinKit 2.0.8, it provides real-time RTMP streaming to YouTube Live with 480p/720p/1080p presets, screen-capture based compositing (camera + UI), and stability-focused frame pipeline controls.
+USB External Camera is a professional iOS application that enables iPad-optimized live streaming using UVC-compatible USB external cameras. Built with HaishinKit 2.2.5, it provides real-time RTMP streaming to YouTube Live with 480p/720p/1080p presets (both 16:9 landscape and 9:16 portrait), screen-capture based compositing (camera + UI), and stability-focused frame pipeline controls.
 
 ### 💡 Development Motivation
 
@@ -25,7 +25,7 @@ This project was initiated to enable **flexible shooting and monitoring from var
 
 - 📹 **Screen Capture Streaming** - Stream camera preview + UI overlay simultaneously
 - 🔌 **USB Camera Support** - Full support for UVC-compatible external cameras
-- 📡 **Real-time RTMP** - Professional streaming with HaishinKit 2.0.8
+- 📡 **Real-time RTMP** - Professional streaming with HaishinKit 2.2.5
 - 🎛️ **Advanced Controls** - Video/audio quality, resolution, bitrate settings
 - 🎚️ **YouTube Presets** - 480p / 720p / 1080p quick presets with manual override
 - 📊 **Live Statistics** - Real-time monitoring of streaming performance
@@ -43,7 +43,7 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - ✅ Real-time audio mixing and processing with AAC encoding
 - ✅ Mic permission/audio-session preflight before live start (prevents audio 0 kbps cases)
 - ✅ Frame backpressure control in screen-capture pipeline (reduced buffering/stutter)
-- 🚧 Microphone mute toggle is currently under development (temporarily disabled in UI)
+- ✅ Real-time microphone mute toggle — reflected in the outgoing stream via the MediaMixer audio pipeline
 
 ### Video & Audio
 - 🎬 **Resolutions**: 480p (848×480), 720p (1280×720), 1080p (1920×1080)
@@ -72,7 +72,7 @@ This project was initiated to enable **flexible shooting and monitoring from var
 - **Camera**: UVC-compatible USB external camera
 - **Microphone**: Mic permission required for audio track output
 - **Network**: Stable upload bandwidth (recommended: 3+ Mbps for 480p, 6+ Mbps for 720p, 10+ Mbps for 1080p)
-- **Orientation**: **Landscape mode** (Portrait mode under development) - Currently optimized for landscape orientation
+- **Orientation**: **Landscape (16:9)** and **Portrait (9:16)** both supported. The stream orientation is selectable in settings and auto-syncs to the device orientation when idle.
 
 > **Policy Note**: Intel Mac development environments are not officially supported. Simulator validation is based on Apple Silicon Macs, and this project intentionally excludes the `x86_64` iOS Simulator architecture.
 
@@ -127,7 +127,7 @@ open USBExternalCamera.xcodeproj
 The project uses Swift Package Manager with the following dependencies:
 
 - [LiveStreamingCore](https://github.com/joopark4/LiveStreamingCore) (1.0.0) - Reusable RTMP streaming module
-- [HaishinKit](https://github.com/HaishinKit/HaishinKit.swift) (2.0.8) - RTMP streaming engine
+- [HaishinKit](https://github.com/HaishinKit/HaishinKit.swift) (2.2.5, `HaishinKit` + `RTMPHaishinKit` products) - RTMP streaming engine
 - [Logboard](https://github.com/shogo4405/Logboard) (2.5.0) - Advanced logging
 
 All dependencies are managed automatically by Xcode.
@@ -299,11 +299,9 @@ USBExternalCamera-iOS/
 - 480p recommended for slower devices or limited bandwidth
 - Hardware acceleration is automatically enabled when available
 
-**Portrait mode / UI layout issues**
-- This app currently supports **landscape mode only**
-- Portrait mode may cause UI layout problems (portrait mode support is under development)
-- For now, rotate your iPad to landscape orientation before using the app
-- Streaming performance is currently optimized for landscape orientation
+**Portrait / landscape orientation**
+- Both orientations are supported. Stream aspect (16:9 or 9:16) auto-syncs to the device orientation when not broadcasting.
+- To override, open Settings → Stream Orientation. The toggle is locked while a live broadcast is active; stop the broadcast to change orientation.
 
 ### Debug Logs
 
@@ -350,10 +348,10 @@ xcodebuild -scheme USBExternalCamera -destination 'platform=iOS,name=Your-Device
 
 ### 🚧 Future Development Plans
 
-- **Portrait Mode Support**: Currently under development to support both landscape and portrait orientations
+- **MediaMixer consolidation**: Unify the two `MediaMixer` instances (screen-capture `mixer` / Examples-pattern `mediaMixer`) into one managed lifecycle (tracked follow-up from PR #17 review).
 - **Enhanced UI Layouts**: Improved responsive design for different screen orientations
 - **Additional Camera Features**: More camera controls and settings
-- **Performance Improvements**: Continued optimization for various iPad models
+- **Performance Improvements**: Reuse `CVPixelBufferPool` in the manual-frame pipeline and Metal-accelerated color/scale conversion in `ManualFrameProcessor` (tracked in LSC).
 
 ## 📖 Documentation
 

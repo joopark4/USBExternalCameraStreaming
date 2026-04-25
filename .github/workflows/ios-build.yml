@@ -1,0 +1,83 @@
+name: iOS Build
+
+# main 에 대한 PR, 직접 push 에서 모두 돌려서 의존성/API 회귀를 빠르게 감지한다.
+# 이 앱은 실기기 카메라 기능 테스트가 불가능하므로 CI 는 "컴파일이 깨지지 않는다" 를
+# 1차 안전망으로 삼는다.
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ios-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (generic iOS)
+    # 이 프로젝트는 Xcode 26.x / iPhoneOS 26.x SDK 가 필요 (HaishinKit 2.2.5 의
+    # `kVTCompressionPropertyKey_VariableBitRate` 가 `@available(iOS 26.0, *)` 로 gated).
+    # macos-latest runner 에는 Xcode 26.0 ~ 26.3 이 함께 설치돼 있으므로 명시 선택.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      SCHEME: USBExternalCamera
+      PROJECT: USBExternalCamera.xcodeproj
+      DERIVED_DATA: build-ci
+      # iPhoneOS 26.x SDK 를 가진 가장 높은 Xcode 26 마이너 버전을 선택. runner 가 26.4+ 를
+      # 제공하기 시작하면 이 값만 갱신.
+      XCODE_APP: /Applications/Xcode_26.3.app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.x
+        run: |
+          if [[ ! -d "$XCODE_APP" ]]; then
+            echo "❌ $XCODE_APP not found on runner. Available Xcode apps:"
+            ls /Applications | grep -i Xcode || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun --show-sdk-path --sdk iphoneos
+
+      - name: Cache SwiftPM artifacts
+        # checkouts 는 다시 받더라도 XCFramework(libsrt 등) 아티팩트는 캐시 효과가 큼.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.DERIVED_DATA }}/SourcePackages/artifacts
+          key: ${{ runner.os }}-spm-artifacts-${{ hashFiles('USBExternalCamera.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-artifacts-
+
+      - name: Resolve package dependencies
+        run: |
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -resolvePackageDependencies \
+            -derivedDataPath "$DERIVED_DATA"
+
+      - name: Build for generic iOS device
+        # 실기기 profile/서명 없이도 컴파일만 확인되면 OK. 앱 스트리밍/카메라 로직의
+        # API 회귀(예: HaishinKit minor bump, Swift 6 strict concurrency 변경 등)를
+        # 즉시 잡기 위한 안전망.
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$DERIVED_DATA" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build.log

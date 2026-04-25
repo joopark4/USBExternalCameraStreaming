@@ -117,9 +117,17 @@ final class MainViewModel: ObservableObject {
         logDebug("🔧 MainViewModel: showingPermissionAlert set to \(showingPermissionAlert)", category: .ui)
     }
     
-    /// 라이브 스트리밍 설정 시트 표시 상태 갱신
+    /// 라이브 스트리밍 설정 시트 표시 상태 갱신.
+    /// LiveStreamViewModel 의 플래그에 반영해, 설정 시트가 열린 상태에서 디바이스 회전이
+    /// 사용자의 수동 방향 선택을 덮어쓰지 않도록 한다.
+    /// 시트가 닫히는 시점에는 즉시 동기화를 시도 — 시트를 연 채 기기를 회전시킨 경우
+    /// 닫힌 직후까지 stale 한 방향이 유지되던 문제를 해소한다.
     func setLiveStreamSettingsPresented(_ isPresented: Bool) {
         logDebug("📺 MainViewModel: isPresentingLiveStreamSettings set to \(isPresented)", category: .ui)
+        liveStreamViewModel.isSettingsSheetPresented = isPresented
+        if !isPresented {
+            liveStreamViewModel.syncStreamOrientationFromDeviceIfIdle()
+        }
     }
     
     /// 로깅 설정 화면 표시 (개발용)
