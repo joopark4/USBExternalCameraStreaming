@@ -50,8 +50,7 @@ jobs:
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -resolvePackageDependencies \
-            -derivedDataPath "$DERIVED_DATA" \
-            -disableAutomaticPackageResolution NO
+            -derivedDataPath "$DERIVED_DATA"
 
       - name: Build for generic iOS device
         # 실기기 profile/서명 없이도 컴파일만 확인되면 OK. 앱 스트리밍/카메라 로직의
