@@ -298,10 +298,12 @@ final class MainViewModel: ObservableObject {
     /// 반응형 바인딩 설정
     /// ViewModel들 간의 상태 변화를 구독하여 UI 상태를 자동으로 업데이트합니다.
     private func setupBindings() {
-        // 권한 상태 변화 감지
-        permissionViewModel.$areAllPermissionsGranted
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] (areGranted: Bool) in
+        // 권한 상태 변화 감지. PermissionViewModel 이 PermissionManager 의 변경을 forward 하는
+        // publisher 를 노출하므로, willSet 시점의 stale value 를 피하기 위해 RunLoop.main 으로
+        // 한 tick 늦춰 didSet 이후의 값을 읽도록 한다.
+        permissionViewModel.permissionStatusChanges
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in
                 self?.updateUIState()
             }
             .store(in: &cancellables)
