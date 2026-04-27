@@ -73,12 +73,16 @@ final class MainViewModel: ObservableObject {
         self.permissionViewModel = permissionViewModel
         self.liveStreamViewModel = liveStreamViewModel
         
-        // CameraViewModel과 HaishinKitManager 연결 설정
-        if let haishinKitManager = liveStreamViewModel.streamingService as? HaishinKitManager {
-            cameraViewModel.connectToStreaming(haishinKitManager)
-            logDebug("🔗 [MainViewModel] CameraViewModel과 HaishinKitManager 연결 완료", category: .ui)
+        // CameraViewModel 과 스트리밍 매니저 연결 — concrete `HaishinKitManager` 대신 카메라가
+        // 필요로 하는 protocol composition (`HaishinKitManagerProtocol & CameraFrameDelegate`)
+        // 으로 캐스팅. 테스트에서 mock 주입 시 두 protocol 만 채택하면 충분하다.
+        if let cameraStreamingService =
+            liveStreamViewModel.streamingService as? (any HaishinKitManagerProtocol & CameraFrameDelegate)
+        {
+            cameraViewModel.connectToStreaming(cameraStreamingService)
+            logDebug("🔗 [MainViewModel] CameraViewModel과 스트리밍 매니저 연결 완료", category: .ui)
         } else {
-            logError("❌ [MainViewModel] HaishinKitManager 연결 실패", category: .ui)
+            logError("❌ [MainViewModel] 스트리밍 매니저 연결 실패", category: .ui)
         }
         
         setupBindings()

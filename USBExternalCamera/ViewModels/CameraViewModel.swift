@@ -39,8 +39,11 @@ final class CameraViewModel: NSObject, ObservableObject {
     /// - 카메라 세션 관리 및 카메라 전환 처리
     private let sessionManager: CameraSessionManager
     
-    /// 스트리밍 매니저 (카메라 프레임 수신용)
-    private var streamingManager: HaishinKitManager?
+    /// 스트리밍 매니저 (카메라 프레임 수신용).
+    /// 카메라 세션이 필요로 하는 정확한 capability 만 받도록 protocol composition 으로 표현 —
+    /// `HaishinKitManagerProtocol` 은 스트리밍 시작/중지 등 매니저 책임, `CameraFrameDelegate` 는
+    /// `CameraSessionManager.addFrameConsumer` 가 받는 frame 수신 인터페이스.
+    private var streamingManager: (any HaishinKitManagerProtocol & CameraFrameDelegate)?
     
     /// 카메라 세션 접근자
     /// - 현재 카메라 세션에 대한 읽기 전용 접근 제공
@@ -349,10 +352,10 @@ final class CameraViewModel: NSObject, ObservableObject {
         }
     }
     
-    /// 카메라와 스트리밍 연결 설정 (화면 캡처용)
-    /// - Parameters:
-    ///   - streamingManager: 스트리밍 매니저 인스턴스
-    func connectToStreaming(_ streamingManager: HaishinKitManager) {
+    /// 카메라와 스트리밍 연결 설정 (화면 캡처용).
+    /// 구체 타입(`HaishinKitManager`) 대신 필요한 protocol composition 만 받아, mock 주입과
+    /// LSC concrete 의존성 분리를 가능케 합니다.
+    func connectToStreaming(_ streamingManager: any HaishinKitManagerProtocol & CameraFrameDelegate) {
         if let currentStreamingManager = self.streamingManager,
            currentStreamingManager !== streamingManager {
             sessionManager.removeFrameConsumer(currentStreamingManager)
