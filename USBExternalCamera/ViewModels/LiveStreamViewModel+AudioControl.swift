@@ -1,7 +1,6 @@
 import AVFoundation
 import CoreMedia
 import Foundation
-import HaishinKit
 import LiveStreamingCore
 
 extension LiveStreamViewModel {
@@ -132,7 +131,12 @@ extension LiveStreamViewModel {
   }
 
   func attachAudioPeakObserverIfNeeded(retryCount: Int = 20) async {
-    guard let stream = liveStreamService.getRTMPStream() else {
+    // 스트림 준비 전에 호출될 수 있으므로 짧게 retry.
+    // 이전에는 `liveStreamService.getRTMPStream()?.addOutput(observer)` 로 직접 붙였지만,
+    // 그 경로는 `HaishinKit` / `RTMPHaishinKit` 타입을 app layer 로 노출시켰다.
+    // LSC 의 `attachAudioPeakObserver(onPeak:)` 가 옵저버 인스턴스까지 내부에 보관하므로,
+    // 성공 여부는 `isAudioPeakObserverAttached` 로 확인한다.
+    guard liveStreamService.getRTMPStream() != nil else {
       guard retryCount > 0 else { return }
       if retryCount == 20 || retryCount == 1 {
         logDebug("🎵 오디오 피크 옵저버 대기 중... 남은 재시도: \(retryCount)", category: .streaming)
@@ -142,17 +146,13 @@ extension LiveStreamViewModel {
       return
     }
 
-    if audioPeakObserver == nil {
-      audioPeakObserver = StreamAudioPeakOutputObserver { [weak self] level, decibels in
-        guard let self else { return }
-        Task { @MainActor [weak self] in
-          self?.updateMicrophonePeak(level: level, decibels: decibels)
-        }
+    await liveStreamService.attachAudioPeakObserver { [weak self] level, decibels in
+      Task { @MainActor [weak self] in
+        self?.updateMicrophonePeak(level: level, decibels: decibels)
       }
     }
 
-    if let observer = audioPeakObserver {
-      await stream.addOutput(observer)
+    if liveStreamService.isAudioPeakObserverAttached {
       resetAudioPeakDiagnostics()
       startAudioPeakHealthCheckTask()
       logDebug("🎵 오디오 피크 옵저버 연결 완료", category: .streaming)
@@ -161,9 +161,7 @@ extension LiveStreamViewModel {
 
   func detachAudioPeakObserver() async {
     stopAudioPeakHealthCheckTask()
-    guard let observer = audioPeakObserver else { return }
-    guard let stream = liveStreamService.getRTMPStream() else { return }
-    await stream.removeOutput(observer)
+    await liveStreamService.detachAudioPeakObserver()
     logDebug("🎵 오디오 피크 옵저버 해제 완료", category: .streaming)
   }
 
@@ -307,93 +305,10 @@ extension LiveStreamViewModel {
   }
 }
 
-final class StreamAudioPeakOutputObserver: NSObject, StreamOutput, @unchecked Sendable {
-  private let onPeak: @Sendable (Float, Float) -> Void
-  private let lock = NSLock()
-  private var previousLevel: Float = 0
-
-  init(onPeak: @escaping @Sendable (Float, Float) -> Void) {
-    self.onPeak = onPeak
-  }
-
-  nonisolated func stream(_ stream: some StreamConvertible, didOutput audio: AVAudioBuffer, when: AVAudioTime)
-  {
-    guard let pcmBuffer = audio as? AVAudioPCMBuffer else { return }
-
-    let (level, decibels) = Self.measurePeak(from: pcmBuffer)
-
-    lock.lock()
-    let smoothed = max(level, previousLevel * 0.78)
-    previousLevel = smoothed
-    lock.unlock()
-
-    onPeak(smoothed, decibels)
-  }
-
-  nonisolated func stream(_ stream: some StreamConvertible, didOutput video: CMSampleBuffer) {}
-
-  static func measurePeak(from buffer: AVAudioPCMBuffer) -> (Float, Float) {
-    let frameCount = Int(buffer.frameLength)
-    guard frameCount > 0 else { return (0, -80) }
-
-    let channelCount = Int(buffer.format.channelCount)
-    guard channelCount > 0 else { return (0, -80) }
-
-    let sampleStep = max(1, frameCount / 1024)
-    var peak: Float = 0
-
-    if let channels = buffer.floatChannelData {
-      for channel in 0..<channelCount {
-        let samples = channels[channel]
-        var index = 0
-        while index < frameCount {
-          peak = max(peak, abs(samples[index]))
-          index += sampleStep
-        }
-      }
-    } else if let channels = buffer.int16ChannelData {
-      let scale = Float(Int16.max)
-      for channel in 0..<channelCount {
-        let samples = channels[channel]
-        var index = 0
-        while index < frameCount {
-          peak = max(peak, abs(Float(samples[index])) / scale)
-          index += sampleStep
-        }
-      }
-    } else if let channels = buffer.int32ChannelData {
-      let scale = Float(Int32.max)
-      for channel in 0..<channelCount {
-        let samples = channels[channel]
-        var index = 0
-        while index < frameCount {
-          peak = max(peak, abs(Float(samples[index])) / scale)
-          index += sampleStep
-        }
-      }
-    }
-
-    let safePeak = max(peak, 0.0001)
-    let decibels = max(-80, min(0, 20 * log10(safePeak)))
-    let normalized = normalizedLevel(from: decibels)
-
-    return (normalized, decibels)
-  }
-
-  private static func normalizedLevel(from decibels: Float) -> Float {
-    // 작은 음성도 더 잘 보이도록 감도를 보정한 커브
-    let noiseFloor: Float = -72
-    let headroom: Float = -6
-    let gamma: Float = 0.72
-
-    if decibels <= noiseFloor {
-      return 0
-    }
-
-    let linear = ((decibels - noiseFloor) / (headroom - noiseFloor)).clamped(to: 0...1)
-    return pow(linear, gamma).clamped(to: 0...1)
-  }
-}
+// NOTE: `StreamAudioPeakOutputObserver` 는 LiveStreamingCore 로 이관되었습니다
+// (`AudioPeakStreamOutput` + `HaishinKitManager.attachAudioPeakObserver(onPeak:)`).
+// app layer 에는 더 이상 `StreamOutput` / `StreamConvertible` 타입 참조가 없고
+// `import HaishinKit` / `import RTMPHaishinKit` 도 불필요합니다.
 
 final class IdleMicrophonePeakMonitor: @unchecked Sendable {
   private let onPeak: @Sendable (Float, Float) -> Void
@@ -421,7 +336,7 @@ final class IdleMicrophonePeakMonitor: @unchecked Sendable {
 
     inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
       guard let self else { return }
-      let (level, decibels) = StreamAudioPeakOutputObserver.measurePeak(from: buffer)
+      let (level, decibels) = AudioPeakMeter.measurePeak(from: buffer)
 
       self.lock.lock()
       let smoothedLevel = max(level, self.previousLevel * 0.55)

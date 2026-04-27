@@ -5,11 +5,11 @@ struct PermissionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: PermissionViewModel
     @State private var showingOpenSourceLicenses = false
-    
+
     init(viewModel: PermissionViewModel) {
         self.viewModel = viewModel
     }
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -17,39 +17,23 @@ struct PermissionSettingsView: View {
                     PermissionRow(
                         icon: "camera",
                         title: NSLocalizedString("permission_camera", comment: ""),
-                        status: viewModel.permissionStatusText(viewModel.cameraStatus)
+                        status: viewModel.cameraStatus
                     ) {
-                        Task {
-                            await viewModel.requestCameraPermission()
-                        }
+                        Task { await viewModel.requestCameraPermission() }
                     }
-                    
+
                     PermissionRow(
                         icon: "mic",
                         title: NSLocalizedString("permission_microphone", comment: ""),
-                        status: viewModel.permissionStatusText(viewModel.microphoneStatus)
+                        status: viewModel.microphoneStatus
                     ) {
-                        Task {
-                            await viewModel.requestMicrophonePermission()
-                        }
+                        Task { await viewModel.requestMicrophonePermission() }
                     }
-                    
-                    PermissionRow(
-                        icon: "photo.on.rectangle",
-                        title: NSLocalizedString("permission_photo_library", comment: ""),
-                        status: viewModel.permissionStatusText(viewModel.photoLibraryStatus)
-                    ) {
-                        Task {
-                            await viewModel.requestPhotoLibraryPermission()
-                        }
-                    }
-                    
-                    // 구분선
+
                     Divider()
                         .padding(.horizontal)
                         .padding(.vertical, 12)
-                    
-                    // 오픈소스 라이선스 버튼
+
                     OpenSourceButton {
                         showingOpenSourceLicenses = true
                     }
@@ -73,13 +57,15 @@ struct PermissionSettingsView: View {
     }
 }
 
-/// 권한 설정 행을 표시하는 뷰
+/// 단일 권한 항목 행. `PermissionStatus` 만 받고 표시 텍스트 / 액션 라벨 / 비활성 여부를
+/// 모두 자체 파생합니다 — 호출처가 status / actionTitle / isActionEnabled 를 따로
+/// 전달할 때 발생하던 invariant 일치 부담을 제거합니다.
 struct PermissionRow: View {
     let icon: String
     let title: String
-    let status: String
+    let status: PermissionStatus
     let action: () -> Void
-    
+
     var body: some View {
         HStack {
             Image(systemName: icon)
@@ -87,34 +73,52 @@ struct PermissionRow: View {
             VStack(alignment: .leading) {
                 Text(title)
                     .font(.headline)
-                Text(status)
+                Text(statusText)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
             Spacer()
             Button(action: action) {
-                Text(NSLocalizedString("permissions_request", comment: ""))
+                Text(actionTitle)
                     .font(.subheadline)
             }
             .buttonStyle(.bordered)
+            .disabled(status == .authorized)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(Color(.systemBackground))
+    }
+
+    private var statusText: String {
+        switch status {
+        case .notDetermined: return NSLocalizedString("permission_status_not_determined", comment: "")
+        case .restricted:    return NSLocalizedString("permission_status_restricted", comment: "")
+        case .denied:        return NSLocalizedString("permission_status_denied", comment: "")
+        case .authorized:    return NSLocalizedString("permission_status_authorized", comment: "")
+        }
+    }
+
+    private var actionTitle: String {
+        switch status {
+        case .notDetermined:        return NSLocalizedString("permissions_request", comment: "")
+        case .denied, .restricted:  return NSLocalizedString("permissions_open_settings", comment: "")
+        case .authorized:           return NSLocalizedString("permission_status_authorized", comment: "")
+        }
     }
 }
 
 /// 오픈소스 라이선스 버튼
 struct OpenSourceButton: View {
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack {
                 Image(systemName: "doc.text")
                     .frame(width: 24)
                     .foregroundColor(.blue)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("오픈소스 라이선스")
                         .font(.headline)
@@ -123,9 +127,9 @@ struct OpenSourceButton: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -141,4 +145,4 @@ struct OpenSourceButton: View {
 
 #Preview {
     PermissionSettingsView(viewModel: PermissionViewModel(permissionManager: PermissionManager()))
-} 
+}

@@ -67,6 +67,15 @@ extension LiveStreamViewModel {
     default:
       break
     }
+    // 사용자가 설정 시트를 열고 수동으로 송출 방향을 고르고 있을 수 있음.
+    // 그 상태에서는 디바이스 회전으로 선택을 덮어쓰지 않는다 — 시트가 닫힐 때
+    // 다음 회전 알림으로 자연스럽게 재동기화된다.
+    guard !isSettingsSheetPresented else {
+      logDebug(
+        "방향 observer skipped: settings sheet open (device=\(describeCurrentDeviceOrientation()))",
+        category: .streaming)
+      return
+    }
     guard let resolved = detectDeviceStreamOrientation() else { return }
     guard settings.streamOrientation != resolved else { return }
 
@@ -273,6 +282,7 @@ extension LiveStreamViewModel {
     // 에러 상태로 변경 및 메시지 표시
     await updateStatus(.error(.streamingFailed(userMessage)), message: userMessage)
     screenCaptureStreamingStartedAt = nil
+    stopDataMonitoring()
     resumeIdleMicrophonePeakMonitoringAfterStreaming()
   }
 
@@ -291,7 +301,9 @@ extension LiveStreamViewModel {
     DispatchQueue.main.async {
       NotificationCenter.default.post(name: .stopScreenCapture, object: nil)
     }
-    // Step 2: HaishinKit 스트리밍 서비스 중지
+    // Step 2: 데이터 모니터링 타이머 중지 (스트리밍 타이머가 VM 생명주기 끝까지 살아남지 않도록 보장)
+    stopDataMonitoring()
+    // Step 3: HaishinKit 스트리밍 서비스 중지
     await liveStreamService.stopStreaming()
     logInfo("✅ [화면캡처] 스트리밍 서비스 중지 완료", category: .streaming)
   }

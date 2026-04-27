@@ -110,16 +110,28 @@ final class MainViewModel: ObservableObject {
         selectedSidebarItem = item
     }
     
-    /// 권한 설정 화면 표시
+    /// 권한 설정 화면 표시.
+    /// 시트를 열기 직전에 PermissionManager 의 캐시된 상태를 시스템 권한 상태로 다시
+    /// 갱신합니다. 카메라 세션이 켜지며 자동으로 떴던 시스템 다이얼로그에 사용자가 응답한
+    /// 결과를 시트 안에서도 즉시 반영하기 위함입니다.
     func showPermissionSettings() {
         logDebug("🔧 MainViewModel: showPermissionSettings() called", category: .ui)
+        permissionViewModel.refreshStatus()
         showingPermissionAlert = true
         logDebug("🔧 MainViewModel: showingPermissionAlert set to \(showingPermissionAlert)", category: .ui)
     }
     
-    /// 라이브 스트리밍 설정 시트 표시 상태 갱신
+    /// 라이브 스트리밍 설정 시트 표시 상태 갱신.
+    /// LiveStreamViewModel 의 플래그에 반영해, 설정 시트가 열린 상태에서 디바이스 회전이
+    /// 사용자의 수동 방향 선택을 덮어쓰지 않도록 한다.
+    /// 시트가 닫히는 시점에는 즉시 동기화를 시도 — 시트를 연 채 기기를 회전시킨 경우
+    /// 닫힌 직후까지 stale 한 방향이 유지되던 문제를 해소한다.
     func setLiveStreamSettingsPresented(_ isPresented: Bool) {
         logDebug("📺 MainViewModel: isPresentingLiveStreamSettings set to \(isPresented)", category: .ui)
+        liveStreamViewModel.isSettingsSheetPresented = isPresented
+        if !isPresented {
+            liveStreamViewModel.syncStreamOrientationFromDeviceIfIdle()
+        }
     }
     
     /// 로깅 설정 화면 표시 (개발용)
@@ -333,11 +345,14 @@ final class MainViewModel: ObservableObject {
 
     }
     
-    /// 현재 상태에 따른 UI 상태 업데이트
-    /// 권한 상태와 카메라 선택 상태에 따라 적절한 UI를 결정합니다.
+    /// 현재 상태에 따른 UI 상태 업데이트.
+    /// 카메라/마이크 권한이 모두 허용되지 않은 경우 디테일뷰가 권한 안내 화면을 노출하고,
+    /// 권한이 모두 허용된 후에는 카메라 선택 여부에 따라 placeholder/preview 화면을 보여줍니다.
+    /// 자동으로 권한 시트를 띄우지는 않습니다 — 사용자가 디테일뷰의 "권한 설정" 버튼이나
+    /// 사이드바 gear 를 의도적으로 눌렀을 때만 권한 시트가 표시됩니다.
     private func updateUIState() {
         let newState: UIState
-        
+
         if !permissionViewModel.areAllPermissionsGranted {
             newState = .permissionRequired
         } else if cameraViewModel.selectedCamera == nil {
@@ -345,7 +360,7 @@ final class MainViewModel: ObservableObject {
         } else {
             newState = .cameraActive
         }
-        
+
         // 개선: 상태가 실제로 변경된 경우에만 업데이트하여 불필요한 UI 리렌더링 방지
         if currentUIState != newState {
             currentUIState = newState
@@ -361,7 +376,7 @@ final class MainViewModel: ObservableObject {
 enum UIState {
     /// 로딩 중
     case loading
-    /// 권한 필요
+    /// 카메라/마이크 권한 미허용 — 권한 안내 화면 노출
     case permissionRequired
     /// 카메라 미선택
     case cameraNotSelected

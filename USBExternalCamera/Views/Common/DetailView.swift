@@ -73,11 +73,12 @@ struct CameraDetailContentView: View {
       // 로딩 상태
       LoadingView()
     case .permissionRequired:
-      // 권한 필요 상태
+      // 카메라/마이크 권한 미허용 — 권한 안내 화면. 사용자가 안내 화면 안의 버튼을 눌러야만
+      // 권한 시트가 열림 (자동으로 sheet 를 띄우지 않음).
       PermissionRequiredView(viewModel: viewModel)
     case .cameraNotSelected:
       // 카메라 미선택 상태
-      CameraPlaceholderView()
+      CameraPlaceholderView(viewModel: viewModel)
     case .cameraActive:
       // 카메라 활성화 상태
       CameraPreviewContainerView(viewModel: viewModel)
@@ -879,53 +880,77 @@ private struct FocusMetricChip: View {
   }
 }
 
-/// 카메라 플레이스홀더 View 컴포넌트
-/// 카메라가 선택되지 않았을 때 표시되는 안내 화면입니다.
+/// 권한 시트로 진입하는 공통 버튼 — `CameraPlaceholderView` / `PermissionRequiredView`
+/// 양쪽에서 동일하게 사용. 두 곳의 라벨/스타일이 항상 같이 변경되도록 한 곳으로 묶어둡니다.
+private struct PermissionSettingsButton: View {
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Label(
+        NSLocalizedString("go_to_permission_settings", comment: "권한 설정"),
+        systemImage: "lock.shield"
+      )
+      .font(.headline)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 10)
+    }
+    .buttonStyle(.borderedProminent)
+    .tint(.blue)
+  }
+}
+
+/// 카메라 플레이스홀더 View 컴포넌트.
+/// 카메라가 선택되지 않은 상태에서 노출되는 안내 화면입니다. 권한 진입 버튼을 함께 둬서
+/// 사이드바 gear 외에도 디테일뷰 안에서 바로 권한 설정에 들어갈 수 있게 합니다.
 struct CameraPlaceholderView: View {
+  let viewModel: MainViewModel
+
   var body: some View {
     Color.black
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .overlay {
-        VStack {
+        VStack(spacing: 20) {
           Image(systemName: "camera")
             .font(.system(size: 50))
             .foregroundColor(.gray)
           Text(NSLocalizedString("select_camera", comment: "카메라 선택"))
             .font(.title2)
             .foregroundColor(.gray)
+
+          PermissionSettingsButton {
+            viewModel.showPermissionSettings()
+          }
         }
+        .padding()
       }
   }
 }
 
-/// 권한 필요 안내 View 컴포넌트
-/// 카메라/마이크 권한이 필요할 때 표시되는 안내 화면입니다.
+/// 권한 필요 안내 View 컴포넌트.
+/// 카메라/마이크 권한이 모두 허용되지 않았을 때 디테일뷰가 노출하는 안내 화면입니다.
+/// 권한 시트를 자동으로 띄우지 않으며, 사용자가 본 화면의 버튼을 눌러야만 시트가 열립니다.
 struct PermissionRequiredView: View {
   @ObservedObject var viewModel: MainViewModel
 
   var body: some View {
     VStack(spacing: 20) {
-      // 경고 아이콘
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: 50))
         .foregroundColor(.orange)
 
-      // 제목
       Text(NSLocalizedString("permission_settings_needed", comment: "권한 설정 필요"))
         .font(.title2)
         .bold()
 
-      // 안내 메시지
       Text(viewModel.permissionViewModel.permissionGuideMessage)
         .multilineTextAlignment(.center)
         .foregroundColor(.secondary)
         .padding(.horizontal)
 
-      // 권한 설정 버튼
-      Button(NSLocalizedString("go_to_permission_settings", comment: "권한 설정으로 이동")) {
+      PermissionSettingsButton {
         viewModel.showPermissionSettings()
       }
-      .buttonStyle(.borderedProminent)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding()

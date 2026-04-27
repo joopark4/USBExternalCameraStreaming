@@ -6,10 +6,9 @@
 //
 
 import AVFoundation
-import HaishinKit
+import Foundation
 import SwiftUI
 import UIKit
-import Foundation
 
 /// 포커스 인디케이터 뷰
 final class FocusIndicatorView: UIView {

@@ -449,7 +449,6 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSCameraUsageDescription = "카메라 사용 허용";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "마이크 사용 허용";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "사진첩 사용 허용";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -492,7 +491,6 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSCameraUsageDescription = "카메라 사용 허용";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "마이크 사용 허용";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "사진첩 사용 허용";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -638,7 +636,7 @@
 			repositoryURL = "https://github.com/joopark4/LiveStreamingCore.git";
 			requirement = {
 				kind = upToNextMinorVersion;
-				minimumVersion = 2.0.0;
+				minimumVersion = 2.1.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

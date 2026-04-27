@@ -1,129 +1,128 @@
 import SwiftUI
+import UIKit
 import AVFoundation
-import Photos
+import Combine
 
-/// 권한 관리를 위한 ViewModel
-/// MVVM 패턴에서 View와 Model(PermissionManager) 사이의 중간층 역할을 담당합니다.
-/// 권한 상태 관리, 권한 요청, UI 상태 업데이트를 담당합니다.
+/// 카메라/마이크 권한 상태를 SwiftUI 가 관찰할 수 있도록 노출하는 ViewModel.
+/// `PermissionManager` 의 시스템 권한 상태를 mirror 하면서 `areAllPermissionsGranted`
+/// 같은 파생 값을 계산하고, 권한 요청 / 시스템 설정 앱 라우팅 / foreground 자동 갱신을 담당합니다.
 @MainActor
 final class PermissionViewModel: ObservableObject {
-    
+
     // MARK: - Dependencies
-    
-    /// 권한 매니저 - 실제 권한 관련 비즈니스 로직을 담당
+
     let permissionManager: PermissionManager
-    
+
     // MARK: - Published Properties (UI State)
-    
-    /// 카메라 권한 상태
-    /// UI에서 카메라 권한 상태를 표시하고 반응하는데 사용됩니다.
+
     @Published var cameraStatus: PermissionStatus
-    
-    /// 마이크 권한 상태
-    /// UI에서 마이크 권한 상태를 표시하고 반응하는데 사용됩니다.
     @Published var microphoneStatus: PermissionStatus
-    
-    /// 사진첩 권한 상태
-    /// UI에서 사진첩 권한 상태를 표시하고 반응하는데 사용됩니다.
-    @Published var photoLibraryStatus: PermissionStatus
-    
-    /// 모든 필수 권한이 허용되었는지 여부
-    /// MainViewModel에서 바인딩하여 UI 상태를 결정하는데 사용됩니다.
     @Published var areAllPermissionsGranted: Bool = false
-    
+
+    // MARK: - Private
+
+    private var cancellables = Set<AnyCancellable>()
+
     // MARK: - Initialization
-    
-    /// PermissionViewModel 초기화
-    /// 의존성 주입을 통해 PermissionManager를 받아 초기화합니다.
-    /// - Parameter permissionManager: 권한 관리 비즈니스 로직을 담당하는 매니저
+
     init(permissionManager: PermissionManager) {
         self.permissionManager = permissionManager
         self.cameraStatus = permissionManager.cameraStatus
         self.microphoneStatus = permissionManager.microphoneStatus
-        self.photoLibraryStatus = permissionManager.photoLibraryStatus
-        
-        // 초기 권한 상태 업데이트
+
+        updateAllPermissionsStatus()
+
+        // 사용자가 시스템 설정 앱에서 권한을 변경하고 돌아오면 즉시 UI 에 반영.
+        NotificationCenter.default
+            .publisher(for: UIApplication.didBecomeActiveNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.refreshStatus()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    // MARK: - Public Methods (User Actions)
+
+    /// 시스템 권한 상태를 다시 읽어들여 published 프로퍼티 + `areAllPermissionsGranted` 를 동기화합니다.
+    /// 카메라 세션이 켜지며 떴던 시스템 다이얼로그처럼, 앱이 명시적 `requestXxxPermission`
+    /// 을 거치지 않고 권한이 바뀐 경로에서도 UI 가 최신 상태를 반영하도록 합니다.
+    /// 변경 감지 가드를 적용해, foreground 마다 호출되어도 값이 같으면 publish 가 발생하지 않습니다.
+    func refreshStatus() {
+        permissionManager.checkPermissions()
+        if cameraStatus != permissionManager.cameraStatus {
+            cameraStatus = permissionManager.cameraStatus
+        }
+        if microphoneStatus != permissionManager.microphoneStatus {
+            microphoneStatus = permissionManager.microphoneStatus
+        }
         updateAllPermissionsStatus()
     }
-    
-    // MARK: - Public Methods (User Actions)
-    
-    /// 카메라 권한 요청
-    /// 비동기적으로 카메라 권한을 요청하고 상태를 업데이트합니다.
+
+    /// 카메라 권한 요청.
+    /// `.notDetermined` 만 시스템 다이얼로그를 띄울 수 있고, `.denied`/`.restricted` 는
+    /// iOS 가 다이얼로그를 다시 띄우지 않으므로 시스템 설정 앱으로 사용자를 이동시킵니다.
     func requestCameraPermission() async {
+        if permissionManager.cameraStatus.requiresSystemSettings {
+            await openSystemSettings()
+            return
+        }
         await permissionManager.requestCameraPermission()
         cameraStatus = permissionManager.cameraStatus
         updateAllPermissionsStatus()
     }
-    
-    /// 마이크 권한 요청
-    /// 비동기적으로 마이크 권한을 요청하고 상태를 업데이트합니다.
+
+    /// 마이크 권한 요청. 카메라와 동일한 분기 정책.
     func requestMicrophonePermission() async {
+        if permissionManager.microphoneStatus.requiresSystemSettings {
+            await openSystemSettings()
+            return
+        }
         await permissionManager.requestMicrophonePermission()
         microphoneStatus = permissionManager.microphoneStatus
         updateAllPermissionsStatus()
     }
-    
-    /// 사진첩 권한 요청
-    /// 비동기적으로 사진첩 권한을 요청하고 상태를 업데이트합니다.
-    func requestPhotoLibraryPermission() async {
-        await permissionManager.requestPhotoLibraryPermission()
-        photoLibraryStatus = permissionManager.photoLibraryStatus
-        updateAllPermissionsStatus()
+
+    private func openSystemSettings() async {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        await UIApplication.shared.open(url)
     }
-    
-    // MARK: - Utility Methods
-    
-    /// 권한 상태를 사용자에게 표시할 텍스트로 변환
-    /// - Parameter status: 권한 상태
-    /// - Returns: 로컬라이즈된 권한 상태 텍스트
-    func permissionStatusText(_ status: PermissionStatus) -> String {
-        switch status {
-        case .notDetermined:
-            return NSLocalizedString("permission_status_not_determined", comment: "권한 상태 미결정")
-        case .restricted:
-            return NSLocalizedString("permission_status_restricted", comment: "권한 상태 제한됨")
-        case .denied:
-            return NSLocalizedString("permission_status_denied", comment: "권한 상태 거부됨")
-        case .authorized:
-            return NSLocalizedString("permission_status_authorized", comment: "권한 상태 허용됨")
-        }
-    }
-    
-    /// 권한이 거부된 항목 목록 반환
-    /// UI에서 어떤 권한이 거부되었는지 표시하는데 사용됩니다.
-    var deniedPermissions: [String] {
-        var denied: [String] = []
-        if cameraStatus == .denied { 
-            denied.append(NSLocalizedString("permission_camera", comment: "카메라 권한")) 
-        }
-        if microphoneStatus == .denied { 
-            denied.append(NSLocalizedString("permission_microphone", comment: "마이크 권한")) 
-        }
-        if photoLibraryStatus == .denied { 
-            denied.append(NSLocalizedString("permission_photo_library", comment: "사진첩 권한")) 
-        }
-        return denied
-    }
-    
-    /// 권한 설정 가이드 메시지 생성
-    /// 사용자에게 어떤 권한이 필요한지 안내하는 메시지를 반환합니다.
+
+    // MARK: - Derived Values
+
+    /// 권한 안내 화면(`PermissionRequiredView`) 에 표시할 메시지.
+    /// `.notDetermined` 도 "허용 안 됨" 으로 잡습니다 — 사용자 입장에서는 아직 응답하지 않은
+    /// 상태나 거부한 상태나 모두 "허용되지 않은" 상태이기 때문입니다.
     var permissionGuideMessage: String {
-        if deniedPermissions.isEmpty {
+        let pending = pendingPermissions
+        if pending.isEmpty {
             return NSLocalizedString("all_permissions_granted", comment: "모든 권한 허용됨")
-        } else {
-            return String(format: NSLocalizedString("permissions_denied_message", comment: "권한 거부 메시지"), 
-                         deniedPermissions.joined(separator: ", "))
+        }
+        return String(
+            format: NSLocalizedString("permissions_required_message", comment: "권한 필요 메시지"),
+            pending.joined(separator: ", ")
+        )
+    }
+
+    private var pendingPermissions: [String] {
+        var pending: [String] = []
+        if cameraStatus != .authorized {
+            pending.append(NSLocalizedString("permission_camera", comment: "카메라"))
+        }
+        if microphoneStatus != .authorized {
+            pending.append(NSLocalizedString("permission_microphone", comment: "마이크"))
+        }
+        return pending
+    }
+
+    // MARK: - Private Methods
+
+    /// 변경 감지 가드 — `areAllPermissionsGranted` 가 실제로 변할 때만 publish.
+    private func updateAllPermissionsStatus() {
+        let granted = cameraStatus == .authorized && microphoneStatus == .authorized
+        if areAllPermissionsGranted != granted {
+            areAllPermissionsGranted = granted
         }
     }
-    
-    // MARK: - Private Methods
-    
-    /// 모든 권한 상태를 확인하여 areAllPermissionsGranted 업데이트
-    /// 개별 권한 상태가 변경될 때마다 호출되어 전체 권한 상태를 갱신합니다.
-    private func updateAllPermissionsStatus() {
-        areAllPermissionsGranted = cameraStatus == .authorized &&
-                                  microphoneStatus == .authorized &&
-                                  photoLibraryStatus == .authorized
-    }
-} 
+}

@@ -33,23 +33,42 @@ extension LiveStreamViewModel {
     return summary
   }
 
-  /// 실시간 데이터 모니터링 시작 (정기적 체크)
+  /// 실시간 데이터 모니터링 시작 (정기적 체크).
+  /// 타이머는 `dataMonitoringTimer` 에 보관해 중지/재호출 시 누수 없이 관리한다.
+  @MainActor
   func startDataMonitoring() {
+    stopDataMonitoring()
     logDebug("🚀 [MONITOR] Starting data monitoring", category: .streaming)
-    Timer.scheduledTimer(withTimeInterval: Constants.dataMonitoringInterval, repeats: true) {
-      [weak self] timer in
+    dataMonitoringTimer = Timer.scheduledTimer(
+      withTimeInterval: Constants.dataMonitoringInterval, repeats: true
+    ) { [weak self] timer in
       guard let self = self else {
         timer.invalidate()
         return
       }
       Task { @MainActor in
-        if self.isStreaming {
-          await self.checkCurrentDataTransmission()
-        } else {
+        guard self.isStreaming else {
           logDebug("⏹️ [MONITOR] Stopping monitoring - streaming ended", category: .streaming)
+          // 항상 "지금 발화한 타이머" 만 끝낸다.
+          // rapid stop/start 경계에서 `self.dataMonitoringTimer` 는 이미 새 세션의
+          // 타이머를 가리킬 수 있으므로, identity 가 일치할 때만 shared 참조도 정리.
           timer.invalidate()
+          if self.dataMonitoringTimer === timer {
+            self.dataMonitoringTimer = nil
+          }
+          return
         }
+        await self.checkCurrentDataTransmission()
       }
     }
+  }
+
+  /// 모니터링 타이머 중지. `startDataMonitoring` 및 stop/ fail 경로에서 호출.
+  @MainActor
+  func stopDataMonitoring() {
+    guard dataMonitoringTimer != nil else { return }
+    dataMonitoringTimer?.invalidate()
+    dataMonitoringTimer = nil
+    logDebug("⏹️ [MONITOR] Data monitoring timer invalidated", category: .streaming)
   }
 }
