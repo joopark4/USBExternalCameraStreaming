@@ -341,19 +341,21 @@ final class MainViewModel: ObservableObject {
 
     }
     
-    /// 현재 상태에 따른 UI 상태 업데이트
-    /// 권한 상태와 카메라 선택 상태에 따라 적절한 UI를 결정합니다.
+    /// 현재 상태에 따른 UI 상태 업데이트.
+    /// 카메라 선택 상태에 따라 적절한 UI를 결정합니다.
+    /// 권한 미허용은 더 이상 별도의 UI 분기를 만들지 않습니다 — 권한이 없는 경우
+    /// 카메라 enumeration 이 비어 자연스럽게 `.cameraNotSelected` 가 표시되며,
+    /// placeholder 화면 안의 "권한 설정" 버튼으로 사용자가 의도적으로 권한 시트에
+    /// 진입할 수 있습니다 (자동으로 권한 시트를 띄우지 않음).
     private func updateUIState() {
         let newState: UIState
-        
-        if !permissionViewModel.areAllPermissionsGranted {
-            newState = .permissionRequired
-        } else if cameraViewModel.selectedCamera == nil {
+
+        if cameraViewModel.selectedCamera == nil {
             newState = .cameraNotSelected
         } else {
             newState = .cameraActive
         }
-        
+
         // 개선: 상태가 실제로 변경된 경우에만 업데이트하여 불필요한 UI 리렌더링 방지
         if currentUIState != newState {
             currentUIState = newState
@@ -369,8 +371,6 @@ final class MainViewModel: ObservableObject {
 enum UIState {
     /// 로딩 중
     case loading
-    /// 권한 필요
-    case permissionRequired
     /// 카메라 미선택
     case cameraNotSelected
     /// 카메라 활성화
