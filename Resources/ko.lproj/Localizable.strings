@@ -22,7 +22,6 @@
 "permissions_request" = "권한 요청";
 "permission_camera" = "카메라";
 "permission_microphone" = "마이크";
-"permission_photo_library" = "사진첩";
 "permission_settings_needed" = "권한 설정이 필요합니다";
 "go_to_permission_settings" = "권한 설정하기";
 "permission_status_not_determined" = "확인 안됨";

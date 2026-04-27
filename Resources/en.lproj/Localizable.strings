@@ -22,7 +22,6 @@
 "permissions_request" = "Request Permissions";
 "permission_camera" = "Camera";
 "permission_microphone" = "Microphone";
-"permission_photo_library" = "Photo Library";
 "permission_settings_needed" = "Permission settings required";
 "go_to_permission_settings" = "Go to Permission Settings";
 "permission_status_not_determined" = "Not Determined";

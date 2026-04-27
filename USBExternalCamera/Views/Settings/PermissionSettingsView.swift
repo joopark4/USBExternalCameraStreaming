@@ -33,17 +33,7 @@ struct PermissionSettingsView: View {
                             await viewModel.requestMicrophonePermission()
                         }
                     }
-                    
-                    PermissionRow(
-                        icon: "photo.on.rectangle",
-                        title: NSLocalizedString("permission_photo_library", comment: ""),
-                        status: viewModel.permissionStatusText(viewModel.photoLibraryStatus)
-                    ) {
-                        Task {
-                            await viewModel.requestPhotoLibraryPermission()
-                        }
-                    }
-                    
+
                     // 구분선
                     Divider()
                         .padding(.horizontal)

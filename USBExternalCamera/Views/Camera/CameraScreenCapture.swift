@@ -928,27 +928,6 @@ extension CameraPreviewUIView {
     return (streamingImage, displayImage)
   }
 
-  /// 단말 화면 캡처 저장 (사진 앱에 저장)
-  ///
-  /// 사용자가 현재 화면을 사진으로 저장할 때 사용
-  public func saveDisplayCapture(completion: @escaping (Bool, Error?) -> Void) {
-    guard let displayImage = renderToImageForDisplay() else {
-      completion(
-        false,
-        NSError(
-          domain: "CameraPreview", code: 1,
-          userInfo: [
-            NSLocalizedDescriptionKey: NSLocalizedString(
-              "camera_unavailable", comment: "카메라를 사용할 수 없습니다")
-          ]))
-      return
-    }
-
-    UIImageWriteToSavedPhotosAlbum(displayImage, nil, nil, nil)
-    logInfo("화면 캡처 사진 앱에 저장 완료: \(displayImage.size)", category: .general)
-    completion(true, nil)
-  }
-
   /// 화면 캡처 상태 확인
   var isCapturingScreen: Bool {
     return isScreenCapturing

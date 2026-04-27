@@ -1,5 +1,4 @@
 import AVFoundation
-import Photos
 import SwiftUI
 
 /// 권한 상태를 나타내는 열거형
@@ -10,14 +9,13 @@ enum PermissionStatus {
     case authorized
 }
 
-/// 권한 관리를 위한 클래스
+/// 권한 관리를 위한 클래스.
+/// 이 앱은 카메라/마이크 권한만 사용합니다 (사진첩 저장 기능 미사용).
 class PermissionManager: ObservableObject {
     /// 카메라 권한 상태
     @Published var cameraStatus: PermissionStatus = .notDetermined
     /// 마이크 권한 상태
     @Published var microphoneStatus: PermissionStatus = .notDetermined
-    /// 사진첩 권한 상태
-    @Published var photoLibraryStatus: PermissionStatus = .notDetermined
 
 
     /// 초기화
@@ -29,7 +27,6 @@ class PermissionManager: ObservableObject {
     func checkPermissions() {
         checkCameraPermission()
         checkMicrophonePermission()
-        checkPhotoLibraryPermission()
     }
 
     /// 카메라 권한 확인
@@ -64,22 +61,6 @@ class PermissionManager: ObservableObject {
         }
     }
 
-    /// 사진첩 권한 확인
-    private func checkPhotoLibraryPermission() {
-        switch PHPhotoLibrary.authorizationStatus(for: .readWrite) {
-        case .notDetermined:
-            photoLibraryStatus = .notDetermined
-        case .restricted:
-            photoLibraryStatus = .restricted
-        case .denied:
-            photoLibraryStatus = .denied
-        case .authorized, .limited:
-            photoLibraryStatus = .authorized
-        @unknown default:
-            photoLibraryStatus = .notDetermined
-        }
-    }
-
     /// 카메라 권한 요청
     func requestCameraPermission() async {
         let granted = await AVCaptureDevice.requestAccess(for: .video)
@@ -95,25 +76,4 @@ class PermissionManager: ObservableObject {
             microphoneStatus = granted ? .authorized : .denied
         }
     }
-
-    /// 사진첩 권한 요청
-    func requestPhotoLibraryPermission() async {
-        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-        await MainActor.run {
-            switch status {
-            case .authorized, .limited:
-                photoLibraryStatus = .authorized
-            case .denied:
-                photoLibraryStatus = .denied
-            case .restricted:
-                photoLibraryStatus = .restricted
-            case .notDetermined:
-                photoLibraryStatus = .notDetermined
-            @unknown default:
-                photoLibraryStatus = .notDetermined
-            }
-        }
-    }
-    
-
 } 
