@@ -7,6 +7,16 @@ enum PermissionStatus {
     case restricted
     case denied
     case authorized
+
+    /// 사용자가 본 앱 안의 다이얼로그가 아니라 시스템 설정 앱에서만 권한을 변경할 수 있는
+    /// 상태인지 여부. 한 번 거부된 카메라/마이크 권한은 iOS 가 다이얼로그를 다시 띄우지
+    /// 않으므로 이 케이스에 해당합니다.
+    var requiresSystemSettings: Bool {
+        switch self {
+        case .denied, .restricted: return true
+        case .notDetermined, .authorized: return false
+        }
+    }
 }
 
 /// 권한 관리를 위한 클래스.

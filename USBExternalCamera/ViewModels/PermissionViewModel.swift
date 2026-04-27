@@ -1,5 +1,7 @@
 import SwiftUI
+import UIKit
 import AVFoundation
+import Combine
 
 /// 권한 관리를 위한 ViewModel.
 /// MVVM 패턴에서 View와 Model(PermissionManager) 사이의 중간층 역할을 담당합니다.
@@ -23,6 +25,10 @@ final class PermissionViewModel: ObservableObject {
     /// 모든 필수 권한이 허용되었는지 여부
     @Published var areAllPermissionsGranted: Bool = false
 
+    // MARK: - Private
+
+    private var cancellables = Set<AnyCancellable>()
+
     // MARK: - Initialization
 
     init(permissionManager: PermissionManager) {
@@ -32,6 +38,16 @@ final class PermissionViewModel: ObservableObject {
 
         // 초기 권한 상태 업데이트
         updateAllPermissionsStatus()
+
+        // 사용자가 시스템 설정 앱에서 권한을 변경하고 돌아오면 즉시 UI 에 반영.
+        NotificationCenter.default
+            .publisher(for: UIApplication.didBecomeActiveNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.refreshStatus()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Public Methods (User Actions)
@@ -47,21 +63,55 @@ final class PermissionViewModel: ObservableObject {
         updateAllPermissionsStatus()
     }
 
-    /// 카메라 권한 요청
+    /// 카메라 권한 요청.
+    /// 현재 상태가 `.notDetermined` 인 경우에만 시스템 다이얼로그를 띄울 수 있습니다.
+    /// 이미 `.denied`/`.restricted` 라면 iOS 가 다이얼로그를 더 이상 보여주지 않으므로
+    /// 시스템 설정 앱으로 사용자를 이동시킵니다.
     func requestCameraPermission() async {
+        if permissionManager.cameraStatus.requiresSystemSettings {
+            await openSystemSettings()
+            return
+        }
         await permissionManager.requestCameraPermission()
         cameraStatus = permissionManager.cameraStatus
         updateAllPermissionsStatus()
     }
 
-    /// 마이크 권한 요청
+    /// 마이크 권한 요청.
+    /// 카메라와 동일한 정책 — `.denied`/`.restricted` 면 시스템 설정 앱으로 이동.
     func requestMicrophonePermission() async {
+        if permissionManager.microphoneStatus.requiresSystemSettings {
+            await openSystemSettings()
+            return
+        }
         await permissionManager.requestMicrophonePermission()
         microphoneStatus = permissionManager.microphoneStatus
         updateAllPermissionsStatus()
     }
 
+    /// iOS 시스템 설정 앱의 본 앱 페이지를 엽니다.
+    private func openSystemSettings() async {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        guard await UIApplication.shared.canOpenURL(url) else { return }
+        await UIApplication.shared.open(url)
+    }
+
     // MARK: - Utility Methods
+
+    /// 권한 row 의 액션 버튼 라벨을 권한 상태에 따라 결정합니다.
+    /// `.notDetermined` 면 시스템 다이얼로그를 띄울 수 있으므로 "권한 요청",
+    /// `.denied`/`.restricted` 면 iOS 가 다이얼로그를 더 띄우지 않으므로 "설정 열기",
+    /// `.authorized` 면 더 할 일이 없으므로 "허용됨".
+    func actionButtonTitle(for status: PermissionStatus) -> String {
+        switch status {
+        case .notDetermined:
+            return NSLocalizedString("permissions_request", comment: "권한 요청")
+        case .denied, .restricted:
+            return NSLocalizedString("permissions_open_settings", comment: "설정 열기")
+        case .authorized:
+            return NSLocalizedString("permission_status_authorized", comment: "허용됨")
+        }
+    }
 
     /// 권한 상태를 사용자에게 표시할 텍스트로 변환
     func permissionStatusText(_ status: PermissionStatus) -> String {

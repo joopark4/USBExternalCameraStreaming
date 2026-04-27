@@ -20,6 +20,7 @@
 // MARK: - Permissions
 "permissions_title" = "권한 설정";
 "permissions_request" = "권한 요청";
+"permissions_open_settings" = "설정 열기";
 "permission_camera" = "카메라";
 "permission_microphone" = "마이크";
 "permission_settings_needed" = "권한 설정이 필요합니다";

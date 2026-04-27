@@ -17,17 +17,21 @@ struct PermissionSettingsView: View {
                     PermissionRow(
                         icon: "camera",
                         title: NSLocalizedString("permission_camera", comment: ""),
-                        status: viewModel.permissionStatusText(viewModel.cameraStatus)
+                        status: viewModel.permissionStatusText(viewModel.cameraStatus),
+                        actionTitle: viewModel.actionButtonTitle(for: viewModel.cameraStatus),
+                        isActionEnabled: viewModel.cameraStatus != .authorized
                     ) {
                         Task {
                             await viewModel.requestCameraPermission()
                         }
                     }
-                    
+
                     PermissionRow(
                         icon: "mic",
                         title: NSLocalizedString("permission_microphone", comment: ""),
-                        status: viewModel.permissionStatusText(viewModel.microphoneStatus)
+                        status: viewModel.permissionStatusText(viewModel.microphoneStatus),
+                        actionTitle: viewModel.actionButtonTitle(for: viewModel.microphoneStatus),
+                        isActionEnabled: viewModel.microphoneStatus != .authorized
                     ) {
                         Task {
                             await viewModel.requestMicrophonePermission()
@@ -68,8 +72,10 @@ struct PermissionRow: View {
     let icon: String
     let title: String
     let status: String
+    let actionTitle: String
+    let isActionEnabled: Bool
     let action: () -> Void
-    
+
     var body: some View {
         HStack {
             Image(systemName: icon)
@@ -83,10 +89,11 @@ struct PermissionRow: View {
             }
             Spacer()
             Button(action: action) {
-                Text(NSLocalizedString("permissions_request", comment: ""))
+                Text(actionTitle)
                     .font(.subheadline)
             }
             .buttonStyle(.bordered)
+            .disabled(!isActionEnabled)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

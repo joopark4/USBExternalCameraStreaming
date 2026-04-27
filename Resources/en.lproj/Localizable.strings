@@ -20,6 +20,7 @@
 // MARK: - Permissions
 "permissions_title" = "Permission Settings";
 "permissions_request" = "Request Permissions";
+"permissions_open_settings" = "Open Settings";
 "permission_camera" = "Camera";
 "permission_microphone" = "Microphone";
 "permission_settings_needed" = "Permission settings required";
