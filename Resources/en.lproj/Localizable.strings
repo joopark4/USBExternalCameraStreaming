@@ -30,7 +30,6 @@
 "permission_status_denied" = "Denied";
 "permission_status_authorized" = "Authorized";
 "all_permissions_granted" = "All permissions have been granted.";
-"permissions_denied_message" = "The following permissions have been denied:\n%@\n\nPlease allow permissions in the Settings app.";
 "permissions_required_message" = "The following permissions are required:\n%@\n\nPlease allow them from the permission settings.";
 "mic_permission_not_granted_error" = "Cannot start audio streaming without microphone permission.";
 "mic_permission_denied_error" = "Microphone permission is required. Please enable it in Settings.";

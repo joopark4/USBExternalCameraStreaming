@@ -30,7 +30,6 @@
 "permission_status_denied" = "거부됨";
 "permission_status_authorized" = "허용됨";
 "all_permissions_granted" = "모든 권한이 허용되었습니다.";
-"permissions_denied_message" = "다음 권한이 거부되었습니다:\n%@\n\n설정 앱에서 권한을 허용해주세요.";
 "permissions_required_message" = "다음 권한이 필요합니다:\n%@\n\n권한 설정에서 허용해주세요.";
 "mic_permission_not_granted_error" = "마이크 권한이 없어 오디오 송출을 시작할 수 없습니다";
 "mic_permission_denied_error" = "마이크 권한이 필요합니다. 설정에서 마이크 권한을 허용해주세요";

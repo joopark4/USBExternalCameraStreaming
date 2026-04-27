@@ -880,10 +880,29 @@ private struct FocusMetricChip: View {
   }
 }
 
+/// 권한 시트로 진입하는 공통 버튼 — `CameraPlaceholderView` / `PermissionRequiredView`
+/// 양쪽에서 동일하게 사용. 두 곳의 라벨/스타일이 항상 같이 변경되도록 한 곳으로 묶어둡니다.
+private struct PermissionSettingsButton: View {
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Label(
+        NSLocalizedString("go_to_permission_settings", comment: "권한 설정"),
+        systemImage: "lock.shield"
+      )
+      .font(.headline)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 10)
+    }
+    .buttonStyle(.borderedProminent)
+    .tint(.blue)
+  }
+}
+
 /// 카메라 플레이스홀더 View 컴포넌트.
-/// 카메라가 선택되지 않은 상태(권한 미허용으로 enumerable 카메라가 없는 경우 포함)에
-/// 표시되는 안내 화면입니다. 사용자가 명시적으로 누를 수 있는 "권한 설정" 진입 버튼을
-/// 함께 제공해, 자동으로 권한 시트를 띄우지 않고도 권한 화면에 진입할 수 있게 합니다.
+/// 카메라가 선택되지 않은 상태에서 노출되는 안내 화면입니다. 권한 진입 버튼을 함께 둬서
+/// 사이드바 gear 외에도 디테일뷰 안에서 바로 권한 설정에 들어갈 수 있게 합니다.
 struct CameraPlaceholderView: View {
   let viewModel: MainViewModel
 
@@ -899,20 +918,9 @@ struct CameraPlaceholderView: View {
             .font(.title2)
             .foregroundColor(.gray)
 
-          Button {
+          PermissionSettingsButton {
             viewModel.showPermissionSettings()
-          } label: {
-            Label(
-              NSLocalizedString("go_to_permission_settings", comment: "권한 설정"),
-              systemImage: "lock.shield"
-            )
-            .font(.headline)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
           }
-          .buttonStyle(.borderedProminent)
-          .tint(.blue)
-          .accessibilityHint(Text(NSLocalizedString("permission_settings_needed", comment: "권한 설정 필요")))
         }
         .padding()
       }
@@ -921,8 +929,7 @@ struct CameraPlaceholderView: View {
 
 /// 권한 필요 안내 View 컴포넌트.
 /// 카메라/마이크 권한이 모두 허용되지 않았을 때 디테일뷰가 노출하는 안내 화면입니다.
-/// 권한 시트를 자동으로 띄우지 않으며, 사용자가 본 화면의 "권한 설정으로 이동" 버튼을
-/// 눌러야만 시트가 열립니다 (사이드바 우상단 gear 도 동일).
+/// 권한 시트를 자동으로 띄우지 않으며, 사용자가 본 화면의 버튼을 눌러야만 시트가 열립니다.
 struct PermissionRequiredView: View {
   @ObservedObject var viewModel: MainViewModel
 
@@ -941,19 +948,9 @@ struct PermissionRequiredView: View {
         .foregroundColor(.secondary)
         .padding(.horizontal)
 
-      Button {
+      PermissionSettingsButton {
         viewModel.showPermissionSettings()
-      } label: {
-        Label(
-          NSLocalizedString("go_to_permission_settings", comment: "권한 설정으로 이동"),
-          systemImage: "lock.shield"
-        )
-        .font(.headline)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
       }
-      .buttonStyle(.borderedProminent)
-      .tint(.blue)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding()
