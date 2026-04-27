@@ -8,14 +8,8 @@ import SwiftUI
 extension LiveStreamViewModel {
   // MARK: - Private Methods - Streaming
   private func performStreamingStart(with captureSession: AVCaptureSession) async throws {
-    // 화면 캡처 스트리밍 시작 (카메라 스트리밍은 제거됨)
-    if let haishinKitManager = liveStreamService as? HaishinKitManager {
-      try await haishinKitManager.startScreenCaptureStreaming(with: settings)
-    } else {
-      // 다른 서비스의 경우 화면 캡처 스트리밍을 구현해야 함
-      throw LiveStreamError.streamingFailed(
-        NSLocalizedString("screen_capture_only_supported", comment: "화면 캡처 스트리밍만 지원됩니다"))
-    }
+    // `startScreenCaptureStreaming` 은 protocol 에 정의된 멤버라 concrete 캐스팅 불필요.
+    try await liveStreamService.startScreenCaptureStreaming(with: settings)
   }
 
   private func performStreamingStop() async throws {

@@ -19,10 +19,6 @@ extension LiveStreamViewModel {
   /// - 기타 오류: 원본 에러 전파
   /// - Throws: LiveStreamError 또는 기타 스트리밍 관련 에러
   func performScreenCaptureStreamingStart() async throws {
-    guard let haishinKitManager = liveStreamService as? HaishinKitManager else {
-      throw LiveStreamError.configurationError("HaishinKitManager가 초기화되지 않았습니다")
-    }
-
     try await prepareAudioCapturePrerequisites()
 
     // 현재 디바이스 방향과 저장된 streamOrientation 을 비교해 **로컬 struct** 에서 명시적으로 덮어쓰고
@@ -52,7 +48,7 @@ extension LiveStreamViewModel {
 
     logDebug("🔄 [화면캡처] 화면 캡처 스트리밍 시작 중...", category: .streaming)
     // 화면 캡처 전용 스트리밍 시작 — 반드시 `startSettings`(로컬) 로 전달.
-    try await haishinKitManager.startScreenCaptureStreaming(with: startSettings)
+    try await liveStreamService.startScreenCaptureStreaming(with: startSettings)
     // 데이터 모니터링 시작 (네트워크 상태, FPS 등)
     startDataMonitoring()
     logInfo("✅ [화면캡처] 화면 캡처 스트리밍 서비스 시작 완료", category: .streaming)
