@@ -110,9 +110,13 @@ final class MainViewModel: ObservableObject {
         selectedSidebarItem = item
     }
     
-    /// 권한 설정 화면 표시
+    /// 권한 설정 화면 표시.
+    /// 시트를 열기 직전에 PermissionManager 의 캐시된 상태를 시스템 권한 상태로 다시
+    /// 갱신합니다. 카메라 세션이 켜지며 자동으로 떴던 시스템 다이얼로그에 사용자가 응답한
+    /// 결과를 시트 안에서도 즉시 반영하기 위함입니다.
     func showPermissionSettings() {
         logDebug("🔧 MainViewModel: showPermissionSettings() called", category: .ui)
+        permissionViewModel.refreshStatus()
         showingPermissionAlert = true
         logDebug("🔧 MainViewModel: showingPermissionAlert set to \(showingPermissionAlert)", category: .ui)
     }
@@ -342,15 +346,16 @@ final class MainViewModel: ObservableObject {
     }
     
     /// 현재 상태에 따른 UI 상태 업데이트.
-    /// 카메라 선택 상태에 따라 적절한 UI를 결정합니다.
-    /// 권한 미허용은 더 이상 별도의 UI 분기를 만들지 않습니다 — 권한이 없는 경우
-    /// 카메라 enumeration 이 비어 자연스럽게 `.cameraNotSelected` 가 표시되며,
-    /// placeholder 화면 안의 "권한 설정" 버튼으로 사용자가 의도적으로 권한 시트에
-    /// 진입할 수 있습니다 (자동으로 권한 시트를 띄우지 않음).
+    /// 카메라/마이크 권한이 모두 허용되지 않은 경우 디테일뷰가 권한 안내 화면을 노출하고,
+    /// 권한이 모두 허용된 후에는 카메라 선택 여부에 따라 placeholder/preview 화면을 보여줍니다.
+    /// 자동으로 권한 시트를 띄우지는 않습니다 — 사용자가 디테일뷰의 "권한 설정" 버튼이나
+    /// 사이드바 gear 를 의도적으로 눌렀을 때만 권한 시트가 표시됩니다.
     private func updateUIState() {
         let newState: UIState
 
-        if cameraViewModel.selectedCamera == nil {
+        if !permissionViewModel.areAllPermissionsGranted {
+            newState = .permissionRequired
+        } else if cameraViewModel.selectedCamera == nil {
             newState = .cameraNotSelected
         } else {
             newState = .cameraActive
@@ -371,6 +376,8 @@ final class MainViewModel: ObservableObject {
 enum UIState {
     /// 로딩 중
     case loading
+    /// 카메라/마이크 권한 미허용 — 권한 안내 화면 노출
+    case permissionRequired
     /// 카메라 미선택
     case cameraNotSelected
     /// 카메라 활성화

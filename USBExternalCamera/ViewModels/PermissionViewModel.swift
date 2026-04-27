@@ -36,6 +36,17 @@ final class PermissionViewModel: ObservableObject {
 
     // MARK: - Public Methods (User Actions)
 
+    /// 시스템 권한 상태를 다시 읽어들여 published 프로퍼티 + `areAllPermissionsGranted` 를
+    /// 즉시 동기화합니다. 카메라 세션이 켜지며 자동으로 떴던 시스템 다이얼로그에 사용자가
+    /// 응답한 직후처럼, 앱이 명시적으로 `requestXxxPermission` 을 호출하지 않고 권한이 바뀐
+    /// 케이스에서도 UI 가 최신 상태를 반영하도록 합니다.
+    func refreshStatus() {
+        permissionManager.checkPermissions()
+        cameraStatus = permissionManager.cameraStatus
+        microphoneStatus = permissionManager.microphoneStatus
+        updateAllPermissionsStatus()
+    }
+
     /// 카메라 권한 요청
     func requestCameraPermission() async {
         await permissionManager.requestCameraPermission()
@@ -66,25 +77,30 @@ final class PermissionViewModel: ObservableObject {
         }
     }
 
-    /// 권한이 거부된 항목 목록 반환
-    var deniedPermissions: [String] {
-        var denied: [String] = []
-        if cameraStatus == .denied {
-            denied.append(NSLocalizedString("permission_camera", comment: "카메라 권한"))
+    /// 아직 `.authorized` 가 아닌 권한 항목들의 사용자 표시 이름 목록.
+    /// `.notDetermined`(아직 묻지 않음) 와 `.denied`/`.restricted` 모두 포함합니다 —
+    /// 카메라 세션이 사용자의 응답을 받기 전까지는 사용자 입장에서 둘 다 "허용 안 됨" 이기 때문입니다.
+    var pendingPermissions: [String] {
+        var pending: [String] = []
+        if cameraStatus != .authorized {
+            pending.append(NSLocalizedString("permission_camera", comment: "카메라 권한"))
         }
-        if microphoneStatus == .denied {
-            denied.append(NSLocalizedString("permission_microphone", comment: "마이크 권한"))
+        if microphoneStatus != .authorized {
+            pending.append(NSLocalizedString("permission_microphone", comment: "마이크 권한"))
         }
-        return denied
+        return pending
     }
 
-    /// 권한 설정 가이드 메시지 생성
+    /// 권한 설정 가이드 메시지 생성.
+    /// 권한이 모두 허용된 경우 안내 메시지를, 그렇지 않으면 어떤 권한이 필요한지 나열합니다.
     var permissionGuideMessage: String {
-        if deniedPermissions.isEmpty {
+        if pendingPermissions.isEmpty {
             return NSLocalizedString("all_permissions_granted", comment: "모든 권한 허용됨")
         } else {
-            return String(format: NSLocalizedString("permissions_denied_message", comment: "권한 거부 메시지"),
-                         deniedPermissions.joined(separator: ", "))
+            return String(
+                format: NSLocalizedString("permissions_required_message", comment: "권한 필요 메시지"),
+                pendingPermissions.joined(separator: ", ")
+            )
         }
     }
 

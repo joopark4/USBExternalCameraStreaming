@@ -72,9 +72,12 @@ struct CameraDetailContentView: View {
     case .loading:
       // 로딩 상태
       LoadingView()
+    case .permissionRequired:
+      // 카메라/마이크 권한 미허용 — 권한 안내 화면. 사용자가 안내 화면 안의 버튼을 눌러야만
+      // 권한 시트가 열림 (자동으로 sheet 를 띄우지 않음).
+      PermissionRequiredView(viewModel: viewModel)
     case .cameraNotSelected:
-      // 카메라 미선택 상태 — 권한 미허용도 이 화면으로 흡수되며,
-      // placeholder 안의 "권한 설정" 버튼으로 사용자가 의도적으로 권한 시트에 진입.
+      // 카메라 미선택 상태
       CameraPlaceholderView(viewModel: viewModel)
     case .cameraActive:
       // 카메라 활성화 상태
@@ -913,6 +916,47 @@ struct CameraPlaceholderView: View {
         }
         .padding()
       }
+  }
+}
+
+/// 권한 필요 안내 View 컴포넌트.
+/// 카메라/마이크 권한이 모두 허용되지 않았을 때 디테일뷰가 노출하는 안내 화면입니다.
+/// 권한 시트를 자동으로 띄우지 않으며, 사용자가 본 화면의 "권한 설정으로 이동" 버튼을
+/// 눌러야만 시트가 열립니다 (사이드바 우상단 gear 도 동일).
+struct PermissionRequiredView: View {
+  @ObservedObject var viewModel: MainViewModel
+
+  var body: some View {
+    VStack(spacing: 20) {
+      Image(systemName: "exclamationmark.triangle")
+        .font(.system(size: 50))
+        .foregroundColor(.orange)
+
+      Text(NSLocalizedString("permission_settings_needed", comment: "권한 설정 필요"))
+        .font(.title2)
+        .bold()
+
+      Text(viewModel.permissionViewModel.permissionGuideMessage)
+        .multilineTextAlignment(.center)
+        .foregroundColor(.secondary)
+        .padding(.horizontal)
+
+      Button {
+        viewModel.showPermissionSettings()
+      } label: {
+        Label(
+          NSLocalizedString("go_to_permission_settings", comment: "권한 설정으로 이동"),
+          systemImage: "lock.shield"
+        )
+        .font(.headline)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+      }
+      .buttonStyle(.borderedProminent)
+      .tint(.blue)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .padding()
   }
 }
 
